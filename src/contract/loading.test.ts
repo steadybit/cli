@@ -4,10 +4,10 @@ import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { loadPolicy } from './loading';
+import { loadContract } from './loading';
 
-describe('policy/loading', () => {
-  describe('loadPolicy', () => {
+describe('contract/loading', () => {
+  describe('loadContract', () => {
     const fileWithSyntaxErrors = path.join(tmpdir(), `${uuidv4()}-syntax-errors.json`);
     const fileWithValidJson = path.join(tmpdir(), `${uuidv4()}-valid.json`);
     const fileWithValidYaml = path.join(tmpdir(), `${uuidv4()}-valid.yml`);
@@ -29,17 +29,17 @@ describe('policy/loading', () => {
     });
 
     it('must reject when file cannot be found', async () => {
-      await expect(loadPolicy(path.join(tmpdir(), uuidv4())))
-        .rejects.toThrow(/Failed to read policy file.*/);
+      await expect(loadContract(path.join(tmpdir(), uuidv4())))
+        .rejects.toThrow(/Failed to read contract file.*/);
     });
 
     it('must reject when file cannot be parsed', async () => {
-      await expect(loadPolicy(fileWithSyntaxErrors))
-        .rejects.toThrow(/Failed to parse policy file.*/);
+      await expect(loadContract(fileWithSyntaxErrors))
+        .rejects.toThrow(/Failed to parse contract file.*/);
     });
 
     it('must successfully load JSON files', async () => {
-      await expect(loadPolicy(fileWithValidJson)).resolves.toMatchInlineSnapshot(`
+      await expect(loadContract(fileWithValidJson)).resolves.toMatchInlineSnapshot(`
 Object {
   "type": "json",
 }
@@ -47,7 +47,7 @@ Object {
     });
 
     it('must successfully load YAML files', async () => {
-      await expect(loadPolicy(fileWithValidYaml)).resolves.toMatchInlineSnapshot(`
+      await expect(loadContract(fileWithValidYaml)).resolves.toMatchInlineSnapshot(`
 Object {
   "type": "yaml",
 }
