@@ -1,0 +1,63 @@
+{
+  "name": "steadybit",
+  "version": "1.0.0",
+  "description": "Command-line interface to interact with the Steadybit API",
+  "keywords": [
+    "steadybit",
+    "cli",
+    "chaos engineering",
+    "resilience engineering",
+    "api",
+    "gitops"
+  ],
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "steadybit": "dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/steadybit/cli.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "verify": "npm run verify:unit-test && npm run verify:lint",
+    "verify:unit-test": "jest",
+    "verify:lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "build": "npm run clean && npm run build:ts && npm run build:permissions",
+    "build:ts": "tsc",
+    "build:permissions": "chmod a+x dist/index.js",
+    "ci": "npm run verify && npm run build",
+    "prepublishOnly": "npm run verify && npm run build"
+  },
+  "engines": {
+    "node": ">=0.12"
+  },
+  "author": "Steadybit GmbH",
+  "license": "MIT",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "commander": "^9.0.0",
+    "js-yaml": "^4.1.0",
+    "node-fetch": "^3.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.16.7",
+    "@babel/preset-env": "^7.16.7",
+    "@babel/preset-typescript": "^7.16.7",
+    "@types/diff": "^5.0.2",
+    "@types/ejs": "^3.1.0",
+    "@types/jest": "^27.4.0",
+    "@types/js-yaml": "^4.0.5",
+    "@types/uuid": "^8.3.4",
+    "@typescript-eslint/eslint-plugin": "^5.9.0",
+    "@typescript-eslint/parser": "^5.9.0",
+    "babel-jest": "^27.4.6",
+    "eslint": "^8.6.0",
+    "jest": "^27.4.7",
+    "typescript": "^4.5.4",
+    "uuid": "^8.3.2"
+  }
+}
