@@ -10,6 +10,6 @@ export async function uploadContract(contract: Contract): Promise<void> {
       body: contract
     });
   } catch (e) {
-    throw abortExecution(`Failed upload contract to Steadybit: %s`, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution(`Failed to upload contract to Steadybit: %s`, (e as Error)?.message ?? 'Unknown error');
   }
 }
