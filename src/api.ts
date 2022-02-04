@@ -1,4 +1,5 @@
 import fetch, { Response } from 'node-fetch';
+import colors from 'colors/safe';
 
 import { abortExecution } from './errors';
 
@@ -9,7 +10,7 @@ export interface ApiCallArguments {
   path: string;
   method: string;
   queryParameters?: Record<string, string>;
-  body?: never;
+  body?: unknown;
   timeout?: number; // defaults to 30000
   expect2xx?: boolean; // defaults to true
 }
@@ -59,7 +60,7 @@ export async function executeApiCall({ method, path, queryParameters, body, time
 async function checkPrerequisites() {
   if (!accessToken) {
     throw abortExecution(
-      'API access token not defined. You can define the access token via the "STEADYBIT_TOKEN" environment variable.'
+      `API access token not defined. You can define the access token via the ${colors.bold('STEADYBIT_TOKEN')} environment variable.`
     );
   }
 }

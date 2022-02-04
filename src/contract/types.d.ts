@@ -1,1 +1,5 @@
-export type Contract = never;
+export interface Contract {
+  name: string;
+  healthEndpoint: string;
+  desiredResilienceLevel: string;
+}
