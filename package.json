@@ -10,12 +10,11 @@
     "api",
     "gitops"
   ],
-  "main": "dist/index.js",
   "files": [
     "dist"
   ],
   "bin": {
-    "steadybit": "dist/index.js"
+    "steadybit": "dist/cli/index.js"
   },
   "repository": {
     "type": "git",
@@ -28,7 +27,7 @@
     "verify:lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "build": "npm run clean && npm run build:ts && npm run build:permissions",
     "build:ts": "tsc",
-    "build:permissions": "chmod a+x dist/index.js",
+    "build:permissions": "chmod 755 dist/cli/*",
     "ci": "npm run verify && npm run build",
     "prepublishOnly": "npm run verify && npm run build"
   },
@@ -38,7 +37,7 @@
   "author": "Steadybit GmbH",
   "license": "MIT",
   "dependencies": {
-    "colors": "^1.4.0",
+    "colors": "1.4.0",
     "commander": "^9.0.0",
     "js-yaml": "^4.1.0",
     "node-fetch": "^3.2.0"
@@ -47,8 +46,6 @@
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.7",
     "@babel/preset-typescript": "^7.16.7",
-    "@types/diff": "^5.0.2",
-    "@types/ejs": "^3.1.0",
     "@types/jest": "^27.4.0",
     "@types/js-yaml": "^4.0.5",
     "@types/uuid": "^8.3.4",

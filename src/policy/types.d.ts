@@ -1,0 +1,1 @@
+export type Policy = never;
