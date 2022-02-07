@@ -6,7 +6,7 @@
 
 ---
 
-The Steadybit CLI enables you to define contracts and policies that your services need to comply with through configuration files that live next to your services' code. This allows you to implement gitops practices easily.
+The Steadybit CLI enables you to define resilience expectations and resilience policies that your services need to comply with through configuration files that live next to your services' code. This allows you to implement gitops practices easily.
 
 ## Installation
 
@@ -17,5 +17,5 @@ npm install -g steadybit
 ## Usage
 
 ```sh
-steadybit contract init
+steadybit service init
 ```

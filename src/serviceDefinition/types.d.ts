@@ -19,7 +19,8 @@ export interface Mapping {
   kubernetes?: KubernetesMapping;
 }
 
-export interface Contract {
+export interface ServiceDefinition {
+  id: string;
   name: string;
   desiredResilienceLevel: string;
   mapping: Mapping;

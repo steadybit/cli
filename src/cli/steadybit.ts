@@ -8,5 +8,6 @@ new Command()
   // more complicated to adapt the root dir accordingly.
   // eslint-disable-next-line
   .version(require('../../package.json').version)
-  .command('contract', 'Configure or verify contracts for an application.')
+  .command('service', 'Alias for the "service-definition" command.')
+  .command('service-definition', 'Configure or verify service definitions.')
   .parseAsync(process.argv);

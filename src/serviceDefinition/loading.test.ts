@@ -4,10 +4,10 @@ import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { loadContract } from './loading';
+import { loadServiceDefinition } from './loading';
 
-describe('contract/loading', () => {
-  describe('loadContract', () => {
+describe('serviceDefinition/loading', () => {
+  describe('loadServiceDefinition', () => {
     const fileWithSyntaxErrors = path.join(tmpdir(), `${uuidv4()}-syntax-errors.json`);
     const fileWithValidJson = path.join(tmpdir(), `${uuidv4()}-valid.json`);
     const fileWithValidYaml = path.join(tmpdir(), `${uuidv4()}-valid.yml`);
@@ -29,17 +29,17 @@ describe('contract/loading', () => {
     });
 
     it('must reject when file cannot be found', async () => {
-      await expect(loadContract(path.join(tmpdir(), uuidv4())))
-        .rejects.toThrow(/Failed to read contract file.*/);
+      await expect(loadServiceDefinition(path.join(tmpdir(), uuidv4())))
+        .rejects.toThrow(/Failed to read service definition file.*/);
     });
 
     it('must reject when file cannot be parsed', async () => {
-      await expect(loadContract(fileWithSyntaxErrors))
-        .rejects.toThrow(/Failed to parse contract file.*/);
+      await expect(loadServiceDefinition(fileWithSyntaxErrors))
+        .rejects.toThrow(/Failed to parse service definition file.*/);
     });
 
     it('must successfully load JSON files', async () => {
-      await expect(loadContract(fileWithValidJson)).resolves.toMatchInlineSnapshot(`
+      await expect(loadServiceDefinition(fileWithValidJson)).resolves.toMatchInlineSnapshot(`
 Object {
   "type": "json",
 }
@@ -47,7 +47,7 @@ Object {
     });
 
     it('must successfully load YAML files', async () => {
-      await expect(loadContract(fileWithValidYaml)).resolves.toMatchInlineSnapshot(`
+      await expect(loadServiceDefinition(fileWithValidYaml)).resolves.toMatchInlineSnapshot(`
 Object {
   "type": "yaml",
 }

@@ -1,16 +1,17 @@
+import { v4 as uuidv4 } from 'uuid';
 import colors from 'colors/safe';
 import inquirer from 'inquirer';
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { Contract, HealthDefinition, KubernetesMapping } from './types';
+import { ServiceDefinition, HealthDefinition, KubernetesMapping } from './types';
 
 export async function init() {
-  const contract = await askForContractInformation();
+  const serviceDefinition = await askForServiceDefinitionInformation();
 
   const outputFile = path.join(process.cwd(), '.steadybit.yml');
-  const fileContent = yaml.dump(contract);
+  const fileContent = yaml.dump(serviceDefinition);
 
   console.log(`About to write to ${colors.bold(outputFile)}:`);
   console.log();
@@ -26,13 +27,13 @@ export async function init() {
   fs.writeFile(outputFile, fileContent);
 
   console.log('File created!');
-  console.log('You can now establish the contract by executing');
+  console.log('You can now upload the service definition by executing');
   console.log(
-    '  ' + colors.bold('steadybit contract establish .steadybit.yml')
+    '  ' + colors.bold('steadybit service apply .steadybit.yml')
   );
 }
 
-async function askForContractInformation(): Promise<Contract> {
+async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -76,13 +77,16 @@ async function askForContractInformation(): Promise<Contract> {
   ]);
 
   const k8Mapping = await askForMappingInformation();
-  answers.mapping = {
-    kubernetes: k8Mapping,
+  const health = await askForHealthInformation();
+
+  return {
+    id: uuidv4(),
+    ...answers,
+    mapping: {
+      kubernetes: k8Mapping,
+    },
+    health
   };
-
-  answers.health = await askForHealthInformation();
-
-  return answers;
 }
 
 const healthHelp = `
@@ -133,7 +137,7 @@ async function askForHealthInformation(): Promise<HealthDefinition[]> {
     health.push(answers);
 
     console.log();
-    continueAsking = await confirm('Would you like to define another health check?');
+    continueAsking = await confirm('Would you like to define another health check?', false);
     console.log();
   }
 
@@ -177,12 +181,13 @@ function validateNotBlank(input: string): boolean {
   return input != null && input.trim().length > 0;
 }
 
-async function confirm(message: string): Promise<boolean> {
+async function confirm(message: string, defaultYes=true): Promise<boolean> {
   const answers = await inquirer.prompt([
     {
       type: 'confirm',
       name: 'confirm',
-      message
+      message,
+      default: defaultYes
     },
   ]);
 
