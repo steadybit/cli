@@ -27,7 +27,9 @@ export async function init() {
 
   console.log('File created!');
   console.log('You can now establish the contract by executing');
-  console.log('  ' + colors.bold('steadybit contract establish .steadybit.yml'));
+  console.log(
+    '  ' + colors.bold('steadybit contract establish .steadybit.yml')
+  );
 }
 
 async function askForContractInformation(): Promise<Contract> {
@@ -37,12 +39,21 @@ async function askForContractInformation(): Promise<Contract> {
       name: 'name',
       message: 'What do you call this service?',
       default: path.basename(process.cwd()),
+      validate: input => input != null && input.trim().length > 0
     },
     {
       type: 'input',
       name: 'healthEndpoint',
       message:
         'What HTTP URL can we ping to idenity whether the service is healthy?',
+      validate: input => {
+        try {
+          new URL(input);
+          return true;
+        } catch (e) {
+          return 'Invalid URL. Please specify an absolute URL, e.g., https://example.com/health';
+        }
+      },
     },
     {
       type: 'list',
