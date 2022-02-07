@@ -50,27 +50,27 @@ async function askForContractInformation(): Promise<Contract> {
       message: 'Desired Resilience Level',
       choices: [
         {
-          name: 'F - the bare minimum for any service',
+          name: 'F - service can restart',
           value: 'F',
         },
         {
-          name: 'E - following Kubernetes best practices',
+          name: 'E - service is redundant',
           value: 'E',
         },
         {
-          name: 'D - TODO',
+          name: 'D - service supports rolling restarts',
           value: 'D',
         },
         {
-          name: 'C - TODO',
+          name: 'C - service is host redundant',
           value: 'C',
         },
         {
-          name: 'B - TODO',
+          name: 'B - service dependency unavailability does not cause restart issues',
           value: 'B',
         },
         {
-          name: 'A - for the most mission-critical systems',
+          name: 'A - HTTP calls are successful when service dependencies are unavailable',
           value: 'A',
         },
       ],

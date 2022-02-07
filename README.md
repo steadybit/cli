@@ -1,7 +1,5 @@
 # Steadybit CLI &nbsp;
 
-Avoid SOP problems, combine origins, proxy services, use SSL, HTTP2, SSI and more… during development!
-
 **[Installation](#installation) |**
 **[Usage](#usage) |**
 **[Changelog](CHANGELOG.md)**
