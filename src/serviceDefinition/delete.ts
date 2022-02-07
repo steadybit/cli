@@ -14,7 +14,7 @@ export async function deleteServiceDefinition(serviceDefinitionPathOrId: string)
   try {
     await executeApiCall({
       method: 'DELETE',
-      path: `/api/service-definition/${encodeURIComponent(id)}`,
+      path: `/api/service-definitions/${encodeURIComponent(id)}`,
     });
   } catch (e) {
     throw abortExecution(

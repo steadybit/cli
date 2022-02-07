@@ -31,6 +31,7 @@ export async function executeApiCall({ method, path, queryParameters, body, time
       method: method,
       headers: {
         Authorization: `accessToken ${accessToken}`,
+        'Content-Type': 'application/json'
       },
       body: body ? JSON.stringify(body) : undefined,
       // @ts-expect-error Signal missing in the type definitions

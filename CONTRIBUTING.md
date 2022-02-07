@@ -10,8 +10,17 @@ git clone git@github.com:steadybit/cli.git
 
 ### Local CLI Execution
 
-```
-npm run build && STEADYBIT_TOKEN="42" ./dist/cli/steadybit.js service init
+```sh
+# Define environment variables
+export STEADYBIT_TOKEN="..."
+export STEADYBIT_URL="http://localhost:8080"
+
+# Build the CLI locally
+npm run build
+
+# Run some CLI commands
+./dist/cli/steadybit.js service init
+./dist/cli/steadybit.js service apply .steadybit.yml
 ```
 
 ## Releasing

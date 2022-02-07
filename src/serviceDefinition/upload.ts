@@ -6,7 +6,7 @@ export async function uploadServiceDefinition(serviceDefinition: ServiceDefiniti
   try {
     await executeApiCall({
       method: 'PUT',
-      path: `/api/service-definition/${encodeURIComponent(serviceDefinition.id)}`,
+      path: `/api/service-definitions/${encodeURIComponent(serviceDefinition.id)}`,
       body: serviceDefinition
     });
   } catch (e) {
