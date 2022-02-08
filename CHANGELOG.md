@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+ - Correct supported Node.js version to `>=16`.
+ - Send a `User-Agent` header when making Steadybit API calls.
+
 ## v0.3.0
  - Rename `contract` to `service definition`
  - Support a `delete` command.

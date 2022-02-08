@@ -32,7 +32,7 @@
     "prepublishOnly": "npm run verify && npm run build"
   },
   "engines": {
-    "node": ">=14.17.0"
+    "node": ">=16.0.0"
   },
   "author": "Steadybit GmbH",
   "license": "MIT",
