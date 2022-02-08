@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0
  - Rename `contract` to `service definition`
  - Support a `delete` command.
  - Rename `establish` to `apply` to be closer to the wording of kubectl.

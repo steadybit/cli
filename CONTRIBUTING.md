@@ -29,5 +29,4 @@ npm run build
 npm run ci
 npm version {major|minor|patch}
 git push --tags origin main
-npm publish
 ```

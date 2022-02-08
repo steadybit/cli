@@ -19,5 +19,5 @@ jobs:
       with:
         node-version: ${{ matrix.node }}
         cache: 'npm'
-    - run: npm install
+    - run: npm ci
     - run: npm run ci
