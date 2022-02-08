@@ -15,6 +15,12 @@ export interface ApiCallArguments {
   expect2xx?: boolean; // defaults to true
 }
 
+// Prefer to load at runtime directly from the package.json to simplify
+// the TypeScript build. Without this, we would have to make the build
+// more complicated to adapt the root dir accordingly.
+// eslint-disable-next-line
+const packageJson = require('../package.json');
+
 export async function executeApiCall({ method, path, queryParameters, body, timeout = 30000, expect2xx = true }: ApiCallArguments): Promise<Response> {
   await checkPrerequisites();
 
@@ -31,7 +37,9 @@ export async function executeApiCall({ method, path, queryParameters, body, time
       method: method,
       headers: {
         Authorization: `accessToken ${accessToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        'User-Agent': `${packageJson.name}@${packageJson.version}`
       },
       body: body ? JSON.stringify(body) : undefined,
       // @ts-expect-error Signal missing in the type definitions
