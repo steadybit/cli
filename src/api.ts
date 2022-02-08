@@ -3,7 +3,7 @@ import colors from 'colors/safe';
 
 import { abortExecution } from './errors';
 
-const baseUrl = process.env.STEADYBIT_URL || 'https://platform.steadybit.io';
+export const baseUrl = process.env.STEADYBIT_URL || 'https://platform.steadybit.io';
 const accessToken = process.env.STEADYBIT_TOKEN;
 
 export interface ApiCallArguments {
