@@ -6,6 +6,8 @@ import yaml from 'js-yaml';
 import path from 'path';
 
 import { ServiceDefinition, HealthDefinition, KubernetesMapping } from './types';
+import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
+import { confirm } from '../prompt/confirm';
 
 export async function init() {
   const serviceDefinition = await askForServiceDefinitionInformation();
@@ -28,9 +30,7 @@ export async function init() {
 
   console.log('File created!');
   console.log('You can now upload the service definition by executing');
-  console.log(
-    '  ' + colors.bold('steadybit service apply .steadybit.yml')
-  );
+  console.log('  ' + colors.bold('steadybit service apply .steadybit.yml'));
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
@@ -73,7 +73,6 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
         },
       ],
     },
-
   ]);
 
   const k8Mapping = await askForMappingInformation();
@@ -85,7 +84,7 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
     mapping: {
       kubernetes: k8Mapping,
     },
-    health
+    health,
   };
 }
 
@@ -112,25 +111,14 @@ async function askForHealthInformation(): Promise<HealthDefinition[]> {
           {
             name: 'HTTP',
             value: 'HTTP',
-          }
+          },
         ],
       },
       {
         type: 'input',
         name: 'url',
-        message:
-          'URL:',
-        validate: input => {
-          try {
-            const url = new URL(input);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-              return `Unsupported protocol ${url.protocol}. Only http: and https: are supported.`;
-            }
-            return true;
-          } catch (e) {
-            return 'Invalid URL. Please specify an absolute URL, e.g., https://example.com/health';
-          }
-        },
+        message: 'URL:',
+        validate: validateHttpUrl,
       },
     ]);
 
@@ -175,21 +163,4 @@ async function askForMappingInformation(): Promise<KubernetesMapping> {
   ]);
 
   return answers;
-}
-
-function validateNotBlank(input: string): boolean {
-  return input != null && input.trim().length > 0;
-}
-
-async function confirm(message: string, defaultYes=true): Promise<boolean> {
-  const answers = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'confirm',
-      message,
-      default: defaultYes
-    },
-  ]);
-
-  return answers.confirm;
 }

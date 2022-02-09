@@ -8,6 +8,7 @@ new Command()
   // more complicated to adapt the root dir accordingly.
   // eslint-disable-next-line
   .version(require('../../package.json').version)
+  .command('config', 'Show/modify the CLI configuration and authentication profiles.')
   .command('service', 'Alias for the "service-definition" command.')
   .command('service-definition', 'Configure or verify service definitions.')
   .parseAsync(process.argv);

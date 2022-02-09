@@ -11,3 +11,7 @@ export function abortExecution(msg: string, ...args: unknown[]): Error {
 
   return new Error(format(msg, ...args));
 }
+
+export function abortExecutionWithError(error: unknown, msg: string, ...args: unknown[]): Error {
+  return abortExecution(`${msg}: %s`, ...args, (error as Error)?.message ?? 'Unknown error');
+}

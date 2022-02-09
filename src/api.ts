@@ -1,10 +1,9 @@
 import fetch, { Response } from 'node-fetch';
 import colors from 'colors/safe';
 
+import { Configuration } from './config/types';
+import { getConfiguration } from './config';
 import { abortExecution } from './errors';
-
-export const baseUrl = process.env.STEADYBIT_URL || 'https://platform.steadybit.io';
-const accessToken = process.env.STEADYBIT_TOKEN;
 
 export interface ApiCallArguments {
   path: string;
@@ -22,12 +21,13 @@ export interface ApiCallArguments {
 const packageJson = require('../package.json');
 
 export async function executeApiCall({ method, path, queryParameters, body, timeout = 30000, expect2xx = true }: ApiCallArguments): Promise<Response> {
-  await checkPrerequisites();
+  const config = await getConfiguration();
+  await checkPrerequisites(config);
 
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeout);
 
-  const url = `${baseUrl}${path}?${new URLSearchParams(
+  const url = `${config.baseUrl}${path}?${new URLSearchParams(
     queryParameters ?? {}
   ).toString()}`;
 
@@ -36,7 +36,7 @@ export async function executeApiCall({ method, path, queryParameters, body, time
     response = await fetch(url, {
       method: method,
       headers: {
-        Authorization: `accessToken ${accessToken}`,
+        Authorization: `accessToken ${config.apiAccessToken}`,
         'Content-Type': 'application/json',
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         'User-Agent': `${packageJson.name}@${packageJson.version}`
@@ -66,10 +66,10 @@ export async function executeApiCall({ method, path, queryParameters, body, time
   return response;
 }
 
-async function checkPrerequisites() {
-  if (!accessToken) {
+async function checkPrerequisites(config: Configuration) {
+  if (!config.apiAccessToken) {
     throw abortExecution(
-      `API access token not defined. You can define the access token via the ${colors.bold('STEADYBIT_TOKEN')} environment variable.`
+      `API access token not defined. You can define the access token via profiles (${colors.bold('steadybit config profile add')} or the ${colors.bold('STEADYBIT_TOKEN')} environment variable.`
     );
   }
 }
