@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - Change terminology in `steadybit service init` command to comply with terminology found in the public documentation.
+
 ## v0.4.0
  - Correct supported Node.js version to `>=16`.
  - Send a `User-Agent` header when making Steadybit API calls.

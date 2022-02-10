@@ -48,27 +48,27 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
       message: 'Desired Resilience Level:',
       choices: [
         {
-          name: 'F - service can restart',
+          name: 'F - challenges for recovery',
           value: 'F',
         },
         {
-          name: 'E - service is redundant',
+          name: 'E - challenges for redundancy',
           value: 'E',
         },
         {
-          name: 'D - service supports rolling restarts',
+          name: 'D - challenges for redundancy during updates',
           value: 'D',
         },
         {
-          name: 'C - service is host redundant',
+          name: 'C - challenges for host redundancy',
           value: 'C',
         },
         {
-          name: 'B - service dependency unavailability does not cause restart issues',
+          name: 'B - challenges for loose coupling on startup',
           value: 'B',
         },
         {
-          name: 'A - HTTP calls are successful when service dependencies are unavailable',
+          name: 'A - challenges for loose coupling',
           value: 'A',
         },
       ],

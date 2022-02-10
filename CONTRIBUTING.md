@@ -26,6 +26,13 @@ npm run build
 ## Releasing
 
 ```
+# Prepare the release
+
+# Edit CHANGELOG.md by renaming the `## Unreleased` header to `## v{next release number}`
+git add CHANGELOG.md
+git commit -m 'chore: prepare release'
+
+# Make the release
 npm run ci
 npm version {major|minor|patch}
 git push --tags origin main
