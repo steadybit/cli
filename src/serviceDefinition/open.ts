@@ -14,6 +14,7 @@ export async function open(serviceDefinitionPath: string) {
       method: 'GET',
       path: `/api/service-definitions/${serviceDefinition.id}/deep-link`,
       expect2xx: false,
+      redirect: 'manual'
     });
   } catch (e) {
     throw abortExecutionWithError(e, errorPrefix + 'HTTP request failed.');
@@ -31,7 +32,7 @@ export async function open(serviceDefinitionPath: string) {
     if (errorTitle) {
       throw abortExecution(errorPrefix + errorTitle);
     } else {
-      throw abortExecution(errorPrefix + 'Got status code %s: %s', response.status);
+      throw abortExecution(errorPrefix + 'Got status code %s', response.status);
     }
   }
 
