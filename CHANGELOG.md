@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0
  - Correct supported Node.js version to `>=16`.
  - Send a `User-Agent` header when making Steadybit API calls.
  - Add a `steadybit service open .steadybit.yml` command.
