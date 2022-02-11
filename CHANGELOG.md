@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.0
  - List succeeded/failed/pending tasks in `steadybit service verify` output.
 
 ## v0.5.0
