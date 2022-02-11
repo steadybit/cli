@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 
 import { deleteServiceDefinition } from '../serviceDefinition/delete';
+import { verify } from '../serviceDefinition/verify';
 import { apply } from '../serviceDefinition/apply';
 import { open } from '../serviceDefinition/open';
 import { init } from '../serviceDefinition/init';
@@ -10,20 +11,24 @@ import { init } from '../serviceDefinition/init';
 const program = new Command();
 
 program
-  .command('init')
-  .description('Initialize a service definition file.')
-  .action(init);
-program
   .command('apply <path-to-service-definition-file>')
   .description('Upload a service definition.')
   .action(apply);
+program
+  .command('delete <id-or-path-to-service-definition-file>')
+  .description('Deletes a service definition.')
+  .action(deleteServiceDefinition);
+program
+  .command('init')
+  .description('Initialize a service definition file.')
+  .action(init);
 program
   .command('open <path-to-service-definition-file>')
   .description('Open the service in the Steadybit UI.')
   .action(open);
 program
-  .command('delete <id-or-path-to-service-definition-file>')
-  .description('Deletes a service definition.')
-  .action(deleteServiceDefinition);
+  .command('verify <path-to-service-definition-file>')
+  .description('Read the current service definition and resilience score state.')
+  .action(verify);
 
 program.parseAsync(process.argv);

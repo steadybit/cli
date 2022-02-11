@@ -26,3 +26,8 @@ export interface ServiceDefinition {
   mapping: Mapping;
   health: HealthDefinition[];
 }
+
+export interface ResilienceScoreServiceState {
+  actualResilienceLevel: string;
+  desiredResilienceLevel: string;
+}
