@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - List succeeded/failed/pending tasks in `steadybit service verify` output.
+
 ## v0.5.0
  - Change terminology in `steadybit service init` command to comply with terminology found in the public documentation.
  - Add a `steadybit service verify .steadybit.yml` command to compare the actual vs. desired resilience level.

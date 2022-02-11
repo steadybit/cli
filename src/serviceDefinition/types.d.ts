@@ -27,7 +27,15 @@ export interface ServiceDefinition {
   health: HealthDefinition[];
 }
 
+export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
+
+export interface Task {
+  state: TaskState;
+  name: string;
+}
+
 export interface ResilienceScoreServiceState {
   actualResilienceLevel: string;
   desiredResilienceLevel: string;
+  tasks: Task[];
 }
