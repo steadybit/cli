@@ -37,7 +37,7 @@ export async function verify(serviceDefinitionPath: string) {
     console.log();
     printTaskList(state);
 
-    if (hasAchievedDesiredLevel(state)) {
+    if (!hasAchievedDesiredLevel(state)) {
       process.exit(1);
     }
   } catch (e) {

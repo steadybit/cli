@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.6.1
+ - `steadybit service verify` exit code is wrong.
+
 ## v0.6.0
  - List succeeded/failed/pending tasks in `steadybit service verify` output.
 
