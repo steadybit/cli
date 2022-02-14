@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.0.0
+ - First public release.
+
 ## v0.6.1
  - `steadybit service verify` exit code is wrong.
 
