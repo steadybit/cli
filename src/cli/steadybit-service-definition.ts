@@ -28,7 +28,7 @@ program
   .action(open);
 program
   .command('verify <path-to-service-definition-file>')
-  .description('Read the current service definition and resilience score state.')
+  .description('Read the current service definition and state.')
   .action(verify);
 
 program.parseAsync(process.argv);

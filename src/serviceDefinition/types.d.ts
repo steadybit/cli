@@ -26,15 +26,16 @@ export interface ForEach {
   define: Record<string, never>;
 }
 
-export interface PolicyReference {
+export interface ReferenceCoordinate {
   name: string;
   version: string;
+}
+
+export interface PolicyReference extends ReferenceCoordinate {
   parameters?: Record<string, never>;
 }
 
-export interface TaskReference {
-  name: string;
-  version: string;
+export interface TaskReference extends ReferenceCoordinate {
   parameters?: Record<string, never>;
   forEach?: ForEach[];
 }
@@ -51,12 +52,10 @@ export interface ServiceDefinition {
 export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
 
 export interface Task {
+  definition: ReferenceCoordinate;
   state: TaskState;
-  name: string;
 }
 
-export interface ResilienceScoreServiceState {
-  actualResilienceLevel: string;
-  desiredResilienceLevel: string;
+export interface ServiceState {
   tasks: Task[];
 }

@@ -1,6 +1,6 @@
 import { red, bold, green, blue } from 'colors/safe';
 
-import { TaskState, ResilienceScoreServiceState } from './types';
+import { TaskState, ServiceState } from './types';
 import { abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './loading';
 import { executeApiCall } from '../api';
@@ -29,35 +29,18 @@ export async function verify(serviceDefinitionPath: string) {
   try {
     const response = await executeApiCall({
       method: 'GET',
-      path: `/api/resilience-score/service/${serviceDefinition.id}`,
+      path: `/api/service-states/${serviceDefinition.id}`,
     });
-    const state = (await response.json()) as ResilienceScoreServiceState;
+    const state = (await response.json()) as ServiceState;
 
-    printResilienceLevel(state);
-    console.log();
     printTaskList(state);
-
-    if (!hasAchievedDesiredLevel(state)) {
-      process.exit(1);
-    }
   } catch (e) {
-    throw abortExecutionWithError(e, 'Failed to read state for service %s', serviceDefinition.id);
+    const error = await abortExecutionWithError(e, 'Failed to read state for service %s', serviceDefinition.id);
+    throw error;
   }
 }
 
-function printResilienceLevel(state: ResilienceScoreServiceState) {
-  let color: typeof red = s => s;
-  if (!hasAchievedDesiredLevel(state)) {
-    color = red;
-  }
-
-  console.log(color(bold(`Resilience Level`)));
-  console.log(color(bold('================')));
-  console.log('Desired: %s', state.desiredResilienceLevel);
-  console.log(color('Actual:  %s'), state.actualResilienceLevel);
-}
-
-function printTaskList(state: ResilienceScoreServiceState) {
+function printTaskList(state: ServiceState) {
   console.log(bold(`Tasks`));
   console.log(bold('====='));
 
@@ -73,15 +56,11 @@ function printTaskList(state: ResilienceScoreServiceState) {
 
   for (const task of sortedTasks) {
     countByType[task.state]++;
-    console.log(taskColor[task.state](` - %s (%s)`), task.name, taskSuffix[task.state]);
+    console.log(taskColor[task.state](` - %s (%s)`), `${task.definition.name}@${task.definition.version}`, taskSuffix[task.state]);
   }
 
   console.log();
   console.log(taskColor.SUCCESS(`Ok:      %d`), countByType.SUCCESS);
   console.log(taskColor.PENDING(`Pending: %d`), countByType.PENDING);
   console.log(taskColor.FAILURE(`Failure: %d`), countByType.FAILURE);
-}
-
-function hasAchievedDesiredLevel(state: ResilienceScoreServiceState) {
-  return state.desiredResilienceLevel === state.actualResilienceLevel;
 }

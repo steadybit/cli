@@ -1,6 +1,6 @@
-import { executeApiCall } from '../api';
-import { abortExecution } from '../errors';
+import { abortExecutionWithError } from '../errors';
 import { ServiceDefinition } from './types';
+import { executeApiCall } from '../api';
 
 export async function uploadServiceDefinition(serviceDefinition: ServiceDefinition): Promise<void> {
   try {
@@ -10,6 +10,7 @@ export async function uploadServiceDefinition(serviceDefinition: ServiceDefiniti
       body: serviceDefinition
     });
   } catch (e) {
-    throw abortExecution(`Failed to upload service definition to Steadybit: %s`, (e as Error)?.message ?? 'Unknown error');
+    const error = await abortExecutionWithError(e, 'Failed to upload service definition to Steadybit %s', serviceDefinition.id);
+    throw error;
   }
 }

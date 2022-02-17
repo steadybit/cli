@@ -96,9 +96,9 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
 
 const healthHelp = `
 We need to ensure that the service is still operating as expected when
-verifying compliance with the desired resilience level. To do so we support
+verifying compliance with the desired resilience policy. To do so we support
 various checks. Please define at least one health check that we can use
-when running resilience checks.
+when running tasks.
 `;
 
 async function askForHealthInformation(): Promise<HealthDefinition[]> {

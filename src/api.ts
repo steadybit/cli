@@ -79,7 +79,10 @@ export async function executeApiCall({
   }
 
   if (expect2xx && !response.ok) {
-    throw new Error(`Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const error: any = new Error(`Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status}`);
+    error.response = response;
+    throw error;
   }
 
   return response;

@@ -17,7 +17,8 @@ export async function open(serviceDefinitionPath: string) {
       redirect: 'manual'
     });
   } catch (e) {
-    throw abortExecutionWithError(e, errorPrefix + 'HTTP request failed.');
+    const error = await abortExecutionWithError(e, errorPrefix + 'HTTP request failed.');
+    throw error;
   }
 
   if (response.status !== 302) {
