@@ -1,6 +1,6 @@
 import { red, bold, green, blue } from 'colors/safe';
 
-import { Task, TaskState, ResilienceScoreServiceState } from './types';
+import { TaskState, ResilienceScoreServiceState } from './types';
 import { abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './loading';
 import { executeApiCall } from '../api';

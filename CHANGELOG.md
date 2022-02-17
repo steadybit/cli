@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - **Breaking:** The service definition yaml format was changed to directly specify policies and tasks instead of desired resilience levels.
+
 ## v1.0.0
  - First public release.
 

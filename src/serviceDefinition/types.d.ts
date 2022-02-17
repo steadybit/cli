@@ -19,10 +19,31 @@ export interface Mapping {
   kubernetes?: KubernetesMapping;
 }
 
+export type Iterable = 'dependency' | 'container';
+
+export interface ForEach {
+  iterable: Iterable;
+  define: Record<string, never>;
+}
+
+export interface PolicyReference {
+  name: string;
+  version: string;
+  parameters?: Record<string, never>;
+}
+
+export interface TaskReference {
+  name: string;
+  version: string;
+  parameters?: Record<string, never>;
+  forEach?: ForEach[];
+}
+
 export interface ServiceDefinition {
   id: string;
   name: string;
-  desiredResilienceLevel: string;
+  policies?: PolicyReference[];
+  tasks?: TaskReference[];
   mapping: Mapping;
   health: HealthDefinition[];
 }

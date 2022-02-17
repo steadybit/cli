@@ -80,7 +80,13 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
 
   return {
     id: uuidv4(),
-    ...answers,
+    name: answers.name,
+    policies: [
+      {
+        name: `@steadybit/policy-level-${answers.desiredResilienceLevel.toLowerCase()}`,
+        version: '0.1.0'
+      }
+    ],
     mapping: {
       kubernetes: k8Mapping,
     },
