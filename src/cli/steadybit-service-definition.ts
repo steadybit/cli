@@ -28,6 +28,8 @@ program
   .action(open);
 program
   .command('verify <path-to-service-definition-file>')
+  .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
+  .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
   .description('Read the current service definition and state.')
   .action(verify);
 

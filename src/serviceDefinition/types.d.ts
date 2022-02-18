@@ -54,6 +54,8 @@ export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
 export interface Task {
   definition: ReferenceCoordinate;
   state: TaskState;
+  parameters: never;
+  matrixContext: never;
 }
 
 export interface ServiceState {
