@@ -11,8 +11,8 @@ The Steadybit CLI enables you to define resilience expectations and resilience p
 
 ## Prerequisites
 
-- You need to have a free account of Steadybit. Apply here: [Get Started with Steadybit](https://www.steadybit.com/get-started/)
-- at least Node16 as local runtime
+- You need to have a Steadybit account. You can create a free account [via our website](https://www.steadybit.com/get-started/).
+- at least Node.js 16 as local runtime
 
 ## Installation
 
@@ -22,7 +22,7 @@ npm install -g steadybit
 
 ## Authorization
 
-First of all, we need an authorization token. You can grab one from our [Platform](https://platform.steadybit.io/) Settings -> API Access Tokens
+You need an API access token. You can grab one via our [platform](https://platform.steadybit.io/settings/api-tokens) through the `Settings -> API Access Tokens` page.
 
 ```bash
 ➜ steadybit config profile add
@@ -61,7 +61,11 @@ The CLI created a .yml file containing your service definition in your current w
 ```yml
 id: 9cb2888d-3abf-4ac3-bf8b-40b7eb61d271
 name: gateway
-desiredResilienceLevel: A
+policies:
+  - name: '@steadybit/policy-level-b'
+    version: 0.1.0
+  - name: '@steadybit/policy-level-e'
+    version: 0.1.0
 mapping:
   kubernetes:
     cluster: demo-dev
