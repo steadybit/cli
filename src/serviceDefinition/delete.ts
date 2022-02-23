@@ -1,4 +1,8 @@
-import { loadServiceDefinition } from './loading';
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
+import { loadServiceDefinition } from './files';
 import { abortExecution } from '../errors';
 import { executeApiCall } from '../api';
 

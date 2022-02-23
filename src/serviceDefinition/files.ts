@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
 
@@ -25,4 +29,9 @@ export async function loadServiceDefinition(serviceDefinitionPath: string): Prom
       (e as Error)?.message ?? 'Unknown Cause'
     );
   }
+}
+
+export async function writeServiceDefinition(serviceDefinitionPath: string, serviceDefinition: ServiceDefinition): Promise<void> {
+  const fileContent = yaml.dump(serviceDefinition);
+  await fs.writeFile(serviceDefinitionPath, fileContent, { encoding: 'utf8' });
 }

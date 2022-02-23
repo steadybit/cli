@@ -1,14 +1,20 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import { Response } from 'node-fetch';
 import colors from 'colors/safe';
 import yaml from 'js-yaml';
 
+import { loadServiceDefinition, writeServiceDefinition } from './files';
 import { abortExecutionWithError } from '../errors';
-import { loadServiceDefinition } from './loading';
 import { ServiceDefinition } from './types';
 import { executeApiCall } from '../api';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function apply(serviceDefinitionPath: string) {
-  const serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
+  let serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
+  serviceDefinition = await initializeIdIfNecessary(serviceDefinition, serviceDefinitionPath);
 
   try {
     await executeApiCall({
@@ -24,6 +30,16 @@ export async function apply(serviceDefinitionPath: string) {
       await abortExecutionWithError(e, 'Failed to upload service definition to Steadybit %s', serviceDefinition.id);
     }
   }
+}
+
+async function initializeIdIfNecessary(serviceDefinition: ServiceDefinition, serviceDefinitionPath: string) {
+  if (!('id' in serviceDefinition)) {
+    //we have to place to place the id first so it appears on top in file
+    const updated = { id: uuidv4(), ...(serviceDefinition as Omit<ServiceDefinition, 'id'>)};
+    await writeServiceDefinition(serviceDefinitionPath, updated);
+    return updated;
+  }
+  return serviceDefinition;
 }
 
 async function handleConflict(serviceDefinition: ServiceDefinition): Promise<void> {
