@@ -23,6 +23,16 @@ npm run build
 ./dist/cli/steadybit.js service apply .steadybit.yml
 ```
 
+### Local CLI installation
+```sh
+# Build the CLI locally
+npm run build
+# Package the CLI locally
+npm pack
+# Install the local package
+npm i -g steadybit-1.0.0.tgz
+```
+
 ## Releasing
 
 ```
