@@ -47,11 +47,10 @@ Right now, we only support mapping to Kubernetes monitored deployments.
 ? Kubernetes deployment: gateway
 
 We need to ensure that the service is still operating as expected when
-verifying compliance with the desired resilience level. To do so we support
-various checks. Please define at least one health check that we can use
-when running resilience checks.
+verifying compliance with the desired resilience policy. To do so require
+a load-balanced HTTP endpoint that can be called during task
+execution.
 
-? Health Check Type: HTTP
 ? URL: http://k8s.demo.steadybit.io/products
 ...
 ```
@@ -62,18 +61,17 @@ The CLI created a .yml file containing your service definition in your current w
 id: 9cb2888d-3abf-4ac3-bf8b-40b7eb61d271
 name: gateway
 policies:
-  - name: '@steadybit/policy-level-b'
-    version: 0.1.0
-  - name: '@steadybit/policy-level-e'
-    version: 0.1.0
+  - name: 'steadybit/definitions/policies/level-b'
+    version: 0.1.5
+  - name: 'steadybit/definitions/policies/level-e'
+    version: 0.1.5
 mapping:
   kubernetes:
     cluster: demo-dev
     namespace: steadybit-demo
     deployment: gateway
-health:
-  - type: HTTP
-    url: http://k8s.demo.steadybit.io/products
+parameters:
+  httpEndpoint: http://k8s.demo.steadybit.io/products
 ```
 
 ### Sync the service definition with the steadybit platform

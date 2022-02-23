@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { ServiceDefinition, HealthDefinition, KubernetesMapping } from './types';
+import { ServiceDefinition, Parameters, KubernetesMapping } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { confirm } from '../prompt/confirm';
 
@@ -76,66 +76,42 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
   ]);
 
   const k8Mapping = await askForMappingInformation();
-  const health = await askForHealthInformation();
+  const parameters = await askForParameters();
 
   return {
     id: uuidv4(),
     name: answers.name,
     policies: [
       {
-        name: `@steadybit/policy-level-${answers.desiredResilienceLevel.toLowerCase()}`,
-        version: '0.1.0'
+        name: `steadybit/definitions/policies/level-${answers.desiredResilienceLevel.toLowerCase()}`,
+        version: '0.1.5'
       }
     ],
     mapping: {
       kubernetes: k8Mapping,
     },
-    health,
+    parameters
   };
 }
 
-const healthHelp = `
+const parametersHelp = `
 We need to ensure that the service is still operating as expected when
-verifying compliance with the desired resilience policy. To do so we support
-various checks. Please define at least one health check that we can use
-when running tasks.
+verifying compliance with the desired resilience policy. To do so require
+a load-balanced HTTP endpoint that can be called during task
+execution.
 `;
 
-async function askForHealthInformation(): Promise<HealthDefinition[]> {
-  console.log(healthHelp);
+async function askForParameters(): Promise<Parameters> {
+  console.log(parametersHelp);
 
-  const health = [];
-  let continueAsking = true;
-
-  while (continueAsking) {
-    const answers = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'type',
-        message: 'Health Check Type:',
-        choices: [
-          {
-            name: 'HTTP',
-            value: 'HTTP',
-          },
-        ],
-      },
-      {
-        type: 'input',
-        name: 'url',
-        message: 'URL:',
-        validate: validateHttpUrl,
-      },
-    ]);
-
-    health.push(answers);
-
-    console.log();
-    continueAsking = await confirm('Would you like to define another health check?', false);
-    console.log();
-  }
-
-  return health;
+  return await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'httpEndpoint',
+      message: 'URL:',
+      validate: validateHttpUrl,
+    },
+  ]);
 }
 
 const mappingHelp = `

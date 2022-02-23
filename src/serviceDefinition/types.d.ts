@@ -1,14 +1,3 @@
-export type HealthDefinitionTypes = 'HTTP';
-
-export interface HealthDefinition {
-  type: HealthDefinitionTypes
-}
-
-export interface HttpHealthDefinition extends HealthDefinition {
-  type: 'HTTP';
-  url: string;
-}
-
 export interface KubernetesMapping {
   cluster: string;
   namespace: string;
@@ -32,11 +21,11 @@ export interface ReferenceCoordinate {
 }
 
 export interface PolicyReference extends ReferenceCoordinate {
-  parameters?: Record<string, never>;
+  parameters?: Parameters;
 }
 
 export interface TaskReference extends ReferenceCoordinate {
-  parameters?: Record<string, never>;
+  parameters?: Parameters;
   forEach?: ForEach[];
 }
 
@@ -46,15 +35,17 @@ export interface ServiceDefinition {
   policies?: PolicyReference[];
   tasks?: TaskReference[];
   mapping: Mapping;
-  health: HealthDefinition[];
+  parameters?: Parameters;
 }
+
+export type Parameters = Record<string, never>;
 
 export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
 
 export interface Task {
   definition: ReferenceCoordinate;
   state: TaskState;
-  parameters: never;
+  parameters: Parameters;
   matrixContext: never;
 }
 

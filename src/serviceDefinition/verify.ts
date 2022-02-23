@@ -86,7 +86,7 @@ function printTaskList(options: Options, state: ServiceState) {
   console.log(taskColor.FAILURE(`Failure: %d`), countByType.FAILURE);
 }
 
-function printJson(title: string, obj: never): void {
+function printJson(title: string, obj: unknown): void {
   const content = `${title}:\n${JSON.stringify(obj, undefined, 2)}\n`
     .split('\n')
     .map(s => '   ' + s)
