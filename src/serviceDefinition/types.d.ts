@@ -40,6 +40,7 @@ export interface ServiceDefinition {
   tasks?: TaskReference[];
   mapping: Mapping;
   parameters?: Parameters;
+  tags?: Record<string, string>;
 }
 
 export type Parameters = Record<string, any>;

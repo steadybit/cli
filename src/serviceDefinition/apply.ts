@@ -11,10 +11,12 @@ import { abortExecutionWithError } from '../errors';
 import { ServiceDefinition } from './types';
 import { executeApiCall } from '../api';
 import { v4 as uuidv4 } from 'uuid';
+import { addVcsTags } from '../vcs';
 
 export async function apply(serviceDefinitionPath: string) {
   let serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
   serviceDefinition = await initializeIdIfNecessary(serviceDefinition, serviceDefinitionPath);
+  await addVcsTags(serviceDefinitionPath, serviceDefinition);
 
   try {
     await executeApiCall({

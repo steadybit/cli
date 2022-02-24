@@ -6,6 +6,7 @@
  - **Breaking:** Adapted the `steadybit service verify` behavior so that it is compatible with the reworked API model.
  - `steadybit service apply` now helps to resolve conflicts.
  - `steadybit service init` now asks for team and environment information.
+ - `steadybit service apply` now attaches auto-generated tags to the service definition which provide information about the repository, commit and ref.
 
 ## v1.0.0
  - First public release.
