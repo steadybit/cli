@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 export interface KubernetesMapping {
   cluster: string;
   namespace: string;
@@ -38,7 +42,7 @@ export interface ServiceDefinition {
   parameters?: Parameters;
 }
 
-export type Parameters = Record<string, never>;
+export type Parameters = Record<string, any>;
 
 export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
 

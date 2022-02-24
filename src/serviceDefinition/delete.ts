@@ -22,7 +22,7 @@ export async function deleteServiceDefinition(serviceDefinitionPathOrId: string)
     });
   } catch (e) {
     throw abortExecution(
-      `Failed to delete service definition with id %s: %s`,
+      'Failed to delete service definition with id %s: %s',
       id,
       (e as Error)?.message ?? 'Unknown error'
     );

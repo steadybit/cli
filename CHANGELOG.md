@@ -5,6 +5,7 @@
  - **Breaking:** Health definition subsection was removed service definitions.
  - **Breaking:** Adapted the `steadybit service verify` behavior so that it is compatible with the reworked API model.
  - `steadybit service apply` now helps to resolve conflicts.
+ - `steadybit service init` now asks for team and environment information.
 
 ## v1.0.0
  - First public release.

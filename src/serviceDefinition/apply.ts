@@ -48,7 +48,7 @@ async function handleConflict(serviceDefinition: ServiceDefinition): Promise<voi
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/service-definitions/by-mapping`,
+      path: '/api/service-definitions/by-mapping',
       body: serviceDefinition.mapping,
     });
 

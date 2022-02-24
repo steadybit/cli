@@ -10,8 +10,10 @@ import path from 'path';
 
 import { KubernetesMapping, Parameters, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
-import { confirm } from '../prompt/confirm';
 import { writeServiceDefinition } from './files';
+import { confirm } from '../prompt/confirm';
+import { getAllTeams } from '../team/get';
+import { Team } from '../team/types';
 
 export async function init() {
   const serviceDefinition = await askForServiceDefinitionInformation();
@@ -37,6 +39,8 @@ export async function init() {
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
+  const teams = await getAllTeams();
+
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -79,7 +83,7 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
   ]);
 
   const k8Mapping = await askForMappingInformation();
-  const parameters = await askForParameters();
+  const parameters = await askForParameters(teams);
 
   return {
     id: uuidv4(),
@@ -97,24 +101,61 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
   };
 }
 
-const parametersHelp = `
+const httpEndpointHelp = `
 We need to ensure that the service is still operating as expected when
-verifying compliance with the desired resilience policy. To do so require
-a load-balanced HTTP endpoint that can be called during task
-execution.
+verifying compliance with the desired resilience level. To do so require
+a load-balanced HTTP endpoint that can be called during task execution.
 `;
 
-async function askForParameters(): Promise<Parameters> {
-  console.log(parametersHelp);
+const teamAndEnvironmentHelp = `
+Tasks are evaluated in context of teams and environments. For this reason,
+you need to select a team and environment that will be used by Steadybit.
+For example, when executing an experiment.
+`;
 
-  return await inquirer.prompt([
+async function askForParameters(teams: Team[]): Promise<Parameters> {
+  console.log(httpEndpointHelp);
+
+  const {httpEndpoint} = await inquirer.prompt([
     {
       type: 'input',
       name: 'httpEndpoint',
       message: 'URL:',
       validate: validateHttpUrl,
-    },
+    }]);
+
+    console.log(teamAndEnvironmentHelp);
+
+    const {teamKey, environmentName} = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'teamKey',
+        message: 'Team:',
+        choices: teams
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(({name, key}) => ({name, value: key}))
+      },
+      {
+        type: 'list',
+        name: 'environmentName',
+        message: 'Environment:',
+        // We know that the teamKey is within the teams[] because this is how the user
+        // could select the team key.
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        choices: answers => teams
+          .find(t => t.key === answers.teamKey)!
+          .allowedAreas
+          .slice()
+          .sort((a, b) => a.localeCompare(b))
+      }
   ]);
+
+  return {
+    httpEndpoint,
+    teamKey,
+    environmentName
+  };
 }
 
 const mappingHelp = `

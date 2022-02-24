@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import fetch, { Response } from 'node-fetch';
 import colors from 'colors/safe';
 import https from 'https';
