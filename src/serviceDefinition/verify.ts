@@ -4,7 +4,7 @@
 
 import { blue, bold, gray, green, red } from 'colors/safe';
 
-import { ServiceState, TaskState } from './types';
+import { ServiceState, Task, TaskState } from './types';
 import { abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './files';
 import { executeApiCall } from '../api';
@@ -67,11 +67,19 @@ function printTaskList(options: Options, state: ServiceState) {
     PENDING: 0,
   };
 
+  const taskCountByCoordinate: Record<string, number> = {};
   for (const task of sortedTasks) {
+    const key = getCoordinateKey(task);
+    taskCountByCoordinate[key] = (taskCountByCoordinate[key] ?? -1) + 1;
+  }
+
+  for (const task of sortedTasks) {
+    const key = getCoordinateKey(task);
+
     countByType[task.state]++;
     console.log(
       taskColor[task.state](` - %s (%s)`),
-      `${task.definition.name}@${task.definition.version}`,
+      key,
       taskSuffix[task.state]
     );
 
@@ -79,7 +87,7 @@ function printTaskList(options: Options, state: ServiceState) {
       printJson('Parameters', task.parameters);
     }
 
-    if (options.printMatrixContext || Object.keys(task.matrixContext).length > 0) {
+    if (options.printMatrixContext || taskCountByCoordinate[key] > 1) {
       printJson('Matrix Context', task.matrixContext);
     }
   }
@@ -88,6 +96,10 @@ function printTaskList(options: Options, state: ServiceState) {
   console.log(taskColor.SUCCESS(`Ok:      %d`), countByType.SUCCESS);
   console.log(taskColor.PENDING(`Pending: %d`), countByType.PENDING);
   console.log(taskColor.FAILURE(`Failure: %d`), countByType.FAILURE);
+}
+
+function getCoordinateKey(task: Task): string {
+  return `${task.definition.name}@${task.definition.version}`;
 }
 
 function printJson(title: string, obj: unknown): void {
