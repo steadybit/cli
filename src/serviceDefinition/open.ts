@@ -1,7 +1,11 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import opn from 'open';
 
 import { abortExecution, abortExecutionWithError } from '../errors';
-import { loadServiceDefinition } from './loading';
+import { loadServiceDefinition } from './files';
 import { executeApiCall } from '../api';
 
 const errorPrefix = 'Failed to identify deep link to the Steadybit UI. ';

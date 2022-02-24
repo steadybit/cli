@@ -1,12 +1,16 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { loadServiceDefinition } from './loading';
+import { loadServiceDefinition, writeServiceDefinition } from './files';
 
-describe('serviceDefinition/loading', () => {
+describe('serviceDefinition/files', () => {
   describe('loadServiceDefinition', () => {
     const fileWithSyntaxErrors = path.join(tmpdir(), `${uuidv4()}-syntax-errors.json`);
     const fileWithValidJson = path.join(tmpdir(), `${uuidv4()}-valid.json`);
@@ -15,8 +19,8 @@ describe('serviceDefinition/loading', () => {
     beforeAll(async () => {
       await Promise.all([
         fs.writeFile(fileWithSyntaxErrors, '{$$$42:'),
-        fs.writeFile(fileWithValidJson, JSON.stringify({type: 'json'})),
-        fs.writeFile(fileWithValidYaml, yaml.dump({type: 'yaml'}))
+        fs.writeFile(fileWithValidJson, JSON.stringify({ type: 'json' })),
+        fs.writeFile(fileWithValidYaml, yaml.dump({ type: 'yaml' }))
       ]);
     });
 
@@ -55,4 +59,23 @@ Object {
     });
   });
 
+  describe('writeServiceDefinition', () => {
+    const outputfile = path.join(tmpdir(), `${uuidv4()}-valid.yml`);
+
+    afterAll(async () => {
+      await Promise.all([
+        fs.unlink(outputfile)
+      ]);
+    });
+
+    it('must successfully write YAML files', async () => {
+      await writeServiceDefinition(outputfile, { id: '00000000-0000-0000-0000-000000000000', name: 'Test ServiceDefinition', mapping: {} });
+
+      expect((await fs.readFile(outputfile)).toString()).toEqual(`id: 00000000-0000-0000-0000-000000000000
+name: Test ServiceDefinition
+mapping: {}
+`);
+    });
+
+  });
 });

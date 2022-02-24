@@ -1,23 +1,26 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import { v4 as uuidv4 } from 'uuid';
 import colors from 'colors/safe';
 import inquirer from 'inquirer';
-import fs from 'fs/promises';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { ServiceDefinition, Parameters, KubernetesMapping } from './types';
+import { KubernetesMapping, Parameters, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { confirm } from '../prompt/confirm';
+import { writeServiceDefinition } from './files';
 
 export async function init() {
   const serviceDefinition = await askForServiceDefinitionInformation();
 
   const outputFile = path.join(process.cwd(), '.steadybit.yml');
-  const fileContent = yaml.dump(serviceDefinition);
 
   console.log(`About to write to ${colors.bold(outputFile)}:`);
   console.log();
-  console.log(fileContent);
+  console.log(yaml.dump(serviceDefinition));
   console.log();
 
   const ok = await confirm('Should we create this file?');
@@ -26,11 +29,11 @@ export async function init() {
   }
   console.log();
 
-  fs.writeFile(outputFile, fileContent);
+  await writeServiceDefinition(outputFile, serviceDefinition)
 
   console.log('File created!');
   console.log('You can now upload the service definition by executing');
-  console.log('  ' + colors.bold('steadybit service apply .steadybit.yml'));
+  console.log(`  ${colors.bold('steadybit service apply .steadybit.yml')}`);
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {

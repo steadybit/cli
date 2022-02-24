@@ -1,8 +1,12 @@
-import { red, bold, green, blue, gray } from 'colors/safe';
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
 
-import { TaskState, ServiceState } from './types';
+import { blue, bold, gray, green, red } from 'colors/safe';
+
+import { ServiceState, TaskState } from './types';
 import { abortExecutionWithError } from '../errors';
-import { loadServiceDefinition } from './loading';
+import { loadServiceDefinition } from './files';
 import { executeApiCall } from '../api';
 
 const taskSuffix: Record<TaskState, string> = {
