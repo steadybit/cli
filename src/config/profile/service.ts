@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import { homedir } from 'os';
 import fs from 'fs/promises';
 import path from 'path';
@@ -35,18 +39,17 @@ export async function getProfiles(): Promise<Profile[]> {
   try {
     fileContent = await fs.readFile(profilesFile, {encoding: 'utf8'});
   } catch (e) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((e as any)?.code === 'ENOENT') {
       return [];
     }
 
-    throw abortExecution(`Failed to read file '%s': %s`, profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution('Failed to read file \'%s\': %s', profilesFile, (e as Error)?.message ?? 'Unknown error');
   }
 
   try {
     return JSON.parse(fileContent);
   } catch (e) {
-    throw abortExecution(`Failed to parse file '%s' as JSON: %s`, profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution('Failed to parse file \'%s\' as JSON: %s', profilesFile, (e as Error)?.message ?? 'Unknown error');
   }
 }
 
@@ -56,7 +59,7 @@ async function writeProfiles(profiles: Profile[]): Promise<void> {
   try {
     await fs.writeFile(profilesFile, JSON.stringify(profiles, undefined, 2));
   } catch (e) {
-    throw abortExecution(`Failed to write to file '%s': %s`, profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution('Failed to write to file \'%s\': %s', profilesFile, (e as Error)?.message ?? 'Unknown error');
   }
 }
 
@@ -73,9 +76,8 @@ export async function getActiveProfile(): Promise<Profile | undefined> {
     // Users opening and saving the file might end up adding a trailing new line character.
     activeProfileName = activeProfileName.trim();
   } catch (e) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((e as any)?.code !== 'ENOENT') {
-      throw abortExecution(`Failed to read file '%s': %s`, profilesFile, (e as Error)?.message ?? 'Unknown error');
+      throw abortExecution('Failed to read file \'%s\': %s', profilesFile, (e as Error)?.message ?? 'Unknown error');
     }
   }
 
@@ -90,6 +92,6 @@ export async function setActiveProfile(profileName: string): Promise<void> {
   try {
     await fs.writeFile(activeProfileFile, profileName);
   } catch (e) {
-    throw abortExecution(`Failed to write to file '%s': %s`, activeProfileFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution('Failed to write to file \'%s\': %s', activeProfileFile, (e as Error)?.message ?? 'Unknown error');
   }
 }

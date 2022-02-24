@@ -50,7 +50,7 @@ export async function verify(serviceDefinitionPath: string, options: Options) {
 }
 
 function printTaskList(options: Options, state: ServiceState) {
-  console.log(bold(`Tasks`));
+  console.log(bold('Tasks'));
   console.log(bold('====='));
 
   const sortedTasks = state.tasks.slice().sort((a, b) => {
@@ -78,7 +78,7 @@ function printTaskList(options: Options, state: ServiceState) {
 
     countByType[task.state]++;
     console.log(
-      taskColor[task.state](` - %s (%s)`),
+      taskColor[task.state](' - %s (%s)'),
       key,
       taskSuffix[task.state]
     );
@@ -93,9 +93,9 @@ function printTaskList(options: Options, state: ServiceState) {
   }
 
   console.log();
-  console.log(taskColor.SUCCESS(`Ok:      %d`), countByType.SUCCESS);
-  console.log(taskColor.PENDING(`Pending: %d`), countByType.PENDING);
-  console.log(taskColor.FAILURE(`Failure: %d`), countByType.FAILURE);
+  console.log(taskColor.SUCCESS('Ok:      %d'), countByType.SUCCESS);
+  console.log(taskColor.PENDING('Pending: %d'), countByType.PENDING);
+  console.log(taskColor.FAILURE('Failure: %d'), countByType.FAILURE);
 }
 
 function getCoordinateKey(task: Task): string {

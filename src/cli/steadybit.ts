@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
 
 import { Command } from 'commander';
 

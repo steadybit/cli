@@ -20,6 +20,7 @@ export async function init() {
 
   const outputFile = path.join(process.cwd(), '.steadybit.yml');
 
+  console.log();
   console.log(`About to write to ${colors.bold(outputFile)}:`);
   console.log();
   console.log(yaml.dump(serviceDefinition));

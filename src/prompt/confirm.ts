@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import inquirer from 'inquirer';
 
 export async function confirm(message: string, defaultYes = true): Promise<boolean> {

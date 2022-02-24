@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import { getActiveProfile } from './profile/service';
 import { Configuration } from './types';
 

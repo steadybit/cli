@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import inquirer from 'inquirer';
 
 import { setActiveProfile, getProfiles } from './service';

@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import yaml from 'js-yaml';
 
 import { getConfiguration } from './index';

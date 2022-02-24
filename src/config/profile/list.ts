@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 import colors from 'colors/safe';
 
 import { getActiveProfile, getProfiles } from './service';

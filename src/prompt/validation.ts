@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
 export function validateNotBlank(input: string): boolean {
   return input != null && input.trim().length > 0;
 }

@@ -1,4 +1,8 @@
-import { promptProfileSelection } from "./select";
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
+import { promptProfileSelection } from './select';
 import { removeProfile } from './service';
 
 export async function remove(): Promise<void> {
