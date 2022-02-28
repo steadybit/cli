@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.0.1
+ - `steadybit service verify` now correctly terminates with status code `1` when at least one task is either pending or failing.
+
 ## v2.0.0
  - **Breaking:** The service definition yaml format was changed to directly specify policies and tasks instead of desired resilience levels.
  - **Breaking:** Health definition subsection was removed service definitions.

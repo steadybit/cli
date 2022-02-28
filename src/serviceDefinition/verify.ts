@@ -43,10 +43,29 @@ export async function verify(serviceDefinitionPath: string, options: Options) {
     const state = (await response.json()) as ServiceState;
 
     printTaskList(options, state);
+
+    const countByType = getTaskCountByType(state);
+    if (countByType.FAILURE > 0 || countByType.PENDING > 0) {
+      process.exit(1);
+    }
   } catch (e) {
     const error = await abortExecutionWithError(e, 'Failed to read state for service %s', serviceDefinition.id);
     throw error;
   }
+}
+
+function getTaskCountByType(state: ServiceState): Record<TaskState, number> {
+  const countByType: Record<TaskState, number> = {
+    SUCCESS: 0,
+    FAILURE: 0,
+    PENDING: 0,
+  };
+
+  for (const task of state.tasks) {
+    countByType[task.state]++;
+  }
+
+  return countByType;
 }
 
 function printTaskList(options: Options, state: ServiceState) {
@@ -61,11 +80,7 @@ function printTaskList(options: Options, state: ServiceState) {
     return result;
   });
 
-  const countByType: Record<TaskState, number> = {
-    SUCCESS: 0,
-    FAILURE: 0,
-    PENDING: 0,
-  };
+  const countByType = getTaskCountByType(state);
 
   const taskCountByCoordinate: Record<string, number> = {};
   for (const task of sortedTasks) {
@@ -76,7 +91,6 @@ function printTaskList(options: Options, state: ServiceState) {
   for (const task of sortedTasks) {
     const key = getCoordinateKey(task);
 
-    countByType[task.state]++;
     console.log(
       taskColor[task.state](' - %s (%s)'),
       key,
