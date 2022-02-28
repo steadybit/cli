@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.0.0
  - **Breaking:** The service definition yaml format was changed to directly specify policies and tasks instead of desired resilience levels.
  - **Breaking:** Health definition subsection was removed service definitions.
  - **Breaking:** Adapted the `steadybit service verify` behavior so that it is compatible with the reworked API model.
