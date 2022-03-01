@@ -24,6 +24,10 @@ export interface ReferenceCoordinate {
   version: string;
 }
 
+export interface PolicyDefinition extends ReferenceCoordinate {
+  tasks: TaskReference[];
+}
+
 export interface PolicyReference extends ReferenceCoordinate {
   parameters?: Parameters;
 }

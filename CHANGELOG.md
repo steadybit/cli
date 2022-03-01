@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.1.0
+ - `steadybit service ls` can be used to get a (filtered) list of policies and tasks.
+
 ## v2.0.1
  - `steadybit service verify` now correctly terminates with status code `1` when at least one task is either pending or failing.
 
