@@ -4,7 +4,7 @@
 
 import { loadServiceDefinition } from './files';
 import { executeApiCall } from '../api';
-import { executeLs } from './ls';
+import { executeShow } from './show';
 
 jest.mock('./files');
 jest.mock('../api');
@@ -12,7 +12,7 @@ jest.mock('../api');
 const loadServiceDefinitionMock = loadServiceDefinition as jest.Mock;
 const executeApiCallMock = executeApiCall as jest.Mock;
 
-describe('ls', () => {
+describe('show', () => {
   beforeEach(() => {
     loadServiceDefinitionMock.mockReturnValue(
       Promise.resolve({
@@ -50,7 +50,7 @@ describe('ls', () => {
   });
 
   it('must create unfiltered output', async () => {
-    expect(executeLs({ file: 'unused' })).resolves.toMatchInlineSnapshot(`
+    expect(executeShow({ file: 'unused' })).resolves.toMatchInlineSnapshot(`
 Object {
   "exitCode": 0,
   "output": "
@@ -65,7 +65,8 @@ Object {
   });
 
   it('must filter output by name', async () => {
-    expect(executeLs({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-readiness-probe' })).resolves.toMatchInlineSnapshot(`
+    expect(executeShow({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-readiness-probe' })).resolves
+      .toMatchInlineSnapshot(`
 Object {
   "exitCode": 0,
   "output": "
@@ -78,7 +79,9 @@ Object {
   });
 
   it('must filter output by name and version', async () => {
-    expect(executeLs({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-single-replica', version: '^0.1.0' })).resolves.toMatchInlineSnapshot(`
+    expect(
+      executeShow({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-single-replica', version: '^0.1.0' })
+    ).resolves.toMatchInlineSnapshot(`
 Object {
   "exitCode": 0,
   "output": "
@@ -90,7 +93,7 @@ Object {
   });
 
   it('must support empty output', async () => {
-    expect(executeLs({ file: 'unused', name: 'does-not-exist' })).resolves.toMatchInlineSnapshot(`
+    expect(executeShow({ file: 'unused', name: 'does-not-exist' })).resolves.toMatchInlineSnapshot(`
 Object {
   "exitCode": 1,
   "output": "

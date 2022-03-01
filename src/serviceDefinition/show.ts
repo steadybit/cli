@@ -26,13 +26,13 @@ interface ExecutionResult {
   output: string;
 }
 
-export async function ls(options: Options) {
-  const result = await executeLs(options);
+export async function show(options: Options) {
+  const result = await executeShow(options);
   console.log(result.output);
   process.exit(result.exitCode);
 }
 
-export async function executeLs(options: Options): Promise<ExecutionResult> {
+export async function executeShow(options: Options): Promise<ExecutionResult> {
   const serviceDefinition = await loadServiceDefinition(options.file);
   const policyTaskReferences = await getPolicyTaskReferences(serviceDefinition);
 

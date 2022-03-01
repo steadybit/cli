@@ -11,7 +11,7 @@ import { verify } from '../serviceDefinition/verify';
 import { apply } from '../serviceDefinition/apply';
 import { open } from '../serviceDefinition/open';
 import { init } from '../serviceDefinition/init';
-import { ls } from '../serviceDefinition/ls';
+import { show } from '../serviceDefinition/show';
 
 const program = new Command();
 
@@ -32,7 +32,7 @@ program
   .description('Read the current service definition and state.')
   .action(verify);
 program
-  .command('ls')
+  .command('show')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .option('-n, --name <name>', 'Optional task name to filter the result list.')
   .option(
@@ -40,7 +40,7 @@ program
     'Optional task version to filter the result list.',
     validateSemverRangeCommanderArgument
   )
-  .description('Get a list of tasks referenced by this service definition.')
-  .action(ls);
+  .description('Show a list of tasks and policies referenced by this service definition.')
+  .action(show);
 
 program.parseAsync(process.argv);
