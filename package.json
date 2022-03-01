@@ -1,6 +1,6 @@
 {
   "name": "steadybit",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Command-line interface to interact with the Steadybit API",
   "keywords": [
     "steadybit",
