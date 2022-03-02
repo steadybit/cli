@@ -28,12 +28,13 @@ const taskOrder: Record<TaskState, number> = {
 };
 
 interface Options {
+  file: string;
   printParameters?: boolean;
   printMatrixContext?: boolean;
 }
 
-export async function verify(serviceDefinitionPath: string, options: Options) {
-  const serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
+export async function verify(options: Options) {
+  const serviceDefinition = await loadServiceDefinition(options.file);
 
   try {
     const response = await executeApiCall({

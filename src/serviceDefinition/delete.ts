@@ -6,14 +6,22 @@ import { loadServiceDefinition } from './files';
 import { abortExecution } from '../errors';
 import { executeApiCall } from '../api';
 
-export async function deleteServiceDefinition(serviceDefinitionPathOrId: string) {
-  let id = serviceDefinitionPathOrId;
-  try {
-    const serviceDefinition = await loadServiceDefinition(serviceDefinitionPathOrId);
-    id = serviceDefinition.id ?? id;
-  } catch (e) {
-    // swallow silently assuming that the parameter is actually the ID and not a file path
+export interface Options {
+  file: string;
+}
+
+export async function deleteServiceDefinition(id: string, options: Options) {
+  if(!id && !options.file){
+    throw abortExecution(
+      'Failed to delete service definition, no id nor path to the service definition file',
+    );
   }
+
+  if(!id && options.file){
+    const serviceDefinition = await loadServiceDefinition(options.file);
+    id = serviceDefinition.id ?? id;
+  }
+  // assuming that the parameter id is given
 
   try {
     await executeApiCall({

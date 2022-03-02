@@ -13,10 +13,14 @@ import { executeApiCall } from '../api';
 import { v4 as uuidv4 } from 'uuid';
 import { addVcsTags } from '../vcs';
 
-export async function apply(serviceDefinitionPath: string) {
-  let serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
-  serviceDefinition = await initializeIdIfNecessary(serviceDefinition, serviceDefinitionPath);
-  await addVcsTags(serviceDefinitionPath, serviceDefinition);
+export interface Options {
+  file: string;
+}
+
+export async function apply(options: Options) {
+  let serviceDefinition = await loadServiceDefinition(options.file);
+  serviceDefinition = await initializeIdIfNecessary(serviceDefinition, options.file);
+  await addVcsTags(options.file, serviceDefinition);
 
   try {
     await executeApiCall({

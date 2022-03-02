@@ -15,18 +15,29 @@ import { show } from '../serviceDefinition/show';
 
 const program = new Command();
 
-program.command('apply <path-to-service-definition-file>').description('Upload a service definition.').action(apply);
 program
-  .command('delete <id-or-path-to-service-definition-file>')
+  .command('apply')
+  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
+  .description('Upload a service definition.')
+  .action(apply);
+program
+  .command('delete')
+  .argument('<id>', 'id to be deleted', '')
+  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .description('Deletes a service definition.')
   .action(deleteServiceDefinition);
-program.command('init').description('Initialize a service definition file.').action(init);
 program
-  .command('open <path-to-service-definition-file>')
+  .command('init')
+  .description('Initialize a service definition file.')
+  .action(init);
+program
+  .command('open')
+  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .description('Open the service in the Steadybit UI.')
   .action(open);
 program
-  .command('verify <path-to-service-definition-file>')
+  .command('verify')
+  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
   .description('Read the current service definition and state.')
