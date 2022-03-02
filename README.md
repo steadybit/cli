@@ -73,7 +73,8 @@ mapping:
 parameters:
   httpEndpoint: http://k8s.demo.steadybit.io/products
 ```
-The default filename is .steadybit.yml. This is will be used by default. Or you can specify it via option "-f .steadybit.yml"
+
+The default file name is `.steadybit.yml`. Most CLI commands assume that the input file is named this way. In case you prefer an alternative name, you can specify the alternative name via `-f {your name}.yml`.
 
 ### Sync the service definition with the steadybit platform
 You can now upload the service definition by executing
