@@ -12,7 +12,7 @@ import { executeApiCall } from '../api';
 const taskSuffix: Record<TaskState, string> = {
   SUCCESS: 'ok',
   FAILURE: 'failure',
-  PENDING: 'pending',
+  PENDING: 'not checked',
 };
 
 const taskColor: Record<TaskState, typeof red> = {
@@ -108,9 +108,9 @@ function printTaskList(options: Options, state: ServiceState) {
   }
 
   console.log();
-  console.log(taskColor.SUCCESS('Ok:      %d'), countByType.SUCCESS);
-  console.log(taskColor.PENDING('Pending: %d'), countByType.PENDING);
-  console.log(taskColor.FAILURE('Failure: %d'), countByType.FAILURE);
+  console.log(taskColor.SUCCESS('Ok:          %d'), countByType.SUCCESS);
+  console.log(taskColor.PENDING('Not Checked: %d'), countByType.PENDING);
+  console.log(taskColor.FAILURE('Failure:     %d'), countByType.FAILURE);
 }
 
 function getCoordinateKey(task: Task): string {
