@@ -2,6 +2,10 @@
  * Copyright 2022 steadybit GmbH. All rights reserved.
  */
 
+/*
+ * This is required because we are supporting Node.js v14
+ */
+import { AbortController } from 'node-abort-controller';
 import fetch, { Response } from 'node-fetch';
 import colors from 'colors/safe';
 import https from 'https';
@@ -19,7 +23,7 @@ export interface ApiCallArguments {
   timeout?: number; // defaults to 30000
   expect2xx?: boolean; // defaults to true
   // https://github.com/node-fetch/node-fetch#manual-redirect
-  redirect?: 'manual' | 'error'
+  redirect?: 'manual' | 'error';
 }
 
 // Prefer to load at runtime directly from the package.json to simplify
@@ -45,7 +49,7 @@ export async function executeApiCall({
   body,
   timeout = 30000,
   expect2xx = true,
-  redirect = 'error'
+  redirect = 'error',
 }: ApiCallArguments): Promise<Response> {
   const config = await getConfiguration();
   await checkPrerequisites(config);
@@ -67,10 +71,9 @@ export async function executeApiCall({
         'User-Agent': `${packageJson.name}@${packageJson.version}`,
       },
       body: body ? JSON.stringify(body) : undefined,
-      // @ts-expect-error Signal missing in the type definitions
       signal: controller.signal,
       agent: getHttpAgent,
-      redirect
+      redirect,
     });
   } catch (e) {
     throw new Error(
@@ -83,7 +86,9 @@ export async function executeApiCall({
   }
 
   if (expect2xx && !response.ok) {
-    const error: any = new Error(`Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status}`);
+    const error: any = new Error(
+      `Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status}`
+    );
     error.response = response;
     throw error;
   }

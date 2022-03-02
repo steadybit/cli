@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - Node.js v14 support.
+
 ## v2.1.1
 
 - `steadybit service ls` renamed to `steadybit service show`

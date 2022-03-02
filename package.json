@@ -32,7 +32,7 @@
     "prepublishOnly": "npm run verify && npm run build"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=14.0.0"
   },
   "author": "Steadybit GmbH",
   "license": "MIT",
@@ -42,6 +42,7 @@
     "commander": "^9.0.0",
     "inquirer": "^8.2.0",
     "js-yaml": "^4.1.0",
+    "node-abort-controller": "3.0.1",
     "node-fetch": "^2.6.7",
     "open": "^8.4.0",
     "semver": "^7.3.5",
