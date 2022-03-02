@@ -28,6 +28,7 @@ export async function apply(options: Options) {
       path: `/api/service-definitions/${encodeURIComponent(serviceDefinition.id)}`,
       body: serviceDefinition,
     });
+    console.log(colors.green('Done!'));
   } catch (e: any) {
     const response: Response | undefined = e.response;
     if (response?.status === 409) {

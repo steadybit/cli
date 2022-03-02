@@ -4,6 +4,7 @@
  - Node.js v14 support.
  - `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.
  - The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the default service definition file name is `.steadybit.yml`.
+ - Print a success message when a service definition was applied
 
 ## v2.1.1
 
