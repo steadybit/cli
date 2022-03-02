@@ -10,6 +10,7 @@ import path from 'path';
 
 import { KubernetesMapping, Parameters, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
+import { abortExecutionWithError } from '../errors';
 import { writeServiceDefinition } from './files';
 import { confirm } from '../prompt/confirm';
 import { getAllTeams } from '../team/get';
@@ -40,7 +41,13 @@ export async function init() {
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
-  const teams = await getAllTeams();
+  let teams: Team[]
+  try {
+    teams = await getAllTeams();
+  } catch (e) {
+    const error = await abortExecutionWithError(e, 'Failed to retrieve accessible teams from Steadybit');
+    throw error;
+  }
 
   const answers = await inquirer.prompt([
     {

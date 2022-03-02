@@ -29,7 +29,8 @@ export async function apply(serviceDefinitionPath: string) {
     if (response?.status === 409) {
       await handleConflict(serviceDefinition);
     } else {
-      await abortExecutionWithError(e, 'Failed to upload service definition to Steadybit %s', serviceDefinition.id);
+      const error = await abortExecutionWithError(e, 'Failed to upload service definition to Steadybit %s', serviceDefinition.id);
+      throw error;
     }
   }
 }

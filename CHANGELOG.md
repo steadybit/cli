@@ -2,6 +2,7 @@
 
 ## Unreleased
  - Node.js v14 support.
+ - `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.
 
 ## v2.1.1
 
