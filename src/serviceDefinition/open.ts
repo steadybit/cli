@@ -10,8 +10,12 @@ import { executeApiCall } from '../api';
 
 const errorPrefix = 'Failed to identify deep link to the Steadybit UI. ';
 
-export async function open(serviceDefinitionPath: string) {
-  const serviceDefinition = await loadServiceDefinition(serviceDefinitionPath);
+export interface Options {
+  file: string;
+}
+
+export async function open(options: Options) {
+  const serviceDefinition = await loadServiceDefinition(options.file);
   let response;
   try {
     response = await executeApiCall({

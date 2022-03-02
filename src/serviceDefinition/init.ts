@@ -37,7 +37,7 @@ export async function init() {
 
   console.log('File created!');
   console.log('You can now upload the service definition by executing');
-  console.log(`  ${colors.bold('steadybit service apply .steadybit.yml')}`);
+  console.log(`  ${colors.bold('steadybit service apply')}`);
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
