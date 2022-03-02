@@ -111,7 +111,7 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
 
 const httpEndpointHelp = `
 We need to ensure that the service is still operating as expected when
-verifying compliance with the desired resilience level. To do so require
+verifying compliance with the desired resilience level. To do so we require
 a load-balanced HTTP endpoint that can be called during task execution.
 `;
 
