@@ -7,17 +7,18 @@ import { abortExecution } from '../errors';
 import { executeApiCall } from '../api';
 
 export interface Options {
+  id?: string;
   file: string;
 }
 
-export async function deleteServiceDefinition(id: string, options: Options) {
-  if(!id && !options.file){
+export async function deleteServiceDefinition(options: Options) {
+  if(!options.id && !options.file){
     throw abortExecution(
-      'Failed to delete service definition, no id nor path to the service definition file',
+      'Failed to delete service definition, no id nor path to the service definition file was given',
     );
   }
-
-  if(!id && options.file){
+  let id = options.id;
+  if(!options.id && options.file){
     const serviceDefinition = await loadServiceDefinition(options.file);
     id = serviceDefinition.id ?? id;
   }
@@ -26,7 +27,7 @@ export async function deleteServiceDefinition(id: string, options: Options) {
   try {
     await executeApiCall({
       method: 'DELETE',
-      path: `/api/service-definitions/${encodeURIComponent(id)}`,
+      path: `/api/service-definitions/${encodeURIComponent(String(id))}`,
     });
   } catch (e) {
     throw abortExecution(

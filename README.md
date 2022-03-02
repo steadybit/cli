@@ -73,11 +73,12 @@ mapping:
 parameters:
   httpEndpoint: http://k8s.demo.steadybit.io/products
 ```
+The default filename is .steadybit.yml. This is will be used by default. Or you can specify it via option "-f .steadybit.yml"
 
 ### Sync the service definition with the steadybit platform
 You can now upload the service definition by executing
 ```bash
-steadybit service apply .steadybit.yml
+steadybit service apply
 ```
 
 or even better, you can automatically sync the service definition with every commit using our [Github Action](https://github.com/steadybit/define-service)
@@ -85,12 +86,12 @@ or even better, you can automatically sync the service definition with every com
 ### See your Service Definition in Action
 You can now use the cli to open steadybit and watch your current state and work on the next steps.
 ```bash
-steadybit service open .steadybit.yml
+steadybit service open
 ```
 
 which opens the steadybit platform in your standard web browser. From here, you can inspect the service’s current state, trigger challenges and much more.
 
 As an alternative you can verify your current state directly via the CLI
 ```bash
-steadybit service verify .steadybit.yml
+steadybit service verify
 ```

@@ -22,7 +22,7 @@ program
   .action(apply);
 program
   .command('delete')
-  .argument('<id>', 'id to be deleted', '')
+  .option('-i, --id <id>', 'Id to be deleted.')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .description('Deletes a service definition.')
   .action(deleteServiceDefinition);
