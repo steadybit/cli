@@ -6,6 +6,7 @@
  - The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the default service definition file name is `.steadybit.yml`.
  - Print a success message when a service definition was applied.
  - Change label from `pending` to `not checked` in `steadybit service verify` output.
+ - `steadybit def-repo set-version` can be used to modify version numbers in a task and policy definition repository.
 
 ## v2.1.1
 

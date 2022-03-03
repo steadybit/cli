@@ -15,7 +15,7 @@ module.exports = {
   ],
   rules: {
     '@typescript-eslint/no-explicit-any': 0,
-		quotes: ['error', 'single'],
+		quotes: ['error', 'single', {avoidEscape: true}],
 		'header/header': [
 			2,
 			'block',
