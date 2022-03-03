@@ -5,39 +5,12 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { getGitHubRepositoryNameFromGitRemotes, getGitHubRepositoryName, setVersion } from './setVersion';
 import { executeShellCommand } from '../shell';
+import { setVersion } from './setVersion';
 
 const dummyDefinitionRepository = path.join(__dirname, '__tests__', 'dummyDefinitionRepository');
 
 describe('defRepo/setVersion', () => {
-  describe('getGitHubRepositoryNameFromGitRemotes', () => {
-    it('must extract from HTTPS URLs', () => {
-      expect(getGitHubRepositoryNameFromGitRemotes('https://github.com/steadybit/cli.git'))
-        .toEqual('steadybit/cli');
-    });
-
-    it('must extract from SSH URLs', () => {
-      expect(getGitHubRepositoryNameFromGitRemotes('git@github.com:steadybit/cli.git'))
-        .toEqual('steadybit/cli');
-    });
-
-    it('must extract from git remote -v output', () => {
-      expect(getGitHubRepositoryNameFromGitRemotes(`
-origin  git@github.com:steadybit/cli.git (fetch)
-origin  git@github.com:steadybit/cli.git (push)
-`))
-        .toEqual('steadybit/cli');
-    });
-  });
-
-  describe('getGitHubRepositoryName', () => {
-    it('must identify the repository name', async () => {
-      const gitHubRepositoryName = await getGitHubRepositoryName(process.cwd());
-      expect(gitHubRepositoryName).toEqual('steadybit/cli');
-    });
-  });
-
   describe('setVersion', () => {
     afterEach(async () => {
       await executeShellCommand('git restore __tests__/dummyDefinitionRepository', {
@@ -49,7 +22,7 @@ origin  git@github.com:steadybit/cli.git (push)
       // When
       await setVersion({
         version: '1.0.0',
-        cwd: dummyDefinitionRepository
+        directory: dummyDefinitionRepository
       });
 
       // Then

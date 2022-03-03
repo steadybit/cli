@@ -3,21 +3,21 @@
  */
 
 import { TaskDefinition, PolicyDefinition } from '../serviceDefinition/types';
-import { abortExecution, abortExecutionWithError } from '../errors';
 import { forEachFile, IteratorArgs, ForEachAction } from './util';
-import { executeShellCommand } from '../shell';
+import { getGitHubRepositoryName } from '../vcs/github';
+import { abortExecution } from '../errors';
 
 interface Options {
   version: string;
-  cwd: string;
+  directory: string;
 }
 
 export async function setVersion(options: Options) {
-  const gitHubRepositoryName = await getGitHubRepositoryName(options.cwd);
+  const gitHubRepositoryName = await getGitHubRepositoryName(options.directory);
   if (!gitHubRepositoryName) {
     const error = await abortExecution(
-      "Failed to identify GitHub reposity name from `git remote -v` output for CWD '%s'.",
-      options.cwd
+      "Failed to identify GitHub reposity name from `git remote -v` output for directory '%s'.",
+      options.directory
     );
     throw error;
   }
@@ -26,7 +26,7 @@ export async function setVersion(options: Options) {
     pattern: '**/task.?(yml|yaml)',
     options: {
       nocase: true,
-      cwd: options.cwd,
+      cwd: options.directory,
     },
     iterator: args => taskIterator(options, args),
   });
@@ -35,7 +35,7 @@ export async function setVersion(options: Options) {
     pattern: '**/policy.?(yml|yaml)',
     options: {
       nocase: true,
-      cwd: options.cwd,
+      cwd: options.directory,
     },
     iterator: args => policyIterator(options, args, gitHubRepositoryName),
   });
@@ -74,23 +74,4 @@ async function policyIterator(
   }
 
   return action;
-}
-
-// exported for testing purposes
-export async function getGitHubRepositoryName(cwd: string): Promise<string | undefined> {
-  try {
-    const { stdout } = await executeShellCommand('git remote -v', {
-      cwd,
-    });
-
-    return getGitHubRepositoryNameFromGitRemotes(stdout);
-  } catch (e) {
-    const error = await abortExecutionWithError(e, 'Failed to identify GitHub repository name.');
-    throw error;
-  }
-}
-
-// exported for testing purposes
-export function getGitHubRepositoryNameFromGitRemotes(gitRemotes: string): string | undefined {
-  return gitRemotes.match(/github\.com[:/]([^/]+\/[^/ ]+).git/i)?.[1];
 }

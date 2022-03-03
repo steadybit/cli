@@ -7,6 +7,7 @@
  - Print a success message when a service definition was applied.
  - Change label from `pending` to `not checked` in `steadybit service verify` output.
  - `steadybit def-repo set-version` can be used to modify version numbers in a task and policy definition repository.
+ - `steadybit def-repo check` can be used to check task and policy definition files in a repository for format, consistency and references.
 
 ## v2.1.1
 
