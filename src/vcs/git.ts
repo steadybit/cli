@@ -6,37 +6,99 @@ import path from 'path';
 
 import { executeShellCommand } from '../shell';
 
+export async function getGitRemote(filePath: string): Promise<string> {
+  const output = await getGitOutput({
+    command: 'git remote -v',
+    cwd: path.dirname(filePath),
+  });
+  return output.split('\n')[0].split(/\s+/)[1];
+}
+
+export async function getPathToFileInGitRepository(filePath: string): Promise<string> {
+  const output = await getGitOutput({
+    command: 'git rev-parse --show-toplevel',
+    cwd: path.dirname(filePath),
+  });
+  return path.relative(output, filePath);
+}
+
+export async function getAbsolutePathToRepositoryRoot(cwd: string): Promise<string> {
+  return getGitOutput({
+    command: 'git rev-parse --show-toplevel',
+    cwd,
+  });
+}
+
+export async function getGitRef(directory: string): Promise<string> {
+  return getGitOutput({
+    command: 'git symbolic-ref --short HEAD',
+    cwd: directory,
+  });
+}
+
+export async function getGitSha(directory: string): Promise<string> {
+  return getGitOutput({
+    command: 'git rev-parse --verify HEAD',
+    cwd: directory,
+  });
+}
+
+export interface GetGitOutputArgs {
+  command: string;
+  cwd: string;
+}
+
+export async function getGitOutput({ command, cwd }: GetGitOutputArgs): Promise<string> {
+  try {
+    const { stdout } = await executeShellCommand(command, {
+      cwd,
+    });
+
+    return stdout.trim();
+  } catch (e) {
+    throw new Error(
+      `Failed to execute command "${command}" in CWD "${cwd}".`,
+      // TypeScript does not know about error causes yet.
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      { cause: e }
+    );
+  }
+}
+
 export async function getTags(serviceDefinitionPath: string): Promise<Record<string, string>> {
   const records = await Promise.all([
-    getGitOutputAsTag(serviceDefinitionPath, 'git rev-parse --verify HEAD', 'git.sha'),
-    getGitOutputAsTag(serviceDefinitionPath, 'git symbolic-ref --short HEAD', 'git.ref'),
-    getGitOutputAsTag(serviceDefinitionPath, 'git rev-parse --show-toplevel', 'git.repository_path', stdout =>
-      path.relative(stdout, serviceDefinitionPath)
+    getAsTag(
+      'git.sha',
+      getGitSha(path.dirname(serviceDefinitionPath)),
     ),
-    getGitOutputAsTag(serviceDefinitionPath, 'git remote -v', 'git.remote', stdout =>
-      stdout.split('\n')[0].split(/\s+/)[1]
+    getAsTag(
+      'git.ref',
+      getGitRef(path.dirname(serviceDefinitionPath)),
     ),
+    getAsTag(
+      'git.repository_path',
+      getPathToFileInGitRepository(serviceDefinitionPath),
+    ),
+    getAsTag(
+      'git.remote',
+      getGitRemote(path.dirname(serviceDefinitionPath)),
+    )
   ]);
 
   return Object.fromEntries(records.flatMap(record => Object.entries(record)));
 }
 
-async function getGitOutputAsTag(
-  serviceDefinitionPath: string,
-  command: string,
-  tag: string,
-  processValue: (stdout: string) => string = s => s
+async function getAsTag(
+  key: string,
+  valuePromise: Promise<string>
 ): Promise<Record<string, string>> {
   try {
-    let { stdout } = await executeShellCommand(command, {
-      cwd: path.dirname(serviceDefinitionPath),
-    });
+    const value = await valuePromise;
 
-    stdout = processValue(stdout);
-
-    if (stdout.length > 0) {
+    if (value.length > 0) {
       return {
-        [tag]: stdout,
+        [key]: value,
       };
     }
   } catch (e) {
