@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+/*
+ * Copyright 2022 steadybit GmbH. All rights reserved.
+ */
+
+import { Command } from 'commander';
+
+import { setVersion } from '../defRepo/setVersion';
+import { check } from '../defRepo/check';
+
+const program = new Command();
+
+program
+  .command('set-version')
+  .description('Set the versions of policies and tasks referenced within task and policy definition files in this repository.')
+  .requiredOption('-v, --version <version>', 'The version to set.')
+  .option('-d, --directory <directory>', 'The directory to search for task and policy files.', process.cwd())
+  .action(setVersion);
+
+program
+  .command('check')
+  .description('Checks that the tasks and policies checked into the GitHub repository are valid.')
+  .action(check);
+
+program.parseAsync(process.argv);

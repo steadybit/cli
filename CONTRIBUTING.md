@@ -19,8 +19,8 @@ export STEADYBIT_URL="http://localhost:8080"
 npm run build
 
 # Run some CLI commands
-./dist/cli/steadybit.js service init
-./dist/cli/steadybit.js service apply .steadybit.yml
+./cli service init
+./cli service apply .steadybit.yml
 ```
 
 ### Local CLI installation

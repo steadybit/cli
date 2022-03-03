@@ -1,0 +1,8 @@
+---
+name: "steadybit/cli/policies/rolling-update"
+type: policy
+tasks:
+  - name: "steadybit/cli/weak-spots/rolling-update"
+    version: 0.1.5
+  - name: "steadybit/cli/experiments/rolling-update"
+    version: 0.1.5
