@@ -16,6 +16,7 @@ jobs:
         node-version: 16
         cache: 'npm'
         registry-url: 'https://registry.npmjs.org'
+    - run: git remote add test git@github.com:steadybit/cli.git
     - run: npm ci
     - run: npm run ci
     - run: npm publish
