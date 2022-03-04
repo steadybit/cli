@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - `steadybit service init` now has an improved policy selection process.
+
 ## v2.2.0
  - Node.js v14 support.
  - `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.

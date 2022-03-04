@@ -8,7 +8,7 @@ import inquirer from 'inquirer';
 import yaml from 'js-yaml';
 import path from 'path';
 
-import { KubernetesMapping, Parameters, ServiceDefinition } from './types';
+import { KubernetesMapping, Parameters, PolicyReference, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { abortExecutionWithError } from '../errors';
 import { writeServiceDefinition } from './files';
@@ -57,38 +57,9 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
       default: path.basename(process.cwd()),
       validate: validateNotBlank,
     },
-    {
-      type: 'list',
-      name: 'desiredResilienceLevel',
-      message: 'Desired Resilience Level:',
-      choices: [
-        {
-          name: 'F - challenges for recovery',
-          value: 'F',
-        },
-        {
-          name: 'E - challenges for redundancy',
-          value: 'E',
-        },
-        {
-          name: 'D - challenges for redundancy during updates',
-          value: 'D',
-        },
-        {
-          name: 'C - challenges for host redundancy',
-          value: 'C',
-        },
-        {
-          name: 'B - challenges for loose coupling on startup',
-          value: 'B',
-        },
-        {
-          name: 'A - challenges for loose coupling',
-          value: 'A',
-        },
-      ],
-    },
   ]);
+
+  const policies = await askForPolicies();
 
   const k8Mapping = await askForMappingInformation();
   const parameters = await askForParameters(teams);
@@ -96,17 +67,66 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
   return {
     id: uuidv4(),
     name: answers.name,
-    policies: [
-      {
-        name: `steadybit/definitions/policies/level-${answers.desiredResilienceLevel.toLowerCase()}`,
-        version: '0.1.5'
-      }
-    ],
+    policies,
     mapping: {
       kubernetes: k8Mapping,
     },
     parameters
   };
+}
+
+const policiesHelp = `
+Services can refer to policies and tasks to describe the desired resilience
+level. The following question will give you the option to select commonly
+used policies. You may also choose to proceed without selecting a policy.
+In this case, you can modify the generated YAML file once this init step
+completes. For more information and documentation about tasks and policies,
+please refer to the following page:
+
+           ${colors.bold('https://github.com/steadybit/definitions')}
+`;
+
+async function askForPolicies(): Promise<PolicyReference[]> {
+  console.log(policiesHelp);
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'policies',
+      message: 'Policies:',
+      choices: [
+        {
+          name: 'Kubernetes Deployments: Challenges for recovery',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/recovery-pod',
+        },
+        {
+          name: 'Kubernetes Deployments: Challenges for pod redundancy',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/redundancy-pod',
+        },
+        {
+          name: 'Kubernetes Deployments: Challenges for redundancy during updates',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/rolling-update',
+        },
+        {
+          name: 'Kubernetes Deployments: Challenges for host redundancy',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/redundancy-host',
+        },
+        {
+          name: 'Kubernetes Deployments: Challenges for loose coupling on startup',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/loose-coupling-on-startup',
+        },
+        {
+          name: 'Kubernetes Deployments: Challenges for loose coupling',
+          value: 'steadybit/definitions/kubernetes/deployments/policies/loose-coupling',
+        },
+      ],
+    },
+  ]);
+
+  return answers.policies.map((name: string) => ({
+    name,
+    version: '0.2.0'
+  }));
 }
 
 const httpEndpointHelp = `
