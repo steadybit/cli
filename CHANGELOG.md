@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.3.0
  - `steadybit service init` now has an improved policy selection process.
 
 ## v2.2.0
