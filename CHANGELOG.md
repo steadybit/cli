@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+ - `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
+
 ## v2.3.0
  - `steadybit service init` now has an improved policy selection process.
 
