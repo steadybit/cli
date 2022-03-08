@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.4.0
  - `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
 
 ## v2.3.0
