@@ -50,8 +50,16 @@ async function initializeIdIfNecessary(serviceDefinition: ServiceDefinition, ser
   return serviceDefinition;
 }
 
+const conflictHelp = `
+Please resolve the conflict by editing the local service definition file.
+For example, by ensuring that the same ID is used between the local
+service definition and the remote service definition.
+
+${colors.gray('Tip: Most often these conflicts are caused by different IDs for the same mapping.')}
+`;
+
 async function handleConflict(serviceDefinition: ServiceDefinition): Promise<void> {
-  console.log(colors.red('Service definition application resulted in a potential conflict.'));
+  console.log(colors.red('Service definition application resulted in a conflict.'));
 
   try {
     const response = await executeApiCall({
@@ -65,7 +73,7 @@ async function handleConflict(serviceDefinition: ServiceDefinition): Promise<voi
     console.log();
     console.log(yaml.dump(conflictingServiceDefinition));
     console.log();
-    console.log(colors.gray('Tip: Most often these conflicts are caused by different IDs for the same mapping.'));
+    console.log(conflictHelp.trim());
   } catch (e) {
     await abortExecutionWithError(
       e,

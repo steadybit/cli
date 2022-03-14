@@ -3,6 +3,7 @@
 ## v2.5.0
  - Fail hard when an incompatible Node.js version is used.
  - Upgrade versions of policies suggested via `steadybit service init` to `0.2.2`.
+ - Provide additional help when a conflict occurs while running `steadybit service apply`.
 
 ## v2.4.0
  - `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
