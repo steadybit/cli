@@ -125,7 +125,7 @@ async function askForPolicies(): Promise<PolicyReference[]> {
 
   return answers.policies.map((name: string) => ({
     name,
-    version: '0.2.0'
+    version: '0.2.2'
   }));
 }
 
