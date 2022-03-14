@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.0
+ - Fail hard when an incompatible Node.js version is used.
+
 ## v2.4.0
  - `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
 
