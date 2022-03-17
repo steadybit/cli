@@ -17,6 +17,13 @@ export interface Options {
   file: string;
 }
 
+const finishHelp = `
+${colors.green('Done!')} The service definition was successfully applied.
+You may now verify how compliant the service is by executing:
+
+                   ${colors.bold('steadybit service verify')}
+`.trim();
+
 export async function apply(options: Options) {
   let serviceDefinition = await loadServiceDefinition(options.file);
   serviceDefinition = await initializeIdIfNecessary(serviceDefinition, options.file);
@@ -28,7 +35,7 @@ export async function apply(options: Options) {
       path: `/api/service-definitions/${encodeURIComponent(serviceDefinition.id)}`,
       body: serviceDefinition,
     });
-    console.log(colors.green('Done!'));
+    console.log(finishHelp);
   } catch (e: any) {
     const response: Response | undefined = e.response;
     if (response?.status === 409) {
@@ -74,6 +81,7 @@ async function handleConflict(serviceDefinition: ServiceDefinition): Promise<voi
     console.log(yaml.dump(conflictingServiceDefinition));
     console.log();
     console.log(conflictHelp.trim());
+    process.exit(1);
   } catch (e) {
     await abortExecutionWithError(
       e,

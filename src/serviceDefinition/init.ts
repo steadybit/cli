@@ -49,6 +49,8 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
     throw error;
   }
 
+  console.clear();
+
   const answers = await inquirer.prompt([
     {
       type: 'input',

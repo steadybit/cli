@@ -33,6 +33,13 @@ interface Options {
   printMatrixContext?: boolean;
 }
 
+const openHelp = gray(`
+Do you need more information? You can see more details within Steadybit's
+user interface. Try execute the following to open it:
+
+                   ${bold('steadybit service open')}
+`.trim());
+
 export async function verify(options: Options) {
   const serviceDefinition = await loadServiceDefinition(options.file);
 
@@ -44,6 +51,9 @@ export async function verify(options: Options) {
     const state = (await response.json()) as ServiceState;
 
     printTaskList(options, state);
+
+    console.log();
+    console.log(openHelp);
 
     const countByType = getTaskCountByType(state);
     if (countByType.FAILURE > 0 || countByType.PENDING > 0) {

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.0
+ - Improve first-user experience when using the CLI.
+
 ## v2.5.0
  - Fail hard when an incompatible Node.js version is used.
  - Upgrade versions of policies suggested via `steadybit service init` to `0.2.2`.

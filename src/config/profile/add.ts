@@ -10,10 +10,29 @@ import { addProfile } from './service';
 import { defaultBaseUrl } from '..';
 import { Profile } from './types';
 
+const startHelp = `
+Configuration profiles enable you to use the CLI without repeatedly providing
+passwords or having to remember environment variables. Configuration profiles
+are stored in ~/.steadybit
+`.trim();
+
+const finishHelp = `
+${colors.green('Done!')} You can now start using the CLI. For example, you could start
+to define your first service via:
+
+                   ${colors.bold('steadybit service init')}
+`.trim();
+
 export async function add(): Promise<void> {
+  console.clear();
+  console.log(startHelp);
+  console.log();
+
   const profile = await ask();
   await addProfile(profile);
-  console.log(colors.green('Done!'));
+
+  console.log();
+  console.log(finishHelp);
 }
 
 async function ask(): Promise<Profile> {

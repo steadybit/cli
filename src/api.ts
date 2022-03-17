@@ -7,13 +7,11 @@
  */
 import { AbortController } from 'node-abort-controller';
 import fetch, { Response } from 'node-fetch';
-import colors from 'colors/safe';
 import https from 'https';
 import http from 'http';
 
-import { Configuration } from './config/types';
+import { ensurePlatformAccessConfigurationIsAvailable } from './config/requirePlatformAccess';
 import { getConfiguration } from './config';
-import { abortExecution } from './errors';
 
 export interface ApiCallArguments {
   path: string;
@@ -52,7 +50,7 @@ export async function executeApiCall({
   redirect = 'error',
 }: ApiCallArguments): Promise<Response> {
   const config = await getConfiguration();
-  await checkPrerequisites(config);
+  await ensurePlatformAccessConfigurationIsAvailable();
 
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeout);
@@ -94,16 +92,6 @@ export async function executeApiCall({
   }
 
   return response;
-}
-
-async function checkPrerequisites(config: Configuration) {
-  if (!config.apiAccessToken) {
-    throw abortExecution(
-      `API access token not defined. You can define the access token via profiles (${colors.bold(
-        'steadybit config profile add'
-      )} or the ${colors.bold('STEADYBIT_TOKEN')} environment variable.`
-    );
-  }
 }
 
 function getHttpAgent(parsedUrl: URL) {

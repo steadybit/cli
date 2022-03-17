@@ -6,11 +6,26 @@ import { Response } from 'node-fetch';
 import colors from 'colors/safe';
 import { format } from 'util';
 
+export interface AbortExecutionOptions {
+  colorize?: boolean;
+}
+
 export function abortExecution(msg: string, ...args: unknown[]): Error {
+  return abortExecutionWithOpts(undefined, msg, ...args);
+}
+
+export function abortExecutionWithOpts(
+  { colorize = true }: AbortExecutionOptions = {},
+  msg: string,
+  ...args: unknown[]
+): Error {
   // Make unit-testing easier by only aborting the process outside of Jest
   // https://jestjs.io/docs/environment-variables
   if (process.env.NODE_ENV !== 'test') {
-    console.error(colors.red(msg), ...args);
+    if (colorize) {
+      msg = colors.red(msg);
+    }
+    console.error(msg, ...args);
     process.exit(1);
   }
 
