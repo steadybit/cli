@@ -125,6 +125,20 @@ async function askForPolicies(): Promise<PolicyReference[]> {
     },
   ]);
 
+  if (answers.policies.length === 0) {
+    const confirm = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'policiesEmpty',
+        message: 'You did not select any policies. Are you sure to continue?',
+        default: true
+      },
+    ]);
+    if (!confirm.policiesEmpty) {
+      return askForPolicies();
+    }
+  }
+
   return answers.policies.map((name: string) => ({
     name,
     version: '0.2.2'
