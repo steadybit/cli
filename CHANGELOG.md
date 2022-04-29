@@ -1,27 +1,37 @@
 # Changelog
 
+## v2.6.1
+
+- Added a confirmation dialog if the user did not select any policies
+
 ## v2.6.0
- - Improve first-user experience when using the CLI.
+
+- Improve first-user experience when using the CLI.
 
 ## v2.5.0
- - Fail hard when an incompatible Node.js version is used.
- - Upgrade versions of policies suggested via `steadybit service init` to `0.2.2`.
- - Provide additional help when a conflict occurs while running `steadybit service apply`.
+
+- Fail hard when an incompatible Node.js version is used.
+- Upgrade versions of policies suggested via `steadybit service init` to `0.2.2`.
+- Provide additional help when a conflict occurs while running `steadybit service apply`.
 
 ## v2.4.0
- - `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
+
+- `steadybit config profile add` now provides guidance w.r.t. the API access token creation.
 
 ## v2.3.0
- - `steadybit service init` now has an improved policy selection process.
+
+- `steadybit service init` now has an improved policy selection process.
 
 ## v2.2.0
- - Node.js v14 support.
- - `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.
- - The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the default service definition file name is `.steadybit.yml`.
- - Print a success message when a service definition was applied.
- - Change label from `pending` to `not checked` in `steadybit service verify` output.
- - `steadybit def-repo set-version` can be used to modify version numbers in a task and policy definition repository.
- - `steadybit def-repo check` can be used to check task and policy definition files in a repository for format, consistency and references.
+
+- Node.js v14 support.
+- `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.
+- The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the default service definition file name
+  is `.steadybit.yml`.
+- Print a success message when a service definition was applied.
+- Change label from `pending` to `not checked` in `steadybit service verify` output.
+- `steadybit def-repo set-version` can be used to modify version numbers in a task and policy definition repository.
+- `steadybit def-repo check` can be used to check task and policy definition files in a repository for format, consistency and references.
 
 ## v2.1.1
 
