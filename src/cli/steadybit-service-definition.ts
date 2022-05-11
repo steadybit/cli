@@ -51,6 +51,8 @@ program
   .option('--no-error-on-task-failure', 'Whether to end the process with an error when an executed task fails.')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .option('-t, --task <tasks...>', 'Optional filter to limit execution to those tasks matching the given task name. Can appear multiple times')
+  .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
+  .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
   .description('Execute tasks defined for a service.')
   .action(requirePlatformAccess(exec));
 program

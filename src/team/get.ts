@@ -4,7 +4,7 @@
 import { Response } from 'node-fetch';
 
 import { Team, TeamSummary } from './types';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 export async function getAllTeams(): Promise<Team[]> {
   const response: Response = await executeApiCall({

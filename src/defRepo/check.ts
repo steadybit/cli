@@ -9,7 +9,7 @@ import { getAbsolutePathToRepositoryRoot, getGitSha } from '../vcs/git';
 import { abortExecution, abortExecutionWithError } from '../errors';
 import { getGitHubRepositoryName } from '../vcs/github';
 import { forEachFile, IteratorArgs } from './util';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 import { Response } from 'node-fetch';
 
 interface Options {

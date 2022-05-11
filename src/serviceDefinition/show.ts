@@ -7,7 +7,7 @@ import archy from 'archy';
 import { PolicyDefinition, PolicyReference, ReferenceCoordinate, ServiceDefinition } from './types';
 import { abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './files';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 export interface Options {
   file: string;

@@ -9,8 +9,8 @@ import fetch, { Response } from 'node-fetch';
 import https from 'https';
 import http from 'http';
 
-import { ensurePlatformAccessConfigurationIsAvailable } from './config/requirePlatformAccess';
-import { getConfiguration } from './config';
+import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess';
+import { getHeaders, toUrl } from './common';
 
 export interface ApiCallArguments {
   path: string;
@@ -22,12 +22,6 @@ export interface ApiCallArguments {
   // https://github.com/node-fetch/node-fetch#manual-redirect
   redirect?: 'manual' | 'error';
 }
-
-// Prefer to load at runtime directly from the package.json to simplify
-// the TypeScript build. Without this, we would have to make the build
-// more complicated to adapt the root dir accordingly.
-// eslint-disable-next-line
-const packageJson = require('../package.json');
 
 const httpAgentOptions = {
   keepAlive: true,
@@ -48,25 +42,18 @@ export async function executeApiCall({
   expect2xx = true,
   redirect = 'error',
 }: ApiCallArguments): Promise<Response> {
-  const config = await getConfiguration();
   await ensurePlatformAccessConfigurationIsAvailable();
+  const url = await toUrl(path, queryParameters);
+  const headers = await getHeaders();
 
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeout);
-
-  const url = `${config.baseUrl}${path}?${new URLSearchParams(queryParameters ?? {}).toString()}`;
 
   let response: Response;
   try {
     response = await fetch(url, {
       method,
-      headers: {
-        Authorization: `accessToken ${config.apiAccessToken}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json, */*',
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        'User-Agent': `${packageJson.name}@${packageJson.version}`,
-      },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
       agent: getHttpAgent,

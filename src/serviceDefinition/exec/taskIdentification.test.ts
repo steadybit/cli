@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ServiceDefinition, Task } from '../types';
+import { ServiceState, Task } from '../types';
 import { getTasks } from './taskIdentification';
 import { getState } from '../api';
 import { Options } from './types';
@@ -11,10 +11,6 @@ const getStateMock = getState as jest.Mock;
 jest.mock('../api', () => ({
   getState: jest.fn(),
 }));
-
-const serviceDefinition = {
-  id: 'test',
-} as ServiceDefinition;
 
 const tasks = [
   {
@@ -39,12 +35,9 @@ describe('taskIdentification', () => {
   describe('getTasks', () => {
     it('must not filter tasks', async () => {
       // Given
-      getStateMock.mockResolvedValue({
-        tasks,
-      });
 
       // When
-      const result = await getTasks({} as Options, serviceDefinition);
+      const result = getTasks({} as Options, { tasks } as ServiceState);
 
       // Then
       expect(result).toEqual(tasks);
@@ -52,16 +45,13 @@ describe('taskIdentification', () => {
 
     it('must filter tasks when an empty array is passed', async () => {
       // Given
-      getStateMock.mockResolvedValue({
-        tasks,
-      });
 
       // When
-      const result = await getTasks(
+      const result = getTasks(
         {
           task: [],
         } as Options,
-        serviceDefinition
+        { tasks } as ServiceState
       );
 
       // Then
@@ -70,16 +60,13 @@ describe('taskIdentification', () => {
 
     it('must filter tasks by name', async () => {
       // Given
-      getStateMock.mockResolvedValue({
-        tasks,
-      });
 
       // When
-      const result = await getTasks(
+      const result = getTasks(
         {
           task: ['task2'],
         } as Options,
-        serviceDefinition
+        { tasks } as ServiceState
       );
 
       // Then

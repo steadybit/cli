@@ -8,7 +8,7 @@ import yaml from 'js-yaml';
 import { loadServiceDefinition, writeServiceDefinition } from './files';
 import { abortExecutionWithError } from '../errors';
 import { ServiceDefinition } from './types';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 import { v4 as uuidv4 } from 'uuid';
 import { addVcsTags } from '../vcs';
 

@@ -3,7 +3,7 @@
 
 import { loadServiceDefinition } from './files';
 import { abortExecution } from '../errors';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 export interface Options {
   id?: string;

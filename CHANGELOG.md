@@ -2,11 +2,11 @@
 
 ## Unreleased
 - Correct license file header.
-- Execute tasks via `steadybit service exec`
+- Execute tasks via `steadybit service exec`.
 
 ## v2.6.1
 
-- Added a confirmation dialog if the user did not select any policies
+- Added a confirmation dialog if the user did not select any policies.
 
 ## v2.6.0
 

@@ -5,7 +5,7 @@ import opn from 'open';
 
 import { abortExecution, abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './files';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 const errorPrefix = 'Failed to identify deep link to the Steadybit UI. ';
 

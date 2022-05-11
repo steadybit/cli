@@ -8,4 +8,6 @@ export interface Options {
   errorOnEmptyTaskSet: boolean;
   errorOnTaskFailure: boolean;
   task?: string[];
+  printParameters?: boolean;
+  printMatrixContext?: boolean;
 }
