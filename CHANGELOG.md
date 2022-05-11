@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Correct license file header.
+
 ## v2.6.1
 
 - Added a confirmation dialog if the user did not select any policies

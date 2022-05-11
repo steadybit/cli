@@ -1,6 +1,7 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
+
+/* eslint-env node */
 
 module.exports = {
   root: true,
@@ -18,16 +19,15 @@ module.exports = {
 		quotes: ['error', 'single', {avoidEscape: true}],
 		'header/header': [
 			2,
-			'block',
+			'line',
 			[
-				'',
-				{
-					template: ` * Copyright ${new Date().getFullYear()} steadybit GmbH. All rights reserved.`,
-					pattern: /^ \* Copyright \d{4} steadybit GmbH\. All rights reserved\./,
+				' SPDX-License-Identifier: MIT',
+        {
+					template: ` SPDX-FileCopyrightText: ${new Date().getFullYear()} Steadybit GmbH`,
+					pattern: /^ SPDX-FileCopyrightText: \d{4} Steadybit GmbH/,
 				},
-				' ',
 			],
-			2,
+			1,
 			{ lineEndings: 'unix' },
 		],
 	},

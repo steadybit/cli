@@ -1,6 +1,5 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import colors from 'colors/safe';
 import path from 'path';

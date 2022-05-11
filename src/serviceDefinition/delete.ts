@@ -1,6 +1,5 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { loadServiceDefinition } from './files';
 import { abortExecution } from '../errors';

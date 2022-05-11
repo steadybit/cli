@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Command } from 'commander';
 import { satisfies } from 'semver';
