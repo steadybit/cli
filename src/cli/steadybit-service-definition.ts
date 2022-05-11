@@ -10,6 +10,7 @@ import { verify } from '../serviceDefinition/verify';
 import { apply } from '../serviceDefinition/apply';
 import { open } from '../serviceDefinition/open';
 import { init } from '../serviceDefinition/init';
+import { exec } from '../serviceDefinition/exec';
 import { show } from '../serviceDefinition/show';
 import { requirePlatformAccess } from './requirements';
 
@@ -42,6 +43,16 @@ program
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
   .description('Read the current service definition and state.')
   .action(requirePlatformAccess(verify));
+program
+  .command('exec')
+  .option('--no-wait', 'Do not wait for task executions to finish.')
+  .option('--yes', 'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.', false)
+  .option('--no-error-on-empty-task-set', 'Whether to end the process with an error when an execution is triggered for an empty set of tasks.')
+  .option('--no-error-on-task-failure', 'Whether to end the process with an error when an executed task fails.')
+  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
+  .option('-t, --task <tasks...>', 'Optional filter to limit execution to those tasks matching the given task name. Can appear multiple times')
+  .description('Execute tasks defined for a service.')
+  .action(requirePlatformAccess(exec));
 program
   .command('show')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')

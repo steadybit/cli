@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Correct license file header.
+- Execute tasks via `steadybit service exec`
 
 ## v2.6.1
 

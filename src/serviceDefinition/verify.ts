@@ -2,11 +2,10 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { blue, bold, gray, green, red } from 'colors/safe';
-
 import { ServiceState, Task, TaskState } from './types';
-import { abortExecutionWithError } from '../errors';
+
 import { loadServiceDefinition } from './files';
-import { executeApiCall } from '../api';
+import { getState } from './api';
 
 const taskSuffix: Record<TaskState, string> = {
   SUCCESS: 'ok',
@@ -32,35 +31,27 @@ interface Options {
   printMatrixContext?: boolean;
 }
 
-const openHelp = gray(`
+const openHelp = gray(
+  `
 Do you need more information? You can see more details within Steadybit's
-user interface. Try execute the following to open it:
+user interface. Try executing the following to open it:
 
                    ${bold('steadybit service open')}
-`.trim());
+`.trim()
+);
 
 export async function verify(options: Options) {
   const serviceDefinition = await loadServiceDefinition(options.file);
+  const state = await getState(serviceDefinition);
 
-  try {
-    const response = await executeApiCall({
-      method: 'GET',
-      path: `/api/service-states/${serviceDefinition.id}`,
-    });
-    const state = (await response.json()) as ServiceState;
+  printTaskList(options, state);
 
-    printTaskList(options, state);
+  console.log();
+  console.log(openHelp);
 
-    console.log();
-    console.log(openHelp);
-
-    const countByType = getTaskCountByType(state);
-    if (countByType.FAILURE > 0 || countByType.PENDING > 0) {
-      process.exit(1);
-    }
-  } catch (e) {
-    const error = await abortExecutionWithError(e, 'Failed to read state for service %s', serviceDefinition.id);
-    throw error;
+  const countByType = getTaskCountByType(state);
+  if (countByType.FAILURE > 0 || countByType.PENDING > 0) {
+    process.exit(1);
   }
 }
 
@@ -101,11 +92,7 @@ function printTaskList(options: Options, state: ServiceState) {
   for (const task of sortedTasks) {
     const key = getCoordinateKey(task);
 
-    console.log(
-      taskColor[task.state](' - %s (%s)'),
-      key,
-      taskSuffix[task.state]
-    );
+    console.log(taskColor[task.state](' - %s (%s)'), key, taskSuffix[task.state]);
 
     if (options.printParameters) {
       printJson('Parameters', task.parameters);
