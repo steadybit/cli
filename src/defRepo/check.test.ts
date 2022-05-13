@@ -1,18 +1,17 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Response } from 'node-fetch';
 import path from 'path';
 
 import { getAbsolutePathToRepositoryRoot, getGitSha } from '../vcs/git';
-import { executeApiCall, ApiCallArguments } from '../api';
+import { executeApiCall, ApiCallArguments } from '../api/http';
 import { getGitHubRepositoryName } from '../vcs/github';
 import { executeCheck } from './check';
 
 jest.mock('../vcs/github');
 jest.mock('../vcs/git');
-jest.mock('../api');
+jest.mock('../api/http');
 
 const executeApiCallMock = executeApiCall as jest.Mock;
 const getGitShaMock = getGitSha as jest.Mock;

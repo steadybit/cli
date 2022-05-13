@@ -1,6 +1,5 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import colors from 'colors/safe';
 import path from 'path';
@@ -10,7 +9,7 @@ import { getAbsolutePathToRepositoryRoot, getGitSha } from '../vcs/git';
 import { abortExecution, abortExecutionWithError } from '../errors';
 import { getGitHubRepositoryName } from '../vcs/github';
 import { forEachFile, IteratorArgs } from './util';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 import { Response } from 'node-fetch';
 
 interface Options {

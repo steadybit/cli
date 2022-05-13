@@ -1,10 +1,21 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import inquirer from 'inquirer';
 
-export async function confirm(message: string, defaultYes = true): Promise<boolean> {
+export interface ConfirmOptions {
+  defaultYes?: boolean;
+  defaultWhenNonInteractive?: boolean;
+}
+
+export async function confirm(
+  message: string,
+  { defaultYes = true, defaultWhenNonInteractive = true }: ConfirmOptions = {}
+): Promise<boolean> {
+  if (!process.stdout.isTTY) {
+    return defaultWhenNonInteractive;
+  }
+
   const answers = await inquirer.prompt([
     {
       type: 'confirm',

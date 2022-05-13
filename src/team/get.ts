@@ -1,11 +1,10 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Response } from 'node-fetch';
 
 import { Team, TeamSummary } from './types';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 export async function getAllTeams(): Promise<Team[]> {
   const response: Response = await executeApiCall({

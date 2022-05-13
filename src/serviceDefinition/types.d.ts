@@ -1,6 +1,5 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 export interface KubernetesMapping {
   cluster: string;
@@ -53,13 +52,23 @@ export type Parameters = Record<string, any>;
 
 export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';
 
+export interface TaskHistoryEntry {
+  date: string;
+  type: string;
+  meta: Record<string, any>;
+}
+
 export interface Task {
+  id: string;
   definition: ReferenceCoordinate;
   state: TaskState;
+  type: string;
+  history: TaskHistoryEntry[];
   parameters: Parameters;
   matrixContext: never;
 }
 
 export interface ServiceState {
+  id: string;
   tasks: Task[];
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 require('./steadybit-service-definition');

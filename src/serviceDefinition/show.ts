@@ -1,6 +1,5 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { intersects } from 'semver';
 import archy from 'archy';
@@ -8,7 +7,7 @@ import archy from 'archy';
 import { PolicyDefinition, PolicyReference, ReferenceCoordinate, ServiceDefinition } from './types';
 import { abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './files';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 export interface Options {
   file: string;

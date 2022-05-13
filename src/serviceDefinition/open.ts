@@ -1,12 +1,11 @@
-/*
- * Copyright 2022 steadybit GmbH. All rights reserved.
- */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import opn from 'open';
 
 import { abortExecution, abortExecutionWithError } from '../errors';
 import { loadServiceDefinition } from './files';
-import { executeApiCall } from '../api';
+import { executeApiCall } from '../api/http';
 
 const errorPrefix = 'Failed to identify deep link to the Steadybit UI. ';
 
