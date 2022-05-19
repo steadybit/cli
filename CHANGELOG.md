@@ -1,6 +1,11 @@
 # Changelog
 
+## v2.8.0
+
+- `steadybit experiment exec` can be used to execute single experiments.
+
 ## v2.7.0
+
 - Correct license file header.
 - Execute tasks via `steadybit service exec`.
 
