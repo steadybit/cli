@@ -16,6 +16,7 @@ The Steadybit CLI enables you to define resilience expectations and resilience p
 
 ## Installation
 
+Via npm
 ```sh
 npm install -g steadybit
 ```
@@ -95,4 +96,12 @@ which opens the steadybit platform in your standard web browser. From here, you 
 As an alternative you can verify your current state directly via the CLI
 ```bash
 steadybit service verify
+```
+
+## Container Image
+
+You can also use the cli via our container image:
+
+```sh
+docker run -e"STEADYBIT_TOKEN=****" steadybit/cli:latest service verify
 ```
