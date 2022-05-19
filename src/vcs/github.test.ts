@@ -23,6 +23,16 @@ origin  git@github.com:steadybit/cli.git (fetch)
 origin  git@github.com:steadybit/cli.git (push)
 `)
       ).toEqual('steadybit/cli');
+
+      expect(
+        getGitHubRepositoryNameFromGitRemotes(`
+origin\thttps://github.com/steadybit/cli (fetch)
+origin\thttps://github.com/steadybit/cli (push)
+origin\thttps://github.com/steadybit/cli (fetch)
+origin\thttps://github.com/steadybit/cli (push)
+`)
+      ).toEqual('steadybit/cli');
+
     });
   });
 

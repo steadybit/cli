@@ -12,7 +12,7 @@ const dummyDefinitionRepository = path.join(__dirname, '__tests__', 'dummyDefini
 describe('defRepo/setVersion', () => {
   describe('setVersion', () => {
     afterEach(async () => {
-      await executeShellCommand('git restore __tests__/dummyDefinitionRepository', {
+      await executeShellCommand('git checkout -- __tests__/dummyDefinitionRepository', {
         cwd: __dirname
       });
     });

@@ -22,3 +22,23 @@ jobs:
     - run: git remote add test git@github.com:steadybit/cli.git
     - run: npm ci
     - run: npm run ci
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: debug
+        run: git remote -v; cd src/defRepo/__tests__/dummyDefinitionRepository/; git remote -v
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build container
+        uses: docker/build-push-action@v3
+        with:
+          context: ./
+          load: true
+          tags: steadybit/cli:latest
+      - name: Test container
+        run: docker run --rm steadybit/cli:latest -V
