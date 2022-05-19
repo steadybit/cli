@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
+import fetch, { Response } from 'node-fetch';
+import { getHeaders, toUrl } from './common';
+
 /*
  * This is required because we are supporting Node.js v14
  */
 import { AbortController } from 'node-abort-controller';
-import fetch, { Response } from 'node-fetch';
-import https from 'https';
-import http from 'http';
-
 import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess';
-import { getHeaders, toUrl } from './common';
+import http from 'http';
+import https from 'https';
 
 export interface ApiCallArguments {
   path: string;
@@ -21,6 +21,7 @@ export interface ApiCallArguments {
   expect2xx?: boolean; // defaults to true
   // https://github.com/node-fetch/node-fetch#manual-redirect
   redirect?: 'manual' | 'error';
+  fullyQualifiedUrl?: boolean;
 }
 
 const httpAgentOptions = {
@@ -41,9 +42,10 @@ export async function executeApiCall({
   timeout = 30000,
   expect2xx = true,
   redirect = 'error',
+  fullyQualifiedUrl = false,
 }: ApiCallArguments): Promise<Response> {
   await ensurePlatformAccessConfigurationIsAvailable();
-  const url = await toUrl(path, queryParameters);
+  const url = fullyQualifiedUrl ? path : await toUrl(path, queryParameters);
   const headers = await getHeaders();
 
   const controller = new AbortController();
