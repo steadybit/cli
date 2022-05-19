@@ -3,16 +3,15 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Command } from 'commander';
-
+import { apply } from '../serviceDefinition/apply';
 import { deleteServiceDefinition } from '../serviceDefinition/delete';
+import { exec } from '../serviceDefinition/exec';
+import { init } from '../serviceDefinition/init';
+import { open } from '../serviceDefinition/open';
+import { requirePlatformAccess } from './requirements';
+import { show } from '../serviceDefinition/show';
 import { validateSemverRangeCommanderArgument } from '../semver';
 import { verify } from '../serviceDefinition/verify';
-import { apply } from '../serviceDefinition/apply';
-import { open } from '../serviceDefinition/open';
-import { init } from '../serviceDefinition/init';
-import { exec } from '../serviceDefinition/exec';
-import { show } from '../serviceDefinition/show';
-import { requirePlatformAccess } from './requirements';
 
 const program = new Command();
 
@@ -27,10 +26,7 @@ program
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .description('Deletes a service definition.')
   .action(requirePlatformAccess(deleteServiceDefinition));
-program
-  .command('init')
-  .description('Initialize a service definition file.')
-  .action(requirePlatformAccess(init));
+program.command('init').description('Initialize a service definition file.').action(requirePlatformAccess(init));
 program
   .command('open')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
@@ -46,11 +42,21 @@ program
 program
   .command('exec')
   .option('--no-wait', 'Do not wait for task executions to finish.')
-  .option('--yes', 'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.', false)
-  .option('--no-error-on-empty-task-set', 'Whether to end the process with an error when an execution is triggered for an empty set of tasks.')
+  .option(
+    '--yes',
+    'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.',
+    false
+  )
+  .option(
+    '--no-error-on-empty-task-set',
+    'Whether to end the process with an error when an execution is triggered for an empty set of tasks.'
+  )
   .option('--no-error-on-task-failure', 'Whether to end the process with an error when an executed task fails.')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
-  .option('-t, --task <tasks...>', 'Optional filter to limit execution to those tasks matching the given task name. Can appear multiple times')
+  .option(
+    '-t, --task <tasks...>',
+    'Optional filter to limit execution to those tasks matching the given task name. Can appear multiple times'
+  )
   .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
   .description('Execute tasks defined for a service.')

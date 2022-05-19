@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Command } from 'commander';
-import { satisfies } from 'semver';
 import colors from 'colors/safe';
+import { satisfies } from 'semver';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const requiredNodejsVersion = require('../../package.json').engines.node;
@@ -36,4 +36,5 @@ new Command()
   .command('def-repo', 'Change tags and verify a task/policy definition repository state.')
   .command('service', 'Alias for the "service-definition" command.')
   .command('service-definition', 'Configure or verify service definitions.')
+  .command('experiment', 'Check and execute experiments.')
   .parseAsync(process.argv);
