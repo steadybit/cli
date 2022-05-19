@@ -27,6 +27,6 @@ async function executeSingle(options: Options): Promise<boolean | undefined> {
       .pipe(switchMap(() => from(getExperimentExecution(result.location ?? ''))))
       .pipe(tap(e => console.log('Current execution state:', e.state.toLowerCase())))
       .pipe(filter(e => e.state === 'FAILED' || e.state === 'CANCELED' || e.state === 'COMPLETED'))
-      .pipe(map(() => true))
+      .pipe(map(e => (e.state === 'COMPLETED' ? true : false)))
   );
 }

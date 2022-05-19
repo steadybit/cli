@@ -11,8 +11,13 @@ const program = new Command();
 program
   .command('exec')
   .description('Executes an experiment run.')
-  .requiredOption('-key, --key <key>', 'The experiment key.')
+  .requiredOption('-k, --key <key>', 'The experiment key.')
   .option('--no-wait', 'Do not wait for experiment execution to finish.')
+  .option(
+    '--yes',
+    'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.',
+    false
+  )
   .action(requirePlatformAccess(execute));
 
 program.parseAsync(process.argv);
