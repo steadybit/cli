@@ -1,8 +1,12 @@
 # Changelog
 
+## v2.9.0
+
+- Publish Docker image additionally under the major version, e.g., `steadybit/cli:2`
+
 ## v2.8.2
 
- - Add missing `git` dependency to the CLI Docker image.
+- Add missing `git` dependency to the CLI Docker image.
 
 ## v2.8.1
 

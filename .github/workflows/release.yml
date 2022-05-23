@@ -39,12 +39,14 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Obtain version from GitHub Ref
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/v}" >> $GITHUB_ENV
+      - name: Extract Major Version
+        run: echo "MAJOR_RELEASE_VERSION=$(echo ${{ env.RELEASE_VERSION }} | cut -d . -f 1)" >> $GITHUB_ENV
       - name: Build container image
         uses: docker/build-push-action@v3
         with:
           context: ./
           load: true
-          tags: steadybit/cli:latest,steadybit/cli:${{ env.RELEASE_VERSION }}
+          tags: steadybit/cli:latest,steadybit/cli:${{ env.MAJOR_RELEASE_VERSION }},steadybit/cli:${{ env.RELEASE_VERSION }}
       - name: Test container
         run: docker run --rm steadybit/cli:${{ env.RELEASE_VERSION }} -V
       - name: Push container image to Dockerhub
@@ -53,4 +55,4 @@ jobs:
           context: ./
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: steadybit/cli:latest,steadybit/cli:${{ env.RELEASE_VERSION }}
+          tags: steadybit/cli:latest,steadybit/cli:${{ env.MAJOR_RELEASE_VERSION }},steadybit/cli:${{ env.RELEASE_VERSION }}
