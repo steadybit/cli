@@ -1,8 +1,16 @@
 # Changelog
 
+## v2.8.1
+
+- Maintenance release to retag the Docker image.
+
 ## v2.8.0
 
 - `steadybit experiment exec` can be used to execute single experiments.
+
+## v2.7.1
+
+- initial version of the CLI Docker image.
 
 ## v2.7.0
 
