@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.8.2
+
+ - Add missing `git` dependency to the CLI Docker image.
+
 ## v2.8.1
 
 - Maintenance release to retag the Docker image.
