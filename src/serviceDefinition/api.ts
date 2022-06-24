@@ -29,7 +29,7 @@ export async function executeTask(serviceState: ServiceState, task: Task): Promi
   } catch (e) {
     const error = await abortExecutionWithError(
       e,
-      'Failed to execute task %s (%s@%s)',
+      'Failed to run task %s (%s@%s)',
       task.id,
       task.definition.name,
       task.definition.version

@@ -7,7 +7,7 @@ import { executeExperiment } from './execution';
 
 export async function execute(options: Options) {
   if (!options.yes) {
-    const confirmation = await confirm('Are you sure you want to execute the experiment?', {
+    const confirmation = await confirm('Are you sure you want to run the experiment?', {
       defaultYes: false,
       defaultWhenNonInteractive: true,
     });

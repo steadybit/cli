@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.9.1
+
+- Changed `exec` and `execute` to `run` in all descriptions and commands to align the cli to the platforms wording. Added an alias `exec` for backward
+  compatibility.
+
 ## v2.9.0
 
 - Publish Docker image additionally under the major version, e.g., `steadybit/cli:2`

@@ -40,26 +40,27 @@ program
   .description('Read the current service definition and state.')
   .action(requirePlatformAccess(verify));
 program
-  .command('exec')
-  .option('--no-wait', 'Do not wait for task executions to finish.')
+  .command('run')
+  .alias('exec')
+  .option('--no-wait', 'Do not wait for task run to finish.')
   .option(
     '--yes',
-    'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.',
+    'Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.',
     false
   )
   .option(
     '--no-error-on-empty-task-set',
-    'Whether to end the process with an error when an execution is triggered for an empty set of tasks.'
+    'Whether to end the process with an error when an run is triggered for an empty set of tasks.'
   )
-  .option('--no-error-on-task-failure', 'Whether to end the process with an error when an executed task fails.')
+  .option('--no-error-on-task-failure', 'Whether to end the process with an error when an task fails.')
   .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
   .option(
     '-t, --task <tasks...>',
-    'Optional filter to limit execution to those tasks matching the given task name. Can appear multiple times'
+    'Optional filter to limit run to those tasks matching the given task name. Can appear multiple times'
   )
   .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
-  .description('Execute tasks defined for a service.')
+  .description('Run tasks defined for a service.')
   .action(requirePlatformAccess(exec));
 program
   .command('show')

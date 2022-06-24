@@ -18,25 +18,25 @@ export async function exec(options: Options): Promise<void> {
   const tasks = await getTasks(options, serviceState);
 
   if (tasks.length === 0) {
-    console.log(colors.red(`No tasks found for service ${colors.bold(serviceDefinition.name)}. Nothing to execute.`));
+    console.log(colors.red(`No tasks found for service ${colors.bold(serviceDefinition.name)}. Nothing to run.`));
     process.exit(options.errorOnEmptyTaskSet ? 1 : 0);
   } else if (!options.wait && tasks.length > 1) {
     throw abortExecution(
-      'Cannot execute multiple tasks with --no-wait. Please remove --no-wait or execute tasks one by one.'
+      'Cannot run multiple tasks with --no-wait. Please remove --no-wait or run tasks one by one.'
     );
   }
 
   printTaskList(
     {
       ...options,
-      title: 'Tasks to execute',
+      title: 'Tasks to run',
     },
     tasks
   );
   console.log();
 
   if (!options.yes) {
-    const confirmation = await confirm('Are you sure you want to execute these tasks?', {
+    const confirmation = await confirm('Are you sure you want to run these tasks?', {
       defaultYes: false,
       defaultWhenNonInteractive: true,
     });

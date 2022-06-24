@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { ServiceDefinition, ServiceState, Task, TaskHistoryEntry, TaskState } from '../types';
-import { from, switchMap, map, takeWhile, lastValueFrom, distinct } from 'rxjs';
+import { distinct, from, lastValueFrom, map, switchMap, takeWhile } from 'rxjs';
 import { getCoordinateKey, getTaskCountByCoordinate, printTaskStateByType } from '../taskList';
 import { executeTask as sendExecuteTaskHttpRequest } from '../api';
 import { toTwoColumns } from '../../print/columns';
@@ -56,10 +56,10 @@ export async function execute(
       const durationMillis = Date.now() - start;
       let message: string;
       if (result === true) {
-        message = green('Execution completed successfully');
+        message = green('Run completed successfully');
         countByType['SUCCESS']++;
       } else {
-        message = red('Execution completed with failures');
+        message = red('Run completed with failures');
         countByType['FAILURE']++;
       }
       console.log(gray('\n%s (took %s ms)'), message, durationMillis);

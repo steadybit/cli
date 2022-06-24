@@ -14,7 +14,7 @@ export async function executeExperiment(key: string): Promise<ExecuteResult> {
     });
     return { location: response.headers.get('Location') ?? '' };
   } catch (e) {
-    const error = await abortExecutionWithError(e, 'Failed to execute task %s (%s@%s)', key);
+    const error = await abortExecutionWithError(e, 'Failed to run task %s (%s@%s)', key);
     throw error;
   }
 }
@@ -28,7 +28,7 @@ export async function getExperimentExecution(path: string): Promise<ExecutionRes
     });
     return (await response.json()) as ExecutionResult;
   } catch (e) {
-    const error = await abortExecutionWithError(e, 'Failed to get experiment execution ');
+    const error = await abortExecutionWithError(e, 'Failed to get experiment run ');
     throw error;
   }
 }

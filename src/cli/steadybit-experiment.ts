@@ -9,13 +9,14 @@ import { requirePlatformAccess } from './requirements';
 const program = new Command();
 
 program
-  .command('exec')
+  .command('run')
+  .alias('exec')
   .description('Executes an experiment run.')
   .requiredOption('-k, --key <key>', 'The experiment key.')
-  .option('--no-wait', 'Do not wait for experiment execution to finish.')
+  .option('--no-wait', 'Do not wait for experiment run to finish.')
   .option(
     '--yes',
-    'Skip the prompt asking for experiment execution confirmation. Not necessary when no TTY is attached.',
+    'Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.',
     false
   )
   .action(requirePlatformAccess(execute));

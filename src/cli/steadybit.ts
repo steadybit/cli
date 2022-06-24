@@ -36,5 +36,5 @@ new Command()
   .command('def-repo', 'Change tags and verify a task/policy definition repository state.')
   .command('service', 'Alias for the "service-definition" command.')
   .command('service-definition', 'Configure or verify service definitions.')
-  .command('experiment', 'Check and execute experiments.')
+  .command('experiment', 'Check and run experiments.')
   .parseAsync(process.argv);
