@@ -3,17 +3,16 @@
 
 import { KubernetesMapping, Parameters, PolicyReference, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
-
-import { Team } from '../team/types';
 import { abortExecutionWithError } from '../errors';
-import colors from 'colors/safe';
+import { writeServiceDefinition } from './files';
 import { confirm } from '../prompt/confirm';
 import { getAllTeams } from '../team/get';
-import inquirer from 'inquirer';
-import path from 'path';
+import { Team } from '../team/types';
 import { v4 as uuidv4 } from 'uuid';
-import { writeServiceDefinition } from './files';
+import colors from 'colors/safe';
+import inquirer from 'inquirer';
 import yaml from 'js-yaml';
+import path from 'path';
 
 export async function init() {
   const serviceDefinition = await askForServiceDefinitionInformation();
@@ -127,8 +126,8 @@ async function askForPolicies(): Promise<PolicyReference[]> {
 
         {
           name: `${colors.bold(
-            'steadybit/.../loose-coupling'
-          )}-on-startup: Check for coupling to dependent services when restarting your service`,
+            'steadybit/.../loose-coupling-on-startup'
+          )}: Check for coupling to dependent services when restarting your service`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/loose-coupling-on-startup',
         },
         {
@@ -157,7 +156,7 @@ async function askForPolicies(): Promise<PolicyReference[]> {
 
   return answers.policies.map((name: string) => ({
     name,
-    version: '0.2.2',
+    version: '0.5.3',
   }));
 }
 
