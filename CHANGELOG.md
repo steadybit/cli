@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.10.0
+
+- Adding `http-client-fault-tolerance` policy to the list of available policies when running `steadybit service init`.
+
 ## v2.9.1
 
 - Changed `exec` and `execute` to `run` in all descriptions and commands to align the cli to the platforms wording. Added an alias `exec` for backward
