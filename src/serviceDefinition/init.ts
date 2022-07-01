@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { v4 as uuidv4 } from 'uuid';
-import colors from 'colors/safe';
-import inquirer from 'inquirer';
-import yaml from 'js-yaml';
-import path from 'path';
-
 import { KubernetesMapping, Parameters, PolicyReference, ServiceDefinition } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { abortExecutionWithError } from '../errors';
@@ -14,6 +8,11 @@ import { writeServiceDefinition } from './files';
 import { confirm } from '../prompt/confirm';
 import { getAllTeams } from '../team/get';
 import { Team } from '../team/types';
+import { v4 as uuidv4 } from 'uuid';
+import colors from 'colors/safe';
+import inquirer from 'inquirer';
+import yaml from 'js-yaml';
+import path from 'path';
 
 export async function init() {
   const serviceDefinition = await askForServiceDefinitionInformation();
@@ -32,7 +31,7 @@ export async function init() {
   }
   console.log();
 
-  await writeServiceDefinition(outputFile, serviceDefinition)
+  await writeServiceDefinition(outputFile, serviceDefinition);
 
   console.log('File created!');
   console.log('You can now upload the service definition by executing');
@@ -40,7 +39,7 @@ export async function init() {
 }
 
 async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
-  let teams: Team[]
+  let teams: Team[];
   try {
     teams = await getAllTeams();
   } catch (e) {
@@ -72,7 +71,7 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
     mapping: {
       kubernetes: k8Mapping,
     },
-    parameters
+    parameters,
   };
 }
 
@@ -97,27 +96,44 @@ async function askForPolicies(): Promise<PolicyReference[]> {
       message: 'Policies:',
       choices: [
         {
-          name: 'Kubernetes Deployments: Challenges for recovery',
+          name: `${colors.bold(
+            'steadybit/.../recovery-pod'
+          )}: At a bare minimum, your service needs to restart in case of an outage`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/recovery-pod',
         },
         {
-          name: 'Kubernetes Deployments: Challenges for pod redundancy',
+          name: `${colors.bold(
+            'steadybit/.../redundancy-pod'
+          )}: Verify to be redundant on pod-level to avoid single point of failure`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/redundancy-pod',
         },
         {
-          name: 'Kubernetes Deployments: Challenges for redundancy during updates',
-          value: 'steadybit/definitions/kubernetes/deployments/policies/rolling-update',
-        },
-        {
-          name: 'Kubernetes Deployments: Challenges for host redundancy',
+          name: `${colors.bold(
+            'steadybit/.../redundancy-host'
+          )}: Ensure redundancy on host-level to avoid single point of failure`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/redundancy-host',
         },
         {
-          name: 'Kubernetes Deployments: Challenges for loose coupling on startup',
+          name: `${colors.bold('steadybit/.../rolling-update')}: Ensure rolling rollout without service degradation`,
+          value: 'steadybit/definitions/kubernetes/deployments/policies/rolling-update',
+        },
+        {
+          name: `${colors.bold(
+            'steadybit/.../http-client-fault-tolerance'
+          )}: Test your service when a downstream HTTP service has issues`,
+          value: 'steadybit/definitions/kubernetes/deployments/policies/http-client-fault-tolerance',
+        },
+
+        {
+          name: `${colors.bold(
+            'steadybit/.../loose-coupling-on-startup'
+          )}: Check for coupling to dependent services when restarting your service`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/loose-coupling-on-startup',
         },
         {
-          name: 'Kubernetes Deployments: Challenges for loose coupling',
+          name: `${colors.bold(
+            'steadybit/.../loose-coupling'
+          )}: Test that your service functions when dependencies are unavailable`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/loose-coupling',
         },
       ],
@@ -130,7 +146,7 @@ async function askForPolicies(): Promise<PolicyReference[]> {
         type: 'confirm',
         name: 'policiesEmpty',
         message: 'You did not select any policies. Are you sure to continue?',
-        default: true
+        default: true,
       },
     ]);
     if (!confirm.policiesEmpty) {
@@ -140,14 +156,14 @@ async function askForPolicies(): Promise<PolicyReference[]> {
 
   return answers.policies.map((name: string) => ({
     name,
-    version: '0.2.2'
+    version: '0.5.3',
   }));
 }
 
 const httpEndpointHelp = `
 We need to ensure that the service is still operating as expected when
 verifying compliance with the desired resilience level. To do so we require
-a load-balanced HTTP endpoint that can be called during task run.
+a load-balanced HTTP endpoint that can be called during task execution.
 `;
 
 const teamAndEnvironmentHelp = `
@@ -159,45 +175,46 @@ For example, when executing an experiment.
 async function askForParameters(teams: Team[]): Promise<Parameters> {
   console.log(httpEndpointHelp);
 
-  const {httpEndpoint} = await inquirer.prompt([
+  const { httpEndpoint } = await inquirer.prompt([
     {
       type: 'input',
       name: 'httpEndpoint',
       message: 'URL:',
       validate: validateHttpUrl,
-    }]);
+    },
+  ]);
 
-    console.log(teamAndEnvironmentHelp);
+  console.log(teamAndEnvironmentHelp);
 
-    const {teamKey, environmentName} = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'teamKey',
-        message: 'Team:',
-        choices: teams
-          .slice()
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map(({name, key}) => ({name, value: key}))
-      },
-      {
-        type: 'list',
-        name: 'environmentName',
-        message: 'Environment:',
-        // We know that the teamKey is within the teams[] because this is how the user
-        // could select the team key.
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        choices: answers => teams
+  const { teamKey, environmentName } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'teamKey',
+      message: 'Team:',
+      choices: teams
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(({ name, key }) => ({ name, value: key })),
+    },
+    {
+      type: 'list',
+      name: 'environmentName',
+      message: 'Environment:',
+      // We know that the teamKey is within the teams[] because this is how the user
+      // could select the team key.
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      choices: answers =>
+        teams
           .find(t => t.key === answers.teamKey)!
-          .allowedAreas
-          .slice()
-          .sort((a, b) => a.localeCompare(b))
-      }
+          .allowedAreas.slice()
+          .sort((a, b) => a.localeCompare(b)),
+    },
   ]);
 
   return {
     httpEndpoint,
     teamKey,
-    environmentName
+    environmentName,
   };
 }
 
