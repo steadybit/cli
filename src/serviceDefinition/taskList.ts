@@ -10,7 +10,7 @@ import yaml from 'js-yaml';
 const taskSuffix: Record<TaskState, string> = {
   SUCCESS: 'ok',
   FAILURE: 'failure',
-  PENDING: 'not checked',
+  PENDING: 'unchecked',
 };
 
 const taskColor: Record<TaskState, typeof red> = {
