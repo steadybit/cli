@@ -5,11 +5,10 @@ import { Response } from 'node-fetch';
 import colors from 'colors/safe';
 import yaml from 'js-yaml';
 
-import { loadServiceDefinition, writeServiceDefinition } from './files';
 import { abortExecutionWithError } from '../errors';
-import { ServiceDefinition } from './types';
+import { loadServiceDefinition } from './files';
 import { executeApiCall } from '../api/http';
-import { v4 as uuidv4 } from 'uuid';
+import { ServiceDefinition } from './types';
 import { addVcsTags } from '../vcs';
 
 export interface Options {
@@ -24,36 +23,41 @@ You may now verify how compliant the service is by executing:
 `.trim();
 
 export async function apply(options: Options) {
-  let serviceDefinition = await loadServiceDefinition(options.file);
-  serviceDefinition = await initializeIdIfNecessary(serviceDefinition, options.file);
+  const serviceDefinition = await loadServiceDefinition(options.file);
   await addVcsTags(options.file, serviceDefinition);
 
   try {
-    await executeApiCall({
-      method: 'PUT',
-      path: `/api/service-definitions/${encodeURIComponent(serviceDefinition.id)}`,
-      body: serviceDefinition,
-    });
+    if (serviceDefinitionIsNew(serviceDefinition)) {
+      await executeApiCall({
+        method: 'POST',
+        path: '/api/service-definitions',
+        body: serviceDefinition,
+      });
+    } else {
+      await executeApiCall({
+        method: 'PUT',
+        path: `/api/service-definitions/${encodeURIComponent(serviceDefinition.id)}`,
+        body: serviceDefinition,
+      });
+    }
     console.log(finishHelp);
   } catch (e: any) {
     const response: Response | undefined = e.response;
     if (response?.status === 409) {
       await handleConflict(serviceDefinition);
     } else {
-      const error = await abortExecutionWithError(e, 'Failed to upload service definition to Steadybit %s', serviceDefinition.id);
+      const error = await abortExecutionWithError(
+        e,
+        'Failed to upload service definition to Steadybit %s',
+        serviceDefinition.id ?? '(no id)'
+      );
       throw error;
     }
   }
 }
 
-async function initializeIdIfNecessary(serviceDefinition: ServiceDefinition, serviceDefinitionPath: string) {
-  if (!('id' in serviceDefinition)) {
-    //we have to place to place the id first so it appears on top in file
-    const updated = { id: uuidv4(), ...(serviceDefinition as Omit<ServiceDefinition, 'id'>)};
-    await writeServiceDefinition(serviceDefinitionPath, updated);
-    return updated;
-  }
-  return serviceDefinition;
+function serviceDefinitionIsNew(serviceDefinition: ServiceDefinition): boolean {
+  return !('id' in serviceDefinition);
 }
 
 const conflictHelp = `
@@ -75,7 +79,7 @@ async function handleConflict(serviceDefinition: ServiceDefinition): Promise<voi
     });
 
     const conflictingServiceDefinition: ServiceDefinition = await response.json();
-    console.log('The following conflicting service definition is stored:')
+    console.log('The following conflicting service definition is stored:');
     console.log();
     console.log(yaml.dump(conflictingServiceDefinition));
     console.log();
