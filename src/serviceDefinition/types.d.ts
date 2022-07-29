@@ -48,6 +48,15 @@ export interface ServiceDefinition {
   tags?: Record<string, string>;
 }
 
+export interface DefineServiceDefinition {
+  name: string;
+  policies?: PolicyReference[];
+  tasks?: TaskReference[];
+  mapping: Mapping;
+  parameters?: Parameters;
+  tags?: Record<string, string>;
+}
+
 export type Parameters = Record<string, any>;
 
 export type TaskState = 'PENDING' | 'SUCCESS' | 'FAILURE';

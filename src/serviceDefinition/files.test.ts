@@ -19,26 +19,24 @@ describe('serviceDefinition/files', () => {
       await Promise.all([
         fs.writeFile(fileWithSyntaxErrors, '{$$$42:'),
         fs.writeFile(fileWithValidJson, JSON.stringify({ type: 'json' })),
-        fs.writeFile(fileWithValidYaml, yaml.dump({ type: 'yaml' }))
+        fs.writeFile(fileWithValidYaml, yaml.dump({ type: 'yaml' })),
       ]);
     });
 
     afterAll(async () => {
-      await Promise.all([
-        fs.unlink(fileWithSyntaxErrors),
-        fs.unlink(fileWithValidJson),
-        fs.unlink(fileWithValidYaml)
-      ]);
+      await Promise.all([fs.unlink(fileWithSyntaxErrors), fs.unlink(fileWithValidJson), fs.unlink(fileWithValidYaml)]);
     });
 
     it('must reject when file cannot be found', async () => {
-      await expect(loadServiceDefinition(path.join(tmpdir(), uuidv4())))
-        .rejects.toThrow(/Failed to read service definition file.*/);
+      await expect(loadServiceDefinition(path.join(tmpdir(), uuidv4()))).rejects.toThrow(
+        /Failed to read service definition file.*/
+      );
     });
 
     it('must reject when file cannot be parsed', async () => {
-      await expect(loadServiceDefinition(fileWithSyntaxErrors))
-        .rejects.toThrow(/Failed to parse service definition file.*/);
+      await expect(loadServiceDefinition(fileWithSyntaxErrors)).rejects.toThrow(
+        /Failed to parse service definition file.*/
+      );
     });
 
     it('must successfully load JSON files', async () => {
@@ -62,19 +60,15 @@ Object {
     const outputfile = path.join(tmpdir(), `${uuidv4()}-valid.yml`);
 
     afterAll(async () => {
-      await Promise.all([
-        fs.unlink(outputfile)
-      ]);
+      await Promise.all([fs.unlink(outputfile)]);
     });
 
     it('must successfully write YAML files', async () => {
-      await writeServiceDefinition(outputfile, { id: '00000000-0000-0000-0000-000000000000', name: 'Test ServiceDefinition', mapping: {} });
+      await writeServiceDefinition(outputfile, { name: 'Test ServiceDefinition', mapping: {} });
 
-      expect((await fs.readFile(outputfile)).toString()).toEqual(`id: 00000000-0000-0000-0000-000000000000
-name: Test ServiceDefinition
+      expect((await fs.readFile(outputfile)).toString()).toEqual(`name: Test ServiceDefinition
 mapping: {}
 `);
     });
-
   });
 });
