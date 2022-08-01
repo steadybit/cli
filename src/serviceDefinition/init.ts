@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { KubernetesMapping, Parameters, PolicyReference, ServiceDefinition } from './types';
+import { DefineServiceDefinition, KubernetesMapping, Parameters, PolicyReference } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { abortExecutionWithError } from '../errors';
 import { writeServiceDefinition } from './files';
 import { confirm } from '../prompt/confirm';
 import { getAllTeams } from '../team/get';
 import { Team } from '../team/types';
-import { v4 as uuidv4 } from 'uuid';
 import colors from 'colors/safe';
 import inquirer from 'inquirer';
 import yaml from 'js-yaml';
@@ -38,7 +37,7 @@ export async function init() {
   console.log(`  ${colors.bold('steadybit service apply')}`);
 }
 
-async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> {
+async function askForServiceDefinitionInformation(): Promise<DefineServiceDefinition> {
   let teams: Team[];
   try {
     teams = await getAllTeams();
@@ -65,7 +64,6 @@ async function askForServiceDefinitionInformation(): Promise<ServiceDefinition> 
   const parameters = await askForParameters(teams);
 
   return {
-    id: uuidv4(),
     name: answers.name,
     policies,
     mapping: {

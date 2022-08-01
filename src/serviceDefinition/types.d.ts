@@ -38,14 +38,17 @@ export interface TaskReference extends ReferenceCoordinate {
   forEach?: ForEach[];
 }
 
-export interface ServiceDefinition {
-  id: string;
+export interface DefineServiceDefinition {
   name: string;
   policies?: PolicyReference[];
   tasks?: TaskReference[];
   mapping: Mapping;
   parameters?: Parameters;
   tags?: Record<string, string>;
+}
+
+export interface ServiceDefinition extends DefineServiceDefinition {
+  id: string;
 }
 
 export type Parameters = Record<string, any>;
