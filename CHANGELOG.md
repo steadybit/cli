@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.10.1
+
+- Adding a new service will yield the services `id` so the API server can figure out a proper one.
+
 ## v2.10.0
 
 - Adding `http-client-fault-tolerance` policy to the list of available policies when running `steadybit service init`.
