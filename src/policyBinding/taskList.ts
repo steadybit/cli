@@ -78,7 +78,7 @@ export function getTaskCountByType(tasks: Task[]): Record<TaskState, number> {
 export function printTaskStateByType(countByType: Record<TaskState, number>): void {
   console.log(taskColor.SUCCESS('Ok:          %d'), countByType.SUCCESS);
   if (countByType.PENDING >= 0) {
-    console.log(taskColor.PENDING('Unchecked: %d'), countByType.PENDING);
+    console.log(taskColor.PENDING('Unchecked:   %d'), countByType.PENDING);
   }
   console.log(taskColor.FAILURE('Failure:     %d'), countByType.FAILURE);
 }
