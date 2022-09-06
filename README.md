@@ -7,7 +7,7 @@
 
 ---
 
-The Steadybit CLI enables you to define resilience expectations and resilience policies that your services need to comply with through configuration files that live next to your services' code. This allows you to implement gitops practices easily.
+The Steadybit CLI enables you to define resilience expectations and resilience policies that your infrastructure needs to comply with through configuration files that live next to your code. This allows you to implement gitops practices easily.
 
 ## Prerequisites
 
@@ -33,13 +33,13 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ```
 
 ## Usage
-### Describe your Service
+### Description
 ```bash
-➜ steadybit service init
-? Service name: gateway
+➜ steadybit policy-binding init
+? Name: gateway
 ? Desired Resilience Level: A - challenges for loose coupling
 
-In order to understand which service you are describing, we need
+In order to understand which infrastructure you are describing, we need
 to be able to map it to data collected by the Steadybit agents.
 Right now, we only support mapping to Kubernetes monitored deployments.
 
@@ -47,7 +47,7 @@ Right now, we only support mapping to Kubernetes monitored deployments.
 ? Kubernetes namespace: steadybit-demo
 ? Kubernetes deployment: gateway
 
-We need to ensure that the service is still operating as expected when
+We need to ensure that the infrastructure is still operating as expected when
 verifying compliance with the desired resilience policy. To do so require
 a load-balanced HTTP endpoint that can be called during task
 execution.
@@ -56,7 +56,7 @@ execution.
 ...
 ```
 
-The CLI created a .yml file containing your service definition in your current working directory. From now on you are able to fine tune your settings either via subsequent CLI calls or by editing the .yml once you understand the format.
+The CLI created a .yml file containing your policy binding in your current working directory. From now on you are able to fine tune your settings either via subsequent CLI calls or by editing the .yml once you understand the format.
 
 ```yml
 id: 9cb2888d-3abf-4ac3-bf8b-40b7eb61d271
@@ -77,25 +77,25 @@ parameters:
 
 The default file name is `.steadybit.yml`. Most CLI commands assume that the input file is named this way. In case you prefer an alternative name, you can specify the alternative name via `-f {your name}.yml`.
 
-### Sync the service definition with the steadybit platform
-You can now upload the service definition by executing
+### Sync the policy binding with the Steadybit platform
+You can now upload the policy binding by executing
 ```bash
-steadybit service apply
+steadybit policy-binding apply
 ```
 
-or even better, you can automatically sync the service definition with every commit using our [Github Action](https://github.com/steadybit/define-service)
+or even better, you can automatically sync the policy binding with every commit using our [Github Action](https://github.com/steadybit/define-service)
 
-### See your Service Definition in Action
+### See your Policy Binding in Action
 You can now use the cli to open steadybit and watch your current state and work on the next steps.
 ```bash
-steadybit service open
+steadybit policy-binding open
 ```
 
-which opens the steadybit platform in your standard web browser. From here, you can inspect the service’s current state, trigger challenges and much more.
+which opens the Steadybit platform in your standard web browser. From here, you can inspect the policy's current state, trigger challenges and much more.
 
 As an alternative you can verify your current state directly via the CLI
 ```bash
-steadybit service verify
+steadybit policy-binding verify
 ```
 
 ## Container Image
@@ -103,5 +103,5 @@ steadybit service verify
 You can also use the cli via our container image:
 
 ```sh
-docker run -e"STEADYBIT_TOKEN=****" steadybit/cli:latest service verify
+docker run -e"STEADYBIT_TOKEN=****" steadybit/cli:latest policy-binding verify
 ```

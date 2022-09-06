@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ServiceState, Task } from '../types';
+import { PolicyBindingState, Task } from '../types';
 import { getTasks } from './taskIdentification';
 import { getState } from '../api';
 import { Options } from './types';
@@ -37,7 +37,7 @@ describe('taskIdentification', () => {
       // Given
 
       // When
-      const result = getTasks({} as Options, { tasks } as ServiceState);
+      const result = getTasks({} as Options, { tasks } as PolicyBindingState);
 
       // Then
       expect(result).toEqual(tasks);
@@ -51,7 +51,7 @@ describe('taskIdentification', () => {
         {
           task: [],
         } as Options,
-        { tasks } as ServiceState
+        { tasks } as PolicyBindingState
       );
 
       // Then
@@ -66,7 +66,7 @@ describe('taskIdentification', () => {
         {
           task: ['task2'],
         } as Options,
-        { tasks } as ServiceState
+        { tasks } as PolicyBindingState
       );
 
       // Then

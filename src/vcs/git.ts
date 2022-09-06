@@ -65,23 +65,23 @@ export async function getGitOutput({ command, cwd }: GetGitOutputArgs): Promise<
   }
 }
 
-export async function getTags(serviceDefinitionPath: string): Promise<Record<string, string>> {
+export async function getTags(policyBindingPath: string): Promise<Record<string, string>> {
   const records = await Promise.all([
     getAsTag(
       'git.sha',
-      getGitSha(path.dirname(serviceDefinitionPath)),
+      getGitSha(path.dirname(policyBindingPath)),
     ),
     getAsTag(
       'git.ref',
-      getGitRef(path.dirname(serviceDefinitionPath)),
+      getGitRef(path.dirname(policyBindingPath)),
     ),
     getAsTag(
       'git.repository_path',
-      getPathToFileInGitRepository(serviceDefinitionPath),
+      getPathToFileInGitRepository(policyBindingPath),
     ),
     getAsTag(
       'git.remote',
-      getGitRemote(path.dirname(serviceDefinitionPath)),
+      getGitRemote(path.dirname(policyBindingPath)),
     )
   ]);
 

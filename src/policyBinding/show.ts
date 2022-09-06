@@ -4,9 +4,9 @@
 import { intersects } from 'semver';
 import archy from 'archy';
 
-import { PolicyDefinition, PolicyReference, ReferenceCoordinate, ServiceDefinition } from './types';
+import { PolicyDefinition, PolicyReference, ReferenceCoordinate, PolicyBinding } from './types';
 import { abortExecutionWithError } from '../errors';
-import { loadServiceDefinition } from './files';
+import { loadPolicyBinding } from './files';
 import { executeApiCall } from '../api/http';
 
 export interface Options {
@@ -32,13 +32,13 @@ export async function show(options: Options) {
 }
 
 export async function executeShow(options: Options): Promise<ExecutionResult> {
-  const serviceDefinition = await loadServiceDefinition(options.file);
-  const policyTaskReferences = await getPolicyTaskReferences(serviceDefinition);
+  const policyBinding = await loadPolicyBinding(options.file);
+  const policyTaskReferences = await getPolicyTaskReferences(policyBinding);
 
   let exitCode = 0;
 
   const tree: archy.Data = {
-    label: serviceDefinition.name,
+    label: policyBinding.name,
     nodes: [],
   };
 
@@ -63,7 +63,7 @@ export async function executeShow(options: Options): Promise<ExecutionResult> {
       }
     });
 
-  serviceDefinition.tasks
+  policyBinding.tasks
     ?.slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .forEach(task => {
@@ -99,12 +99,12 @@ function shouldAddToOutput(referenceCoordinate: ReferenceCoordinate, options: Op
   return intersects(referenceCoordinate.version, options.version);
 }
 
-async function getPolicyTaskReferences(serviceDefinition: ServiceDefinition): Promise<TaskReferenceThroughPolicy[]> {
-  if (!serviceDefinition.policies) {
+async function getPolicyTaskReferences(policyBinding: PolicyBinding): Promise<TaskReferenceThroughPolicy[]> {
+  if (!policyBinding.policies) {
     return [];
   }
 
-  return await Promise.all(serviceDefinition.policies.map(getTaskReferenceThroughPolicy));
+  return await Promise.all(policyBinding.policies.map(getTaskReferenceThroughPolicy));
 }
 
 async function getTaskReferenceThroughPolicy(policyReference: PolicyReference): Promise<TaskReferenceThroughPolicy> {

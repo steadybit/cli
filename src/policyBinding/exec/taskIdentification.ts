@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ServiceState, Task } from '../types';
+import { PolicyBindingState, Task } from '../types';
 import { Options } from './types';
 
-export function getTasks(options: Options, serviceState: ServiceState): Task[] {
-  let tasks = serviceState.tasks;
+export function getTasks(options: Options, policyBindingState: PolicyBindingState): Task[] {
+  let tasks = policyBindingState.tasks;
 
   const taskFilter = options.task;
   if (taskFilter != null) {

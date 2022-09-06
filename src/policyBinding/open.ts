@@ -4,7 +4,7 @@
 import opn from 'open';
 
 import { abortExecution, abortExecutionWithError } from '../errors';
-import { loadServiceDefinition } from './files';
+import { loadPolicyBinding } from './files';
 import { executeApiCall } from '../api/http';
 
 const errorPrefix = 'Failed to identify deep link to the Steadybit UI. ';
@@ -14,12 +14,12 @@ export interface Options {
 }
 
 export async function open(options: Options) {
-  const serviceDefinition = await loadServiceDefinition(options.file);
+  const policyBinding = await loadPolicyBinding(options.file);
   let response;
   try {
     response = await executeApiCall({
       method: 'GET',
-      path: `/api/service-definitions/${serviceDefinition.id}/deep-link`,
+      path: `/api/policy-bindings/${policyBinding.id}/deep-link`,
       expect2xx: false,
       redirect: 'manual'
     });

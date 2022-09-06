@@ -17,9 +17,9 @@ are stored in ~/.steadybit
 
 const finishHelp = `
 ${colors.green('Done!')} You can now start using the CLI. For example, you could start
-to define your first service via:
+to define your first policy binding via:
 
-                   ${colors.bold('steadybit service init')}
+                   ${colors.bold('steadybit policy-binding init')}
 `.trim();
 
 export async function add(): Promise<void> {

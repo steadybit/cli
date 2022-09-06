@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { loadServiceDefinition } from './files';
+import { loadPolicyBinding } from './files';
 import { executeApiCall } from '../api/http';
 import { executeShow } from './show';
 
 jest.mock('./files');
 jest.mock('../api/http');
 
-const loadServiceDefinitionMock = loadServiceDefinition as jest.Mock;
+const loadPolicyBindingMock = loadPolicyBinding as jest.Mock;
 const executeApiCallMock = executeApiCall as jest.Mock;
 
 describe('show', () => {
   beforeEach(() => {
-    loadServiceDefinitionMock.mockReturnValue(
+    loadPolicyBindingMock.mockReturnValue(
       Promise.resolve({
         tasks: [
           {
