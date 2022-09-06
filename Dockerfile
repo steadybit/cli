@@ -1,4 +1,4 @@
-FROM node:16-alpine as builder
+FROM node:18-alpine as builder
 
 COPY ./ ./build
 WORKDIR ./build
@@ -6,7 +6,7 @@ RUN npm ci && \
     npm run build && \
     npm pack
 
-FROM node:16-alpine
+FROM node:18-alpine
 
 COPY --from=builder ./build/steadybit-*.tgz steadybit.tgz
 
