@@ -83,7 +83,7 @@ You can now upload the policy binding by executing
 steadybit policy-binding apply
 ```
 
-or even better, you can automatically sync the policy binding with every commit using our [Github Action](https://github.com/steadybit/define-service)
+or even better, you can automatically sync the policy binding with every commit using our [Github Action](https://github.com/steadybit/apply-policy-binding)
 
 ### See your Policy Binding in Action
 You can now use the cli to open steadybit and watch your current state and work on the next steps.
