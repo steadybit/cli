@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { TaskDefinition, PolicyDefinition } from '../serviceDefinition/types';
+import { TaskDefinition, PolicyDefinition } from '../policyBinding/types';
 import { forEachFile, IteratorArgs, ForEachAction } from './util';
 import { getGitHubRepositoryName } from '../vcs/github';
 import { abortExecution } from '../errors';

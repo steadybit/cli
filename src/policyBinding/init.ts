@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { DefineServiceDefinition, KubernetesMapping, Parameters, PolicyReference } from './types';
+import { DefinePolicyBinding, KubernetesMapping, Parameters, PolicyReference } from './types';
 import { validateHttpUrl, validateNotBlank } from '../prompt/validation';
 import { abortExecutionWithError } from '../errors';
-import { writeServiceDefinition } from './files';
+import { writePolicyBinding } from './files';
 import { confirm } from '../prompt/confirm';
 import { getAllTeams } from '../team/get';
 import { Team } from '../team/types';
@@ -14,14 +14,14 @@ import yaml from 'js-yaml';
 import path from 'path';
 
 export async function init() {
-  const serviceDefinition = await askForServiceDefinitionInformation();
+  const policyBinding = await askForPolicyBindingInformation();
 
   const outputFile = path.join(process.cwd(), '.steadybit.yml');
 
   console.log();
   console.log(`About to write to ${colors.bold(outputFile)}:`);
   console.log();
-  console.log(yaml.dump(serviceDefinition));
+  console.log(yaml.dump(policyBinding));
   console.log();
 
   const ok = await confirm('Should we create this file?');
@@ -30,14 +30,14 @@ export async function init() {
   }
   console.log();
 
-  await writeServiceDefinition(outputFile, serviceDefinition);
+  await writePolicyBinding(outputFile, policyBinding);
 
   console.log('File created!');
-  console.log('You can now upload the service definition by executing');
-  console.log(`  ${colors.bold('steadybit service apply')}`);
+  console.log('You can now upload the policy binding by executing');
+  console.log(`  ${colors.bold('steadybit policy-binding apply')}`);
 }
 
-async function askForServiceDefinitionInformation(): Promise<DefineServiceDefinition> {
+async function askForPolicyBindingInformation(): Promise<DefinePolicyBinding> {
   let teams: Team[];
   try {
     teams = await getAllTeams();
@@ -52,7 +52,7 @@ async function askForServiceDefinitionInformation(): Promise<DefineServiceDefini
     {
       type: 'input',
       name: 'name',
-      message: 'Service name:',
+      message: 'Name:',
       default: path.basename(process.cwd()),
       validate: validateNotBlank,
     },
@@ -74,7 +74,7 @@ async function askForServiceDefinitionInformation(): Promise<DefineServiceDefini
 }
 
 const policiesHelp = `
-Services can refer to policies and tasks to describe the desired resilience
+Policy bindings can refer to policies and tasks to describe the desired resilience
 level. The following question will give you the option to select commonly
 used policies. You may also choose to proceed without selecting a policy.
 In this case, you can modify the generated YAML file once this init step
@@ -96,7 +96,7 @@ async function askForPolicies(): Promise<PolicyReference[]> {
         {
           name: `${colors.bold(
             'steadybit/.../recovery-pod'
-          )}: At a bare minimum, your service needs to restart in case of an outage`,
+          )}: At a bare minimum, your pod needs to restart in case of an outage`,
           value: 'steadybit/definitions/kubernetes/deployments/policies/recovery-pod',
         },
         {
@@ -159,7 +159,7 @@ async function askForPolicies(): Promise<PolicyReference[]> {
 }
 
 const httpEndpointHelp = `
-We need to ensure that the service is still operating as expected when
+We need to ensure that everything is still operating as expected when
 verifying compliance with the desired resilience level. To do so we require
 a load-balanced HTTP endpoint that can be called during task execution.
 `;
@@ -198,10 +198,10 @@ async function askForParameters(teams: Team[]): Promise<Parameters> {
       type: 'list',
       name: 'environmentName',
       message: 'Environment:',
-      // We know that the teamKey is within the teams[] because this is how the user
-      // could select the team key.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       choices: answers =>
+        // We know that the teamKey is within the teams[] because this is how the user
+        // could select the team key.
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         teams
           .find(t => t.key === answers.teamKey)!
           .allowedAreas.slice()
@@ -217,7 +217,7 @@ async function askForParameters(teams: Team[]): Promise<Parameters> {
 }
 
 const mappingHelp = `
-In order to understand which service you are describing, we need
+In order to understand which infrastructure you are describing, we need
 to be able to map it to data collected by the Steadybit agents.
 Right now, we only support mapping to Kubernetes monitored deployments.
 `;

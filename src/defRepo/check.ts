@@ -4,7 +4,7 @@
 import colors from 'colors/safe';
 import path from 'path';
 
-import { TaskDefinition, PolicyDefinition } from '../serviceDefinition/types';
+import { TaskDefinition, PolicyDefinition } from '../policyBinding/types';
 import { getAbsolutePathToRepositoryRoot, getGitSha } from '../vcs/git';
 import { abortExecution, abortExecutionWithError } from '../errors';
 import { getGitHubRepositoryName } from '../vcs/github';

@@ -34,7 +34,6 @@ new Command()
   .version(require('../../package.json').version)
   .command('config', 'Show/modify the CLI configuration and authentication profiles.')
   .command('def-repo', 'Change tags and verify a task/policy definition repository state.')
-  .command('service', 'Alias for the "service-definition" command.')
-  .command('service-definition', 'Configure or verify service definitions.')
+  .command('policy-binding', 'Configure or verify policy bindings to targets.')
   .command('experiment', 'Check and run experiments.')
   .parseAsync(process.argv);

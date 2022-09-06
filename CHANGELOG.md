@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.0
+ - Breaking: Removed term service
+ - TODO
+
 ## v2.10.1
 
 - Adding a new service will yield the services `id` so the API server can figure out a proper one.

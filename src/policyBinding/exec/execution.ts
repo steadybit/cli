@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ServiceDefinition, ServiceState, Task, TaskHistoryEntry, TaskState } from '../types';
+import { PolicyBinding, PolicyBindingState, Task, TaskHistoryEntry, TaskState } from '../types';
 import { distinct, from, lastValueFrom, map, switchMap, takeWhile } from 'rxjs';
 import { getCoordinateKey, getTaskCountByCoordinate, printTaskStateByType } from '../taskList';
 import { executeTask as sendExecuteTaskHttpRequest } from '../api';
@@ -18,8 +18,8 @@ import ora from 'ora';
 const columnLength = 20;
 
 export async function execute(
-  serviceDefinition: ServiceDefinition,
-  serviceState: ServiceState,
+  policyBinding: PolicyBinding,
+  policyBindingState: PolicyBindingState,
   tasks: Task[],
   options: Options
 ): Promise<boolean | undefined> {
@@ -50,7 +50,7 @@ export async function execute(
       console.log(indent(yaml.dump(task.matrixContext), 2));
     }
 
-    const result = await executeSingle(serviceState, task, options);
+    const result = await executeSingle(policyBindingState, task, options);
 
     if (result !== undefined) {
       const durationMillis = Date.now() - start;
@@ -81,18 +81,18 @@ export async function execute(
   return allSuccessful;
 }
 
-async function executeSingle(serviceState: ServiceState, task: Task, options: Options): Promise<boolean | undefined> {
+async function executeSingle(policyBindingState: PolicyBindingState, task: Task, options: Options): Promise<boolean | undefined> {
   const spinner = ora('Executing task...').start();
   try {
     if (!options.wait) {
-      const taskHistoryEntry = await sendExecuteTaskHttpRequest(serviceState, task);
+      const taskHistoryEntry = await sendExecuteTaskHttpRequest(policyBindingState, task);
       await printExecutionStart(taskHistoryEntry);
       return undefined;
     }
 
     return await lastValueFrom(
       executeApiCall<TaskHistoryEntry>({
-        path: `/api/service-states/${serviceState.id}/task/${task.id}/execute/wait`,
+        path: `/api/policy-bindings/state/${policyBindingState.id}/task/${task.id}/execute/wait`,
       })
         .pipe(distinct(e => e.type))
         .pipe(switchMap(e => from(informAboutHistoryEntry(e, spinner)).pipe(map(() => e))))

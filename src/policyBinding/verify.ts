@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { getTaskCountByType, printTaskList, printTaskStateByType } from './taskList';
-import { loadServiceDefinition } from './files';
+import { loadPolicyBinding } from './files';
 import { bold, gray } from 'colors/safe';
 import { getState } from './api';
 
@@ -17,13 +17,13 @@ const openHelp = gray(
 Do you need more information? You can see more details within Steadybit's
 user interface. Try executing the following to open it:
 
-                   ${bold('steadybit service open')}
+                   ${bold('steadybit policy-binding open')}
 `.trim()
 );
 
 export async function verify(options: Options) {
-  const serviceDefinition = await loadServiceDefinition(options.file);
-  const state = await getState(serviceDefinition);
+  const policyBinding = await loadPolicyBinding(options.file);
+  const state = await getState(policyBinding);
 
   printTaskList({
     ...options,

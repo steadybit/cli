@@ -3,41 +3,41 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Command } from 'commander';
-import { apply } from '../serviceDefinition/apply';
-import { deleteServiceDefinition } from '../serviceDefinition/delete';
-import { exec } from '../serviceDefinition/exec';
-import { init } from '../serviceDefinition/init';
-import { open } from '../serviceDefinition/open';
+import { apply } from '../policyBinding/apply';
+import { deletePolicyBinding } from '../policyBinding/delete';
+import { exec } from '../policyBinding/exec';
+import { init } from '../policyBinding/init';
+import { open } from '../policyBinding/open';
 import { requirePlatformAccess } from './requirements';
-import { show } from '../serviceDefinition/show';
+import { show } from '../policyBinding/show';
 import { validateSemverRangeCommanderArgument } from '../semver';
-import { verify } from '../serviceDefinition/verify';
+import { verify } from '../policyBinding/verify';
 
 const program = new Command();
 
 program
   .command('apply')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
-  .description('Upload a service definition.')
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
+  .description('Upload a policy binding.')
   .action(requirePlatformAccess(apply));
 program
   .command('delete')
   .option('-i, --id <id>', 'Id to be deleted.')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
-  .description('Deletes a service definition.')
-  .action(requirePlatformAccess(deleteServiceDefinition));
-program.command('init').description('Initialize a service definition file.').action(requirePlatformAccess(init));
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
+  .description('Deletes a policy binding.')
+  .action(requirePlatformAccess(deletePolicyBinding));
+program.command('init').description('Initialize a policy binding file.').action(requirePlatformAccess(init));
 program
   .command('open')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
-  .description('Open the service in the Steadybit UI.')
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
+  .description('Open the policy binding in the Steadybit UI.')
   .action(requirePlatformAccess(open));
 program
   .command('verify')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
   .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
-  .description('Read the current service definition and state.')
+  .description('Read the current policy binding and state.')
   .action(requirePlatformAccess(verify));
 program
   .command('run')
@@ -53,25 +53,25 @@ program
     'Whether to end the process with an error when an run is triggered for an empty set of tasks.'
   )
   .option('--no-error-on-task-failure', 'Whether to end the process with an error when an task fails.')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
   .option(
     '-t, --task <tasks...>',
     'Optional filter to limit run to those tasks matching the given task name. Can appear multiple times'
   )
   .option('-pp, --print-parameters', 'Print task parameters when listing tasks.')
   .option('-pm, --print-matrix-context', 'Print the matrix execution context information when listing tasks.')
-  .description('Run tasks defined for a service.')
+  .description('Run tasks defined through a policy binding.')
   .action(requirePlatformAccess(exec));
 program
   .command('show')
-  .option('-f, --file <file>', 'Path to the service definition file.', '.steadybit.yml')
+  .option('-f, --file <file>', 'Path to the policy binding file.', '.steadybit.yml')
   .option('-n, --name <name>', 'Optional task name to filter the result list.')
   .option(
     '-v, --version <version>',
     'Optional task version to filter the result list.',
     validateSemverRangeCommanderArgument
   )
-  .description('Show a list of tasks and policies referenced by this service definition.')
+  .description('Show a list of tasks and policies referenced by this policy binding.')
   .action(requirePlatformAccess(show));
 
 program.parseAsync(process.argv);

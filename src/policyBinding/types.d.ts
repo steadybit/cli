@@ -38,7 +38,7 @@ export interface TaskReference extends ReferenceCoordinate {
   forEach?: ForEach[];
 }
 
-export interface DefineServiceDefinition {
+export interface DefinePolicyBinding {
   name: string;
   policies?: PolicyReference[];
   tasks?: TaskReference[];
@@ -47,7 +47,7 @@ export interface DefineServiceDefinition {
   tags?: Record<string, string>;
 }
 
-export interface ServiceDefinition extends DefineServiceDefinition {
+export interface PolicyBinding extends DefinePolicyBinding {
   id: string;
 }
 
@@ -71,7 +71,7 @@ export interface Task {
   matrixContext: never;
 }
 
-export interface ServiceState {
+export interface PolicyBindingState {
   id: string;
   tasks: Task[];
 }

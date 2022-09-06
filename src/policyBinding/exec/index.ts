@@ -8,17 +8,17 @@ import { confirm } from '../../prompt/confirm';
 import { execute } from './execution';
 import { getState } from '../api';
 import { getTasks } from './taskIdentification';
-import { loadServiceDefinition } from '../files';
+import { loadPolicyBinding } from '../files';
 import { printTaskList } from '../taskList';
 
 export async function exec(options: Options): Promise<void> {
-  const serviceDefinition = await loadServiceDefinition(options.file);
+  const policyBinding = await loadPolicyBinding(options.file);
 
-  const serviceState = await getState(serviceDefinition);
-  const tasks = await getTasks(options, serviceState);
+  const policyBindingState = await getState(policyBinding);
+  const tasks = await getTasks(options, policyBindingState);
 
   if (tasks.length === 0) {
-    console.log(colors.red(`No tasks found for service ${colors.bold(serviceDefinition.name)}. Nothing to run.`));
+    console.log(colors.red(`No tasks found for policy-binding ${colors.bold(policyBinding.name)}. Nothing to run.`));
     process.exit(options.errorOnEmptyTaskSet ? 1 : 0);
   } else if (!options.wait && tasks.length > 1) {
     throw abortExecution(
@@ -45,7 +45,7 @@ export async function exec(options: Options): Promise<void> {
     }
   }
 
-  const allSuccessful = await execute(serviceDefinition, serviceState, tasks, options);
+  const allSuccessful = await execute(policyBinding, policyBindingState, tasks, options);
   // beware: allSuccessful may be undefined when using --no-wait. We therefore have to check
   // for === false explicitly.
   process.exit(allSuccessful === false && options.errorOnTaskFailure ? 1 : 0);
