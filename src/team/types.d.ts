@@ -8,5 +8,5 @@ export interface TeamSummary {
 export interface Team {
   key: string;
   name: string;
-  allowedAreas: string[]
+  allowedEnvironments: string[]
 }

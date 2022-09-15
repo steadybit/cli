@@ -204,7 +204,7 @@ async function askForParameters(teams: Team[]): Promise<Parameters> {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         teams
           .find(t => t.key === answers.teamKey)!
-          .allowedAreas.slice()
+          .allowedEnvironments.slice()
           .sort((a, b) => a.localeCompare(b)),
     },
   ]);
