@@ -1,4 +1,5 @@
-# Changelog
+## v3.0.1
+ - Use new team api format
 
 ## v3.0.0
  - **Breaking:** This version contains breaking changes within the CLI interface. All commands previously found
