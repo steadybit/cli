@@ -1,11 +1,17 @@
 ## v3.0.1
- - Use new team api format
+
+- Support new exit state `ERRORED` of experiments
+
+## v3.0.1
+
+- Use new team api format
 
 ## v3.0.0
- - **Breaking:** This version contains breaking changes within the CLI interface. All commands previously found
-   under `steadybit service` and `steadybit service-definition` can now be found under `steadybit policy-binding`.
-   This was done to remove the problematic term `service` and `service-definition`.
- - Update the Node.js version to Node.js 18 within the Docker image.
+
+- **Breaking:** This version contains breaking changes within the CLI interface. All commands previously found
+  under `steadybit service` and `steadybit service-definition` can now be found under `steadybit policy-binding`.
+  This was done to remove the problematic term `service` and `service-definition`.
+- Update the Node.js version to Node.js 18 within the Docker image.
 
 ## v2.10.1
 
