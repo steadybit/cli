@@ -31,8 +31,6 @@ function executeApiCallInternal<T>(url: string, headers: Record<string, string>)
     };
 
     es.onerror = (event: MessageEvent) => {
-      // @ts-expect-error This prop is not part of the TypeScript definition, but it
-      // is part of the documented EventSource API
       const status: any = event.status;
       if (status != null) {
         subscriber.error(new Error(`Failed to establish SSE connection to ${url}. Got status code ${status}`));
