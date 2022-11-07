@@ -1,3 +1,9 @@
+# Changelog
+
+## v3.0.3
+
+- Upgrade Node.js version in CLI Docker image to avoid [high severity security issues](https://nodejs.org/en/blog/release/v18.12.1/).
+
 ## v3.0.2
 
 - Support new exit state `ERRORED` of experiments
