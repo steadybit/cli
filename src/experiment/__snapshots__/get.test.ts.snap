@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`experiment get should output experiment to file 1`] = `
+"key: TST-1
+name: Verify TTR fashion bestseller
+team: TST
+area: Global
+environment: Global
+lanes:
+  - steps:
+      - type: action
+        ignoreFailure: false
+        parameters:
+          graceful: 'true'
+        actionType: container-stop-attack
+        radius:
+          targetType: container
+          predicate:
+            operator: AND
+            predicates:
+              - key: k8s.namespace
+                operator: EQUALS
+                values:
+                  - steadybit-demo
+              - key: k8s.deployment
+                operator: EQUALS
+                values:
+                  - fashion-bestseller
+          query: null
+          percentage: 50
+"
+`;

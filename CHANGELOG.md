@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.0.4
+
+- New `experiment [get|apply|delete]` commands
+- New `experiment run -f <file>` to execute experiment from file
+
 ## v3.0.3
 
 - Upgrade Node.js version in CLI Docker image to avoid [high severity security issues](https://nodejs.org/en/blog/release/v18.12.1/).

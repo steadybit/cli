@@ -49,7 +49,7 @@ describe('show', () => {
   });
 
   it('must create unfiltered output', async () => {
-    expect(executeShow({ file: 'unused' })).resolves.toMatchInlineSnapshot(`
+    await expect(executeShow({ file: 'unused' })).resolves.toMatchInlineSnapshot(`
 Object {
   "exitCode": 0,
   "output": "
@@ -64,7 +64,7 @@ Object {
   });
 
   it('must filter output by name', async () => {
-    expect(executeShow({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-readiness-probe' })).resolves
+    await expect(executeShow({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-readiness-probe' })).resolves
       .toMatchInlineSnapshot(`
 Object {
   "exitCode": 0,
@@ -78,7 +78,7 @@ Object {
   });
 
   it('must filter output by name and version', async () => {
-    expect(
+    await expect(
       executeShow({ file: 'unused', name: 'steadybit/definitions/weak-spots/k8s-single-replica', version: '^0.1.0' })
     ).resolves.toMatchInlineSnapshot(`
 Object {
@@ -92,7 +92,7 @@ Object {
   });
 
   it('must support empty output', async () => {
-    expect(executeShow({ file: 'unused', name: 'does-not-exist' })).resolves.toMatchInlineSnapshot(`
+    await expect(executeShow({ file: 'unused', name: 'does-not-exist' })).resolves.toMatchInlineSnapshot(`
 Object {
   "exitCode": 1,
   "output": "
