@@ -33,7 +33,30 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ```
 
 ## Usage
-### Description
+### Experiments
+
+Get an existing experiment yaml from Steadybit and write it to file:
+```bash
+steadybit experiment get -k SHOP-1 -f experiment.yml
+```
+
+Only apply the experiment:
+```bash
+steadybit experiment apply -f experiment.yml
+```
+
+Apply and run the experiment in one step:
+```bash
+steadybit experiment run -f experiment.yml
+```
+
+Run existing experiment:
+```bash
+➜ steadybit experiment run -k SHOP-1
+```
+
+### Policies
+#### Description
 ```bash
 ➜ steadybit policy-binding init
 ? Name: gateway
@@ -77,7 +100,7 @@ parameters:
 
 The default file name is `.steadybit.yml`. Most CLI commands assume that the input file is named this way. In case you prefer an alternative name, you can specify the alternative name via `-f {your name}.yml`.
 
-### Sync the policy binding with the Steadybit platform
+#### Sync the policy binding with the Steadybit platform
 You can now upload the policy binding by executing
 ```bash
 steadybit policy-binding apply
@@ -85,7 +108,7 @@ steadybit policy-binding apply
 
 or even better, you can automatically sync the policy binding with every commit using our [Github Action](https://github.com/steadybit/apply-policy-binding)
 
-### See your Policy Binding in Action
+#### See your Policy Binding in Action
 You can now use the cli to open steadybit and watch your current state and work on the next steps.
 ```bash
 steadybit policy-binding open
