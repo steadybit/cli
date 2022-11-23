@@ -19,7 +19,6 @@ export type UpsertResult = {
   key?: string;
 };
 
-export type UpsertAndExecuteResult = {
-  location?: string;
+export type UpsertAndExecuteResult = ExecuteResult & {
   key?: string;
 }

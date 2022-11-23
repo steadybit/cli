@@ -59,7 +59,7 @@ export async function updateExperiment(key: string, experiment: Experiment): Pro
     });
   } catch (e: any) {
     if (e.response.status === 404) {
-      throw await abortExecutionWithError('Experiment %s not found.', key);
+      throw abortExecution('Experiment %s not found.', key);
     } else {
       throw await abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
     }

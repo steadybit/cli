@@ -2,12 +2,26 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { server } from './mocks/server';
+import { resetExperiments } from './mocks/handlers';
+import { createTempDir, removeTempDir } from './mocks/tempFiles';
 
-process.env.STEADYBIT_URL = 'http://test'
-process.env.STEADYBIT_TOKEN = 'abcdefgh'
+process.env.STEADYBIT_URL = 'http://test';
+process.env.STEADYBIT_TOKEN = 'abcdefgh';
 
-beforeAll(() => server.listen());
+beforeAll(async () => {
+  await createTempDir();
+  server.listen();
+});
 
-afterEach(() => server.resetHandlers());
+beforeEach(async () => {
+  resetExperiments();
+});
 
-afterAll(() => server.close());
+afterEach(async () => {
+  server.resetHandlers();
+});
+
+afterAll(async () => {
+  await removeTempDir();
+  server.close();
+});

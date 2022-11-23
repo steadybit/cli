@@ -1,58 +1,68 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import path from 'path';
-import * as os from 'os';
-import fs from 'fs/promises';
-import yaml from 'js-yaml';
-import { mockExperiments } from '../mocks/handlers';
-import { executeExperiment } from './exec';
+import { EXPERIMENTS } from '../mocks/handlers';
+import { executeExperiments } from './exec';
+import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
 
 describe('experiment', () => {
-  let tmpFolder: string;
-
-  beforeAll(async () => {
-    tmpFolder = await fs.mkdtemp(path.join(os.tmpdir(), 'steadybit-cli-test'));
-  });
-
-  afterAll(async () => {
-    await fs.rm(tmpFolder, { recursive: true });
-  });
-
   describe('exec', () => {
     it('should throw when neither key nor file is given', async () => {
-      await expect(executeExperiment({})).rejects.toThrow('Either --key or --file must be specified.');
+      await expect(executeExperiments({ file: [], recursive: false })).rejects.toThrow('Either --key or --file must be specified.');
     });
 
     it('should run experiment by key', async () => {
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiment({ key: 'TST-1' });
+      await executeExperiments({ key: 'TST-1', file: [], recursive: false });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
     });
 
     it('should run experiment by file with update', async () => {
-      const file = path.join(tmpFolder, 'experiment.yaml');
-      await fs.writeFile(file, yaml.dump(mockExperiments['TST-1']));
+      const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['TST-1']);
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiment({ file });
+      await executeExperiments({ file: [file], recursive: false });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
     });
 
     it('should run experiment by file with upsert', async () => {
-      const file = path.join(tmpFolder, 'experiment.yaml');
-      await fs.writeFile(file, yaml.dump(mockExperiments['NEW']));
+      const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['NEW']);
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiment({ file });
+      await executeExperiments({ file: [file], recursive: false });
 
-      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-2');
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
+    });
+
+    it('should run experiments from directory with upsert', async () => {
+      await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
+      await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
+      const logSpy = jest.spyOn(console, 'log');
+
+      await executeExperiments({ file: [getTempDir()], recursive: false });
+
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-2');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/2');
     });
+
+    it('should throw when key and two or more files are given', async () => {
+      await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
+      await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
+
+      await expect(executeExperiments({
+        key: 'TST-1',
+        file: [getTempDir()],
+        recursive: false
+      })).rejects.toThrow('If --key is specified, at most one --file can be specified.');
+    });
+
   });
 });
