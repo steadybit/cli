@@ -2,63 +2,72 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { confirm } from '../prompt/confirm';
-import { loadExperiment, writeExperiment } from './files';
+import { loadExperiment, resolveExperimentFiles, writeExperiment } from './files';
 import * as api from './api';
 import { filter, firstValueFrom, from, interval, map, switchMap, tap } from 'rxjs';
 import { abortExecution } from '../errors';
+import { ExecuteResult } from './types';
 
 interface Options {
   key?: string;
-  file?: string;
+  file: string[];
   yes?: boolean;
   wait?: boolean;
+  recursive: boolean;
 }
 
-export async function executeExperiment(options: Options) {
+export async function executeExperiments(options: Options) {
   if (!options.yes) {
     const confirmation = await confirm('Are you sure you want to run the experiment?', {
       defaultYes: false,
-      defaultWhenNonInteractive: true,
+      defaultWhenNonInteractive: true
     });
     if (!confirmation) {
       process.exit(0);
     }
   }
 
-  let location: string | undefined;
+  const files = await resolveExperimentFiles(options.file, options.recursive);
 
-  if (!options.file) {
+  if (files.length === 0) {
     if (!options.key) {
       throw abortExecution('Either --key or --file must be specified.');
     }
     const result = await api.executeExperiment(options.key);
+    console.log('Experiment run:', result.location);
     console.log('Executing experiment:', options.key);
-    location = result.location;
+    options.wait && result.location && await waitFor(result.location);
   } else {
-    const experiment = await loadExperiment(options.file);
-    const key = options.key || experiment.key;
+    if (files.length > 1 && options.key) {
+      throw abortExecution('If --key is specified, at most one --file can be specified.');
+    }
 
-    if (key) {
-      await api.updateExperiment(key, experiment);
-      const result = await api.executeExperiment(key);
-      console.log('Executing experiment:', key);
-      location = result.location;
-    } else {
-      const result = await api.upsertAndExecuteExperiment(experiment);
-      if (!experiment.key) {
-        await writeExperiment(options.file, { key: result.key, ...experiment });
+    for (const file of files) {
+      const experiment = await loadExperiment(file);
+      let key = options.key || experiment.key;
+      let result: ExecuteResult;
+
+      if (key) {
+        await api.updateExperiment(key, experiment);
+        result = await api.executeExperiment(key);
+      } else {
+        const upsertResult = await api.upsertAndExecuteExperiment(experiment);
+        key = upsertResult.key;
+        result = upsertResult;
+        if (!experiment.key) {
+          await writeExperiment(file, { key, ...experiment });
+        }
       }
-      console.log('Executing experiment:', result.key);
-      location = result.location;
+
+      console.log('Executing experiment:', key);
+      console.log('Experiment run:', result.location);
+      options.wait && result.location && await waitFor(result.location);
     }
   }
+}
 
-  console.log('Experiment run:', location);
 
-  if (!options.wait || !location) {
-    return;
-  }
-
+async function waitFor(location: string): Promise<void> {
   const result = await firstValueFrom(
     interval(5000)
       .pipe(switchMap(() => from(api.getExperimentExecution(location ?? ''))))
@@ -69,5 +78,7 @@ export async function executeExperiment(options: Options) {
       .pipe(map(e => e.state === 'COMPLETED'))
   );
 
-  process.exit(!result ? 1 : 0);
+  if (!result) {
+    process.exit(1);
+  }
 }

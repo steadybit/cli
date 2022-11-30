@@ -4,7 +4,17 @@
 import { rest } from 'msw';
 import { Experiment } from '../experiment/types';
 
-export const mockExperiments: Record<string, Experiment> = {
+let runSequence = 1;
+let experimentSequence = 1;
+let experimentStore: Record<string, Experiment> = {};
+
+export const resetExperiments = () => {
+  experimentSequence = 1;
+  runSequence = 1;
+  experimentStore = { 'TST-1': EXPERIMENTS['TST-1'] };
+};
+
+export const EXPERIMENTS: Record<string, Experiment> = {
   'TST-1': {
     key: 'TST-1',
     name: 'Verify TTR fashion bestseller',
@@ -18,7 +28,7 @@ export const mockExperiments: Record<string, Experiment> = {
             type: 'action',
             ignoreFailure: false,
             parameters: {
-              graceful: 'true',
+              graceful: 'true'
             },
             actionType: 'container-stop-attack',
             radius: {
@@ -29,22 +39,22 @@ export const mockExperiments: Record<string, Experiment> = {
                   {
                     key: 'k8s.namespace',
                     operator: 'EQUALS',
-                    values: ['steadybit-demo'],
+                    values: ['steadybit-demo']
                   },
                   {
                     key: 'k8s.deployment',
                     operator: 'EQUALS',
-                    values: ['fashion-bestseller'],
-                  },
-                ],
+                    values: ['fashion-bestseller']
+                  }
+                ]
               },
               query: null,
-              percentage: 50,
-            },
-          },
-        ],
-      },
-    ],
+              percentage: 50
+            }
+          }
+        ]
+      }
+    ]
   },
   NEW: {
     name: 'Verify TTR fashion bestseller',
@@ -58,7 +68,7 @@ export const mockExperiments: Record<string, Experiment> = {
             type: 'action',
             ignoreFailure: false,
             parameters: {
-              graceful: 'true',
+              graceful: 'true'
             },
             actionType: 'container-stop-attack',
             radius: {
@@ -69,27 +79,27 @@ export const mockExperiments: Record<string, Experiment> = {
                   {
                     key: 'k8s.namespace',
                     operator: 'EQUALS',
-                    values: ['steadybit-demo'],
+                    values: ['steadybit-demo']
                   },
                   {
                     key: 'k8s.deployment',
                     operator: 'EQUALS',
-                    values: ['fashion-bestseller'],
-                  },
-                ],
+                    values: ['fashion-bestseller']
+                  }
+                ]
               },
               query: null,
-              percentage: 50,
-            },
-          },
-        ],
-      },
-    ],
-  },
+              percentage: 50
+            }
+          }
+        ]
+      }
+    ]
+  }
 };
 
 const getExperimentHandler = rest.get('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = mockExperiments[String(req.params.key)];
+  const experiment = experimentStore[String(req.params.key)];
   if (experiment) {
     return res(ctx.json(experiment));
   } else {
@@ -98,30 +108,59 @@ const getExperimentHandler = rest.get('http://test/api/experiments/:key', async 
 });
 
 const deleteExperimentHandler = rest.delete('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = mockExperiments[String(req.params.key)];
-  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
+  const experiment = experimentStore[String(req.params.key)];
+  delete experimentStore[String(req.params.key)];
+  return res(
+    ctx.status(experiment ? 200 : 404),
+    ctx.body('')
+  );
 });
 
 const updateExperimentHandler = rest.post('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = mockExperiments[String(req.params.key)];
-  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
+  const experiment = experimentStore[String(req.params.key)];
+  if (experiment) {
+    experimentStore[String(req.params.key)] = req.json();
+  }
+  return res(
+    ctx.status(experiment ? 200 : 404),
+    ctx.body('')
+  );
 });
 
 const upsertExperimentHandler = rest.post('http://test/api/experiments', async (req, res, ctx) => {
-  return res(ctx.status(201), ctx.body(''), ctx.set({ location: 'http://test/api/experiments/TST-2' }));
+  const key = `NEW-${experimentSequence++}`;
+  experimentStore[key] = req.json();
+  return res(
+    ctx.status(201),
+    ctx.body(''),
+    ctx.set({ location: `http://test/api/experiments/${key}` })
+  );
 });
 
 const executeExperimentHandler = rest.post('http://test/api/experiments/:key/execute', async (req, res, ctx) => {
-  const experiment = mockExperiments[String(req.params.key)];
+  const experiment = experimentStore[String(req.params.key)];
   if (experiment) {
-    return res(ctx.status(201), ctx.body(''), ctx.set({ location: 'http://test/api/experiments/executions/1' }));
+    return res(
+      ctx.status(201),
+      ctx.body(''),
+      ctx.set({ location: `http://test/api/experiments/executions/${runSequence++}` })
+    );
   } else {
-    return res(ctx.status(404), ctx.body(''));
+    return res(
+      ctx.status(404),
+      ctx.body('')
+    );
   }
 });
 
 const executeUpsertExperimentHandler = rest.post('http://test/api/experiments/execute', async (req, res, ctx) => {
-  return res(ctx.status(201), ctx.json({ key: 'TST-2' }), ctx.set({ location: 'http://test/api/experiments/executions/2' }));
+  const key = `NEW-${experimentSequence++}`;
+  experimentStore[key] = req.json();
+  return res(
+    ctx.status(201),
+    ctx.json({ key }),
+    ctx.set({ location: `http://test/api/experiments/executions/${runSequence++}` })
+  );
 });
 
 export const handlers = [
@@ -130,5 +169,5 @@ export const handlers = [
   upsertExperimentHandler,
   updateExperimentHandler,
   deleteExperimentHandler,
-  getExperimentHandler,
+  getExperimentHandler
 ];
