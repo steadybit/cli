@@ -7,7 +7,8 @@
 
 ---
 
-The Steadybit CLI enables you to define resilience expectations and resilience policies that your infrastructure needs to comply with through configuration files that live next to your code. This allows you to implement gitops practices easily.
+The Steadybit CLI enables you to use the Steadybit platform features easier in an automated way and implement e.g. GitOps practices easily.
+You can retrieve, create or adjust experiment designs as well as running them straight away.
 
 ## Prerequisites
 
@@ -33,7 +34,6 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ```
 
 ## Usage
-### Experiments
 
 Get an existing experiment yaml from Steadybit and write it to file:
 ```bash
