@@ -19,8 +19,8 @@ export STEADYBIT_URL="http://localhost:8080"
 npm run build
 
 # Run some CLI commands
-./cli policy-binding init
-./cli policy-binding apply .steadybit.yml
+./cli experiment config show
+./cli experiment get -k ADM-1
 ```
 
 ### Local CLI installation

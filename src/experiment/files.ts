@@ -4,7 +4,6 @@
 import { Experiment } from './types';
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
-import { PolicyBinding } from '../policyBinding/types';
 import { abortExecution } from '../errors';
 import path from 'path';
 
@@ -59,7 +58,7 @@ export async function loadExperiment(file: string): Promise<Experiment> {
   }
 
   try {
-    return yaml.load(fileContent) as PolicyBinding;
+    return yaml.load(fileContent) as Experiment;
   } catch (e) {
     throw abortExecution(
       'Failed to parse experiment file at path \'%s\' as YAML/JSON: %s',

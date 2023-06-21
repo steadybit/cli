@@ -1,4 +1,0 @@
----
-name: "steadybit/cli/weak-spots/rolling-update"
-type: weak_spot
-version: 1.2.3

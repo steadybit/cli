@@ -33,7 +33,5 @@ new Command()
   // eslint-disable-next-line
   .version(require('../../package.json').version)
   .command('config', 'Show/modify the CLI configuration and authentication profiles.')
-  .command('def-repo', 'Change tags and verify a task/policy definition repository state.')
-  .command('policy-binding', 'Configure or verify policy bindings to targets.')
   .command('experiment', 'Check and run experiments.')
   .parseAsync(process.argv);

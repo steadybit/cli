@@ -1,5 +1,4 @@
 # Changelog
-
 ## v3.0.4
 
 - New `experiment [get|apply|delete]` commands
