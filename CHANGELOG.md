@@ -1,4 +1,7 @@
 # Changelog
+## v4.0.0
+- - **Breaking:** Policies feature has been removed from CLI and is not longer supported
+
 ## v3.0.4
 
 - New `experiment [get|apply|delete]` commands
