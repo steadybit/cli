@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2022 Steadybit GmbH
+/*
+ * Copyright 2023 steadybit GmbH. All rights reserved.
+ */
 
 import { rest } from 'msw';
 import { Experiment } from '../experiment/types';
@@ -19,7 +20,6 @@ export const EXPERIMENTS: Record<string, Experiment> = {
     key: 'TST-1',
     name: 'Verify TTR fashion bestseller',
     team: 'TST',
-    area: 'Global',
     environment: 'Global',
     lanes: [
       {
@@ -59,7 +59,6 @@ export const EXPERIMENTS: Record<string, Experiment> = {
   NEW: {
     name: 'Verify TTR fashion bestseller',
     team: 'TST',
-    area: 'Global',
     environment: 'Global',
     lanes: [
       {
