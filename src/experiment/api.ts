@@ -14,7 +14,7 @@ export async function executeExperiment(key: string): Promise<ExecuteResult> {
     });
     return { location: response.headers.get('Location') ?? '' };
   } catch (e) {
-    throw await abortExecutionWithError(e, 'Failed to run task %s (%s@%s)', key);
+    throw await abortExecutionWithError(e, 'Failed to run experiment %s (%s@%s)', key);
   }
 }
 

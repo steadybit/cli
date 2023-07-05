@@ -27,17 +27,15 @@ export async function executeExperiments(options: Options) {
     }
   }
 
-  const files = await resolveExperimentFiles(options.file, options.recursive);
-
-  if (files.length === 0) {
-    if (!options.key) {
-      throw abortExecution('Either --key or --file must be specified.');
-    }
+  if(!options.file && !options.key) {
+    throw abortExecution('Either --key or --file must be specified.');
+  } else if (options.key) {
     const result = await api.executeExperiment(options.key);
     console.log('Experiment run:', result.location);
     console.log('Executing experiment:', options.key);
     options.wait && result.location && await waitFor(result.location);
   } else {
+    const files = await resolveExperimentFiles(options.file, options.recursive);
     if (files.length > 1 && options.key) {
       throw abortExecution('If --key is specified, at most one --file can be specified.');
     }
