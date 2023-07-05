@@ -1,4 +1,7 @@
 # Changelog
+## v4.0.2
+- Fixed experiment execution via key / file
+
 ## v4.0.1
 - Added support to configure profiles non-interactively
 
