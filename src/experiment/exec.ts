@@ -10,7 +10,7 @@ import { ExecuteResult } from './types';
 
 interface Options {
   key?: string;
-  file: string[];
+  file?: string[];
   yes?: boolean;
   wait?: boolean;
   recursive: boolean;
@@ -27,14 +27,9 @@ export async function executeExperiments(options: Options) {
     }
   }
 
-  if(!options.file && !options.key) {
+  if((!options.file && !options.key)) {
     throw abortExecution('Either --key or --file must be specified.');
-  } else if (options.key) {
-    const result = await api.executeExperiment(options.key);
-    console.log('Experiment run:', result.location);
-    console.log('Executing experiment:', options.key);
-    options.wait && result.location && await waitFor(result.location);
-  } else {
+  } else if(options.file) {
     const files = await resolveExperimentFiles(options.file, options.recursive);
     if (files.length > 1 && options.key) {
       throw abortExecution('If --key is specified, at most one --file can be specified.');
@@ -61,6 +56,11 @@ export async function executeExperiments(options: Options) {
       console.log('Experiment run:', result.location);
       options.wait && result.location && await waitFor(result.location);
     }
+  } else if (options.key) {
+    const result = await api.executeExperiment(options.key);
+    console.log('Experiment run:', result.location);
+    console.log('Executing experiment:', options.key);
+    options.wait && result.location && await waitFor(result.location);
   }
 }
 

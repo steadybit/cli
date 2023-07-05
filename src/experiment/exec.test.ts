@@ -8,13 +8,13 @@ import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
 describe('experiment', () => {
   describe('exec', () => {
     it('should throw when neither key nor file is given', async () => {
-      await expect(executeExperiments({ file: [], recursive: false, yes: true })).rejects.toThrow('Either --key or --file must be specified.');
+      await expect(executeExperiments({ recursive: false, yes: true })).rejects.toThrow('Either --key or --file must be specified.');
     });
 
     it('should run experiment by key', async () => {
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiments({ key: 'TST-1', file: [], recursive: false, yes: true });
+      await executeExperiments({ key: 'TST-1', recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
