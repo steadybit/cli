@@ -8,13 +8,13 @@ import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
 describe('experiment', () => {
   describe('exec', () => {
     it('should throw when neither key nor file is given', async () => {
-      await expect(executeExperiments({ file: [], recursive: false })).rejects.toThrow('Either --key or --file must be specified.');
+      await expect(executeExperiments({ file: [], recursive: false, yes: true })).rejects.toThrow('Either --key or --file must be specified.');
     });
 
     it('should run experiment by key', async () => {
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiments({ key: 'TST-1', file: [], recursive: false });
+      await executeExperiments({ key: 'TST-1', file: [], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
@@ -24,7 +24,7 @@ describe('experiment', () => {
       const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['TST-1']);
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiments({ file: [file], recursive: false });
+      await executeExperiments({ file: [file], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
@@ -34,7 +34,7 @@ describe('experiment', () => {
       const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['NEW']);
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiments({ file: [file], recursive: false });
+      await executeExperiments({ file: [file], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
@@ -45,7 +45,7 @@ describe('experiment', () => {
       await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
       const logSpy = jest.spyOn(console, 'log');
 
-      await executeExperiments({ file: [getTempDir()], recursive: false });
+      await executeExperiments({ file: [getTempDir()], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
       expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://test/api/experiments/executions/1');
@@ -60,7 +60,8 @@ describe('experiment', () => {
       await expect(executeExperiments({
         key: 'TST-1',
         file: [getTempDir()],
-        recursive: false
+        recursive: false,
+        yes: true
       })).rejects.toThrow('If --key is specified, at most one --file can be specified.');
     });
 

@@ -1,10 +1,7 @@
-/*
- * Copyright 2023 steadybit GmbH. All rights reserved.
- */
-
 #!/usr/bin/env node
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { Command, Option } from 'commander';
-
 import { remove } from '../config/profile/remove';
 import { select } from '../config/profile/select';
 import { list } from '../config/profile/list';
@@ -17,7 +14,7 @@ program
   .command('add')
   .description('Configure a new profile (interactively or via options).')
   .addOption(new Option('-n, --name <name>', 'Name of the profile'))
-  .addOption(new Option('-b, --baseUrl <url>', `Base URL to be used`).default(defaultBaseUrl))
+  .addOption(new Option('-b, --baseUrl <url>', 'Base URL to be used').default(defaultBaseUrl))
   .addOption(new Option('-t, --token <token>', 'Team API token'))
   .action(add);
 program

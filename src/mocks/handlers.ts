@@ -1,7 +1,5 @@
-/*
- * Copyright 2023 steadybit GmbH. All rights reserved.
- */
-
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { rest } from 'msw';
 import { Experiment } from '../experiment/types';
 
