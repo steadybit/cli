@@ -23,12 +23,28 @@ to run your first experiment via:
                    ${colors.bold('steadybit experiment run -k <your-key>')}
 `.trim();
 
-export async function add(): Promise<void> {
-  console.clear();
-  console.log(startHelp);
-  console.log();
+interface Options {
+  name: string;
+  baseUrl?: string;
+  token:string
+}
 
-  const profile = await ask();
+export async function add(options: Options): Promise<void> {
+  let profile: Profile | undefined;
+  console.log(options);
+  if (options?.name && options?.token) {
+    profile = {
+      name: options.name,
+      baseUrl: options.baseUrl,
+      apiAccessToken: options.token
+    };
+  } else {
+    console.clear();
+    console.log(startHelp);
+    console.log();
+
+    profile = await ask();
+  }
   await addProfile(profile);
 
   console.log();
