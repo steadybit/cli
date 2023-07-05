@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2022 Steadybit GmbH
+/*
+ * Copyright 2023 steadybit GmbH. All rights reserved.
+ */
 
 import colors from 'colors/safe';
 import inquirer from 'inquirer';
@@ -17,9 +18,9 @@ are stored in ~/.steadybit
 
 const finishHelp = `
 ${colors.green('Done!')} You can now start using the CLI. For example, you could start
-to define your first policy binding via:
+to run your first experiment via:
 
-                   ${colors.bold('steadybit policy-binding init')}
+                   ${colors.bold('steadybit experiment run -k <your-key>')}
 `.trim();
 
 export async function add(): Promise<void> {
