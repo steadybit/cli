@@ -1,6 +1,9 @@
 # Changelog
+## v4.0.1
+- Added support to configure profiles non-interactively
+
 ## v4.0.0
-- - **Breaking:** Policies feature has been removed from CLI and is not longer supported
+- **Breaking:** Policies feature has been removed from CLI and is not longer supported
 
 ## v3.0.4
 
