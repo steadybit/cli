@@ -1,4 +1,8 @@
 # Changelog
+
+## v4.0.3
+- Experiment execution shows error/failure reason
+
 ## v4.0.2
 - Fixed experiment execution via key / file
 
