@@ -7,6 +7,9 @@ export type ExecuteResult = {
 
 export type ExecutionResult = {
   state: string;
+  key: string;
+  id: string;
+  reason?: string;
 };
 
 export type Experiment = Record<string, any> & {
