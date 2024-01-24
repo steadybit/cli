@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import yaml from 'js-yaml';
-import { writeExperiment } from './files';
+import { writeYamlFile } from './files';
 import { fetchExperiment } from './api';
 
 export interface Options {
@@ -16,7 +16,7 @@ export async function getExperiment(options: Options) {
   if (!options.file) {
     console.log(yaml.dump(experiment));
   } else {
-    await writeExperiment(options.file, experiment);
+    await writeYamlFile(options.file, experiment);
     console.log('Experiment %s written to %s.', options.key, options.file);
   }
 }

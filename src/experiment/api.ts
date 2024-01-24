@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ExecuteResult, ExecutionResult, Experiment, UpsertAndExecuteResult, UpsertResult } from './types';
+import {
+  ExecuteResult,
+  ExecutionList,
+  ExecutionResult,
+  Experiment,
+  ExperimentList,
+  UpsertAndExecuteResult,
+  UpsertResult
+} from './types';
 
-import { abortExecution, abortExecutionWithError } from '../errors';
-import { executeApiCall } from '../api/http';
+import {abortExecution, abortExecutionWithError} from '../errors';
+import {executeApiCall} from '../api/http';
 
 export async function executeExperiment(key: string): Promise<ExecuteResult> {
   try {
@@ -18,11 +26,11 @@ export async function executeExperiment(key: string): Promise<ExecuteResult> {
   }
 }
 
-export async function getExperimentExecution(path: string): Promise<ExecutionResult> {
+export async function getExperimentExecutionUsingUrl(url: string): Promise<ExecutionResult> {
   try {
     const response = await executeApiCall({
       method: 'GET',
-      path,
+      path: url,
       fullyQualifiedUrl: true
     });
     return (await response.json()) as ExecutionResult;
@@ -110,5 +118,49 @@ export async function upsertAndExecuteExperiment(experiment: Experiment): Promis
     };
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
+  }
+}
+
+export async function fetchExperiments(teamKey: string): Promise<ExperimentList> {
+  try {
+    const response = await executeApiCall({
+      method: 'GET',
+      path: '/api/experiments',
+      queryParameters: {
+        team: teamKey
+      }
+    });
+    return await response.json();
+  } catch (e: any) {
+    throw await abortExecutionWithError(e, 'Failed to get the experiments. HTTP request failed.');
+  }
+}
+
+
+export async function fetchExecutionsForExperiment(key: string): Promise<ExecutionList> {
+  try {
+    const response = await executeApiCall({
+      method: 'GET',
+      path: `/api/experiments/${encodeURIComponent(key)}/executions`
+    });
+    return await response.json();
+  } catch (e: any) {
+    throw await abortExecutionWithError(e, 'Failed to get the executions. HTTP request failed.');
+  }
+}
+
+export async function getExperimentExecution(id: number, abortOnError = true): Promise<ExecutionResult> {
+  try {
+    const response = await executeApiCall({
+      method: 'GET',
+      path: `/api/experiments/executions/${id}`,
+    });
+    return (await response.json()) as ExecutionResult;
+  } catch (e) {
+    if (abortOnError) {
+      throw await abortExecutionWithError(e, 'Failed to get experiment run ');
+    } else {
+      throw e;
+    }
   }
 }

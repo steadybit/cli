@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { Command, Option } from 'commander';
-import { executeExperiments } from '../experiment/exec';
-import { getExperiment } from '../experiment/get';
-import { applyExperiments } from '../experiment/apply';
-import { deleteExperiment } from '../experiment/delete';
-import { requirePlatformAccess } from './requirements';
+import {Command, Option} from 'commander';
+import {executeExperiments} from '../experiment/exec';
+import {getExperiment} from '../experiment/get';
+import {getAllExperiments} from '../experiment/getAll';
+import {applyExperiments} from '../experiment/apply';
+import {deleteExperiment} from '../experiment/delete';
+import {requirePlatformAccess} from './requirements';
 
 const program = new Command();
 
@@ -43,5 +44,10 @@ program
   .addOption(new Option('-k, --key <key>', 'The experiment key.').makeOptionMandatory(true))
   .action(requirePlatformAccess(deleteExperiment));
 
+program
+  .command('get-all')
+  .description('Get all experiment and executions from Steadybit.')
+  .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
+  .action(requirePlatformAccess(getAllExperiments));
 
 program.parseAsync(process.argv);

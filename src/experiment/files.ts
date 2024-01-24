@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { Experiment } from './types';
+import {Experiment} from './types';
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
-import { abortExecution } from '../errors';
+import {abortExecution} from '../errors';
 import path from 'path';
 
 export async function resolveExperimentFiles(files: string[], recursive: boolean): Promise<string[]> {
@@ -41,8 +41,8 @@ export async function resolveExperimentFiles(files: string[], recursive: boolean
   return results;
 }
 
-export async function writeExperiment(file: string, experiment: Experiment): Promise<void> {
-  await fs.writeFile(file, yaml.dump(experiment), { encoding: 'utf8' });
+export async function writeYamlFile(file: string, content: unknown): Promise<void> {
+  await fs.writeFile(file, yaml.dump(content), {encoding: 'utf8'});
 }
 
 export async function loadExperiment(file: string): Promise<Experiment> {

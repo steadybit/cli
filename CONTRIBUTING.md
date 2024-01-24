@@ -19,7 +19,7 @@ export STEADYBIT_URL="http://localhost:8080"
 npm run build
 
 # Run some CLI commands
-./cli experiment config show
+./cli experiment show
 ./cli experiment get -k ADM-1
 ```
 

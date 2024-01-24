@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { confirm } from '../prompt/confirm';
-import { loadExperiment, resolveExperimentFiles, writeExperiment } from './files';
+import { loadExperiment, resolveExperimentFiles, writeYamlFile } from './files';
 import * as api from './api';
 import { filter, firstValueFrom, from, interval, switchMap, tap } from 'rxjs';
 import { abortExecution } from '../errors';
@@ -48,7 +48,7 @@ export async function executeExperiments(options: Options) {
         key = upsertResult.key;
         result = upsertResult;
         if (!experiment.key) {
-          await writeExperiment(file, { key, ...experiment });
+          await writeYamlFile(file, { key, ...experiment });
         }
       }
 
@@ -68,7 +68,7 @@ export async function executeExperiments(options: Options) {
 async function waitFor(location: string): Promise<void> {
   const executionResult = await firstValueFrom(
     interval(5000)
-      .pipe(switchMap(() => from(api.getExperimentExecution(location ?? ''))))
+      .pipe(switchMap(() => from(api.getExperimentExecutionUsingUrl(location ?? ''))))
       .pipe(tap(e => console.log('Current run state:', e.state.toLowerCase())))
       .pipe(
         filter(e => e.state === 'FAILED' || e.state === 'ERRORED' || e.state === 'CANCELED' || e.state === 'COMPLETED')
