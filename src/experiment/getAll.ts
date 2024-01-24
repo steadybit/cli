@@ -27,28 +27,44 @@ export async function getAllExperiments(options: Options) {
   console.log(`Written ${totalExperiments} experiments with ${totalExecutions} executions`);
 }
 
+function removeDeprecatedFields(experiment: Record<string, any>) {
+  if (Array.isArray(experiment.lanes)) {
+    experiment.lanes.forEach(lane => {
+      if (Array.isArray(lane.steps)) {
+        lane.steps.forEach((step: Record<string, any>) => {
+          if (step && typeof step === 'object' && 'radius' in step) {
+            delete step.radius.query;
+            delete step.radius.list;
+          }
+        })
+      }
+    })
+  }
+
+  return experiment;
+}
+
 async function getAllExperimentsForTeam(team: Team, dir: string) {
   const response = await fetchExperiments(team.key);
 
-  let countExecutions = 0;
-  await Promise.all(response.experiments.map(async (item) => {
+  const c = await Promise.all(response.experiments.map(async (item) => {
     const subdir = `${dir}/${item.key}`
     await ensureDirectoryExists(subdir)
 
     const experiment = await fetchExperiment(item.key)
-    await writeYamlFile(`${subdir}/experiment.yaml`, experiment);
-    countExecutions += await getAllExecutionsForExperiment(item.key, subdir);
+    await writeYamlFile(`${subdir}/experiment.yaml`, removeDeprecatedFields(experiment));
+    return await getAllExecutionsForExperiment(item.key, subdir);
   }))
 
   return {
     countExperiments: response.experiments.length,
-    countExecutions
+    countExecutions: c.reduce((a, b) => a + b, 0)
   }
 }
 
 async function getAllExecutionsForExperiment(key: string, dir: string) {
   const response = await fetchExecutionsForExperiment(key);
-  const res: number[] = await Promise.all(response.executions.map(async (item) => {
+  const c: number[] = await Promise.all(response.executions.map(async (item) => {
     try {
       const execution = await getExperimentExecution(item.id, false);
       await writeYamlFile(`${dir}/execution-${item.id}.yaml`, execution);
@@ -57,7 +73,7 @@ async function getAllExecutionsForExperiment(key: string, dir: string) {
       return 0;
     }
   }))
-  return res.reduce((a, b) => a + b, 0);
+  return c.reduce((a, b) => a + b, 0);
 }
 
 async function ensureDirectoryExists(dir: string) {
