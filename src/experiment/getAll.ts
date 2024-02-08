@@ -64,8 +64,13 @@ async function getAllExperimentsForTeam(team: Team, dir: string) {
 
 async function getAllExecutionsForExperiment(key: string, dir: string) {
   const response = await fetchExecutionsForExperiment(key);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   const c: number[] = await Promise.all(response.executions.map(async (item) => {
+    let count = 0;
     try {
+      if (count++ % 100 == 0) { //poor man's throttling
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
       const execution = await getExperimentExecution(item.id, false);
       await writeYamlFile(`${dir}/execution-${item.id}.yaml`, execution);
       return 1;
