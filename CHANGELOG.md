@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.1.0
+- Add get-all command to fetch all experiments
+
 ## v4.0.3
 - Experiment execution shows error/failure reason
 
