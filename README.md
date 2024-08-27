@@ -55,7 +55,6 @@ Run existing experiment:
 ➜ steadybit experiment run -k ADM-1
 ```
 
-
 Export all experiments:
 ```bash
 ➜ steadybit experiment get-all -d ./all-experiments

@@ -46,7 +46,7 @@ program
 
 program
   .command('get-all')
-  .description('Get all experiment and executions from Steadybit.')
+  .description('Get all experiments and executions from Steadybit.')
   .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
   .action(requirePlatformAccess(getAllExperiments));
 
