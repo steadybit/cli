@@ -55,9 +55,9 @@ Run existing experiment:
 ➜ steadybit experiment run -k ADM-1
 ```
 
-Export all experiments:
+Dump all experiments and executions from all teams:
 ```bash
-➜ steadybit experiment get-all -d ./all-experiments
+➜ steadybit experiment dump -d ./dump
 ```
 
 ## Container Image
