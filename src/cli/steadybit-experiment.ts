@@ -5,7 +5,7 @@
 import { Command, Option } from 'commander';
 import { executeExperiments } from '../experiment/exec';
 import { getExperiment } from '../experiment/get';
-import { getAllExperiments } from '../experiment/getAll';
+import { dump } from '../experiment/dump';
 import { applyExperiments } from '../experiment/apply';
 import { deleteExperiment } from '../experiment/delete';
 import { requirePlatformAccess } from './requirements';
@@ -72,9 +72,9 @@ program
   .action(requirePlatformAccess(deleteExperiment));
 
 program
-  .command('get-all')
-  .description('Get all experiments and executions from Steadybit.')
+  .command('dump')
+  .description('Dump all experiments and executions from all teams in Steadybit.')
   .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
-  .action(requirePlatformAccess(getAllExperiments));
+  .action(requirePlatformAccess(dump));
 
 program.parseAsync(process.argv);

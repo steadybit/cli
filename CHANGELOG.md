@@ -3,6 +3,7 @@
 ## v4.2.0
 - Dependency updates
 - Requires Node >= 18
+- Renamed `experiment get-all` to `experiment dump` to prevent misuse.
 
 ## v4.1.1
 - Dependency updates

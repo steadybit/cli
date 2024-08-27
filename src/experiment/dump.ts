@@ -11,7 +11,7 @@ export interface Options {
   directory: string;
 }
 
-export async function getAllExperiments(options: Options) {
+export async function dump(options: Options) {
   await ensureDirectoryExists(options.directory);
   let totalExperiments = 0;
   let totalExecutions = 0;
