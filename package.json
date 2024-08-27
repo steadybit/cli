@@ -22,9 +22,11 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "verify": "npm run verify:unit-test && npm run verify:lint",
+    "verify": "npm run verify:unit-test && npm run verify:lint && npm run prettier-check",
     "verify:unit-test": "jest",
     "verify:lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "prettier-check": "prettier src --check",
+    "prettier-write": "prettier src --write",
     "build": "npm run clean && npm run build:ts && npm run build:permissions",
     "build:ts": "tsc",
     "build:permissions": "chmod 755 dist/cli/*",
@@ -73,6 +75,7 @@
     "eslint-plugin-jest": "^27.1.4",
     "jest": "^27.4.7",
     "msw": "^0.48.0",
+    "prettier": "^3.3.3",
     "typescript": "^4.8.4"
   }
 }

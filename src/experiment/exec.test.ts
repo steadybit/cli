@@ -8,7 +8,9 @@ import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
 describe('experiment', () => {
   describe('exec', () => {
     it('should throw when neither key nor file is given', async () => {
-      await expect(executeExperiments({ recursive: false, yes: true })).rejects.toThrow('Either --key or --file must be specified.');
+      await expect(executeExperiments({ recursive: false, yes: true })).rejects.toThrow(
+        'Either --key or --file must be specified.'
+      );
     });
 
     it('should run experiment by key', async () => {
@@ -57,13 +59,14 @@ describe('experiment', () => {
       await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
       await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
 
-      await expect(executeExperiments({
-        key: 'TST-1',
-        file: [getTempDir()],
-        recursive: false,
-        yes: true
-      })).rejects.toThrow('If --key is specified, at most one --file can be specified.');
+      await expect(
+        executeExperiments({
+          key: 'TST-1',
+          file: [getTempDir()],
+          recursive: false,
+          yes: true,
+        })
+      ).rejects.toThrow('If --key is specified, at most one --file can be specified.');
     });
-
   });
 });

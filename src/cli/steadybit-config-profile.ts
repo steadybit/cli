@@ -17,22 +17,9 @@ program
   .addOption(new Option('-b, --baseUrl <url>', 'Base URL to be used').default(defaultBaseUrl))
   .addOption(new Option('-t, --token <token>', 'Team API token'))
   .action(add);
-program
-  .command('list')
-  .description('List all configured profiles.')
-  .action(list);
-program
-  .command('ls')
-  .description('Alias for list.')
-  .action(list);
-  program
-  .command('remove')
-  .description('Interactively remove an existing profile.')
-  .action(remove);
-program
-  .command('select')
-  .description('Interactively change the currently active profile.')
-  .action(select);
-
+program.command('list').description('List all configured profiles.').action(list);
+program.command('ls').description('Alias for list.').action(list);
+program.command('remove').description('Interactively remove an existing profile.').action(remove);
+program.command('select').description('Interactively change the currently active profile.').action(select);
 
 program.parseAsync(process.argv);

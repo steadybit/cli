@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import {Experiment} from './types';
+import { Experiment } from './types';
 import fs from 'fs/promises';
 import yaml from 'js-yaml';
-import {abortExecution} from '../errors';
+import { abortExecution } from '../errors';
 import path from 'path';
 
 export async function resolveExperimentFiles(files: string[], recursive: boolean): Promise<string[]> {
@@ -19,12 +19,15 @@ export async function resolveExperimentFiles(files: string[], recursive: boolean
         for (const entry of await fs.readdir(file, { withFileTypes: true })) {
           if (entry.isDirectory()) {
             subDirectories.push(path.join(file, entry.name));
-          } else if (entry.isFile() && (entry.name.toLowerCase().endsWith('.yaml') || entry.name.toLowerCase().endsWith('.yml'))) {
+          } else if (
+            entry.isFile() &&
+            (entry.name.toLowerCase().endsWith('.yaml') || entry.name.toLowerCase().endsWith('.yml'))
+          ) {
             results.push(path.join(file, entry.name));
           }
         }
         if (recursive && subDirectories.length > 0) {
-          results.push(...await resolveExperimentFiles(subDirectories, recursive));
+          results.push(...(await resolveExperimentFiles(subDirectories, recursive)));
         }
       } else {
         results.push(file);
@@ -42,7 +45,7 @@ export async function resolveExperimentFiles(files: string[], recursive: boolean
 }
 
 export async function writeYamlFile(file: string, content: unknown): Promise<void> {
-  await fs.writeFile(file, yaml.dump(content), {encoding: 'utf8'});
+  await fs.writeFile(file, yaml.dump(content), { encoding: 'utf8' });
 }
 
 export async function loadExperiment(file: string): Promise<Experiment> {
@@ -51,7 +54,7 @@ export async function loadExperiment(file: string): Promise<Experiment> {
     fileContent = await fs.readFile(file, { encoding: 'utf8' });
   } catch (e) {
     throw abortExecution(
-      'Failed to read experiment file at path \'%s\': %s',
+      "Failed to read experiment file at path '%s': %s",
       file,
       (e as Error)?.message ?? 'Unknown Cause'
     );
@@ -61,7 +64,7 @@ export async function loadExperiment(file: string): Promise<Experiment> {
     return yaml.load(fileContent) as Experiment;
   } catch (e) {
     throw abortExecution(
-      'Failed to parse experiment file at path \'%s\' as YAML/JSON: %s',
+      "Failed to parse experiment file at path '%s' as YAML/JSON: %s",
       file,
       (e as Error)?.message ?? 'Unknown Cause'
     );

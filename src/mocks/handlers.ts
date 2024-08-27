@@ -26,7 +26,7 @@ export const EXPERIMENTS: Record<string, Experiment> = {
             type: 'action',
             ignoreFailure: false,
             parameters: {
-              graceful: 'true'
+              graceful: 'true',
             },
             actionType: 'container-stop-attack',
             radius: {
@@ -37,22 +37,22 @@ export const EXPERIMENTS: Record<string, Experiment> = {
                   {
                     key: 'k8s.namespace',
                     operator: 'EQUALS',
-                    values: ['steadybit-demo']
+                    values: ['steadybit-demo'],
                   },
                   {
                     key: 'k8s.deployment',
                     operator: 'EQUALS',
-                    values: ['fashion-bestseller']
-                  }
-                ]
+                    values: ['fashion-bestseller'],
+                  },
+                ],
               },
               query: null,
-              percentage: 50
-            }
-          }
-        ]
-      }
-    ]
+              percentage: 50,
+            },
+          },
+        ],
+      },
+    ],
   },
   NEW: {
     name: 'Verify TTR fashion bestseller',
@@ -65,7 +65,7 @@ export const EXPERIMENTS: Record<string, Experiment> = {
             type: 'action',
             ignoreFailure: false,
             parameters: {
-              graceful: 'true'
+              graceful: 'true',
             },
             actionType: 'container-stop-attack',
             radius: {
@@ -76,23 +76,23 @@ export const EXPERIMENTS: Record<string, Experiment> = {
                   {
                     key: 'k8s.namespace',
                     operator: 'EQUALS',
-                    values: ['steadybit-demo']
+                    values: ['steadybit-demo'],
                   },
                   {
                     key: 'k8s.deployment',
                     operator: 'EQUALS',
-                    values: ['fashion-bestseller']
-                  }
-                ]
+                    values: ['fashion-bestseller'],
+                  },
+                ],
               },
               query: null,
-              percentage: 50
-            }
-          }
-        ]
-      }
-    ]
-  }
+              percentage: 50,
+            },
+          },
+        ],
+      },
+    ],
+  },
 };
 
 const getExperimentHandler = rest.get('http://test/api/experiments/:key', async (req, res, ctx) => {
@@ -107,10 +107,7 @@ const getExperimentHandler = rest.get('http://test/api/experiments/:key', async 
 const deleteExperimentHandler = rest.delete('http://test/api/experiments/:key', async (req, res, ctx) => {
   const experiment = experimentStore[String(req.params.key)];
   delete experimentStore[String(req.params.key)];
-  return res(
-    ctx.status(experiment ? 200 : 404),
-    ctx.body('')
-  );
+  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
 });
 
 const updateExperimentHandler = rest.post('http://test/api/experiments/:key', async (req, res, ctx) => {
@@ -118,20 +115,13 @@ const updateExperimentHandler = rest.post('http://test/api/experiments/:key', as
   if (experiment) {
     experimentStore[String(req.params.key)] = req.json();
   }
-  return res(
-    ctx.status(experiment ? 200 : 404),
-    ctx.body('')
-  );
+  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
 });
 
 const upsertExperimentHandler = rest.post('http://test/api/experiments', async (req, res, ctx) => {
   const key = `NEW-${experimentSequence++}`;
   experimentStore[key] = req.json();
-  return res(
-    ctx.status(201),
-    ctx.body(''),
-    ctx.set({ location: `http://test/api/experiments/${key}` })
-  );
+  return res(ctx.status(201), ctx.body(''), ctx.set({ location: `http://test/api/experiments/${key}` }));
 });
 
 const executeExperimentHandler = rest.post('http://test/api/experiments/:key/execute', async (req, res, ctx) => {
@@ -143,10 +133,7 @@ const executeExperimentHandler = rest.post('http://test/api/experiments/:key/exe
       ctx.set({ location: `http://test/api/experiments/executions/${runSequence++}` })
     );
   } else {
-    return res(
-      ctx.status(404),
-      ctx.body('')
-    );
+    return res(ctx.status(404), ctx.body(''));
   }
 });
 
@@ -166,5 +153,5 @@ export const handlers = [
   upsertExperimentHandler,
   updateExperimentHandler,
   deleteExperimentHandler,
-  getExperimentHandler
+  getExperimentHandler,
 ];

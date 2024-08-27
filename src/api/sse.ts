@@ -20,7 +20,7 @@ export function executeApiCall<T>({ path, queryParameters }: SseCallArguments): 
 function executeApiCallInternal<T>(url: string, headers: Record<string, string>): Observable<T> {
   return new Observable<T>(subscriber => {
     const es = new EventSource(url, {
-      headers
+      headers,
     });
 
     es.onmessage = (event: MessageEvent) => {

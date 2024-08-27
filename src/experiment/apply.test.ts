@@ -40,8 +40,9 @@ describe('experiment', () => {
       await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
       await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
 
-      await expect(applyExperiments({ key: 'TST-1', file: [getTempDir()], recursive: false })).rejects.toThrow('If --key is specified, at most one --file can be specified.');
+      await expect(applyExperiments({ key: 'TST-1', file: [getTempDir()], recursive: false })).rejects.toThrow(
+        'If --key is specified, at most one --file can be specified.'
+      );
     });
-
   });
 });

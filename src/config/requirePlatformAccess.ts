@@ -19,6 +19,6 @@ export async function ensurePlatformAccessConfigurationIsAvailable() {
   const config = await getConfiguration();
 
   if (!config.apiAccessToken) {
-    throw abortExecutionWithOpts({colorize: false}, platformAccessConfigurationMissingHelp);
+    throw abortExecutionWithOpts({ colorize: false }, platformAccessConfigurationMissingHelp);
   }
 }

@@ -24,7 +24,6 @@ export async function applyExperiments(options: Options) {
 
     console.log('key: ', key, 'file: ', file);
 
-
     if (key) {
       await updateExperiment(key, experiment);
       console.log('Experiment %s updated.', key);

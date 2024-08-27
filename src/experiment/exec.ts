@@ -20,16 +20,16 @@ export async function executeExperiments(options: Options) {
   if (!options.yes) {
     const confirmation = await confirm('Are you sure you want to run the experiment?', {
       defaultYes: false,
-      defaultWhenNonInteractive: true
+      defaultWhenNonInteractive: true,
     });
     if (!confirmation) {
       process.exit(0);
     }
   }
 
-  if((!options.file && !options.key)) {
+  if (!options.file && !options.key) {
     throw abortExecution('Either --key or --file must be specified.');
-  } else if(options.file) {
+  } else if (options.file) {
     const files = await resolveExperimentFiles(options.file, options.recursive);
     if (files.length > 1 && options.key) {
       throw abortExecution('If --key is specified, at most one --file can be specified.');
@@ -54,16 +54,15 @@ export async function executeExperiments(options: Options) {
 
       console.log('Executing experiment:', key);
       console.log('Experiment run:', result.location);
-      options.wait && result.location && await waitFor(result.location);
+      options.wait && result.location && (await waitFor(result.location));
     }
   } else if (options.key) {
     const result = await api.executeExperiment(options.key);
     console.log('Experiment run:', result.location);
     console.log('Executing experiment:', options.key);
-    options.wait && result.location && await waitFor(result.location);
+    options.wait && result.location && (await waitFor(result.location));
   }
 }
-
 
 async function waitFor(location: string): Promise<void> {
   const executionResult = await firstValueFrom(
@@ -76,7 +75,9 @@ async function waitFor(location: string): Promise<void> {
   );
 
   if (executionResult && executionResult.state !== 'COMPLETED') {
-    console.error(`Experiment ${executionResult.key} (#${executionResult.id}) ${executionResult.state.toLowerCase()}${executionResult.reason ? `, reason: ${executionResult.reason}`:''}`)
+    console.error(
+      `Experiment ${executionResult.key} (#${executionResult.id}) ${executionResult.state.toLowerCase()}${executionResult.reason ? `, reason: ${executionResult.reason}` : ''}`
+    );
     process.exit(1);
   }
 }

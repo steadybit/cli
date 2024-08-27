@@ -8,17 +8,17 @@ import {
   Experiment,
   ExperimentList,
   UpsertAndExecuteResult,
-  UpsertResult
+  UpsertResult,
 } from './types';
 
-import {abortExecution, abortExecutionWithError} from '../errors';
-import {executeApiCall} from '../api/http';
+import { abortExecution, abortExecutionWithError } from '../errors';
+import { executeApiCall } from '../api/http';
 
 export async function executeExperiment(key: string): Promise<ExecuteResult> {
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/${encodeURIComponent(key)}/execute`
+      path: `/api/experiments/${encodeURIComponent(key)}/execute`,
     });
     return { location: response.headers.get('Location') ?? '' };
   } catch (e) {
@@ -31,7 +31,7 @@ export async function getExperimentExecutionUsingUrl(url: string): Promise<Execu
     const response = await executeApiCall({
       method: 'GET',
       path: url,
-      fullyQualifiedUrl: true
+      fullyQualifiedUrl: true,
     });
     return (await response.json()) as ExecutionResult;
   } catch (e) {
@@ -39,12 +39,11 @@ export async function getExperimentExecutionUsingUrl(url: string): Promise<Execu
   }
 }
 
-
 export async function fetchExperiment(key: string): Promise<Experiment> {
   try {
     const response = await executeApiCall({
       method: 'GET',
-      path: `/api/experiments/${encodeURIComponent(key)}`
+      path: `/api/experiments/${encodeURIComponent(key)}`,
     });
     const experiment = await response.json();
     delete experiment.version; // We remove the version (as this makes things complicated to use). Will be removed from API in the future.
@@ -63,7 +62,7 @@ export async function updateExperiment(key: string, experiment: Experiment): Pro
     await executeApiCall({
       method: 'POST',
       path: `/api/experiments/${encodeURIComponent(key)}`,
-      body: experiment
+      body: experiment,
     });
   } catch (e: any) {
     if (e.response.status === 404) {
@@ -78,7 +77,7 @@ export async function removeExperiment(key: string): Promise<void> {
   try {
     await executeApiCall({
       method: 'DELETE',
-      path: `/api/experiments/${encodeURIComponent(key)}`
+      path: `/api/experiments/${encodeURIComponent(key)}`,
     });
   } catch (e: any) {
     if (e.response.status === 404) {
@@ -94,7 +93,7 @@ export async function upsertExperiment(experiment: Experiment): Promise<UpsertRe
     const response = await executeApiCall({
       method: 'POST',
       path: '/api/experiments',
-      body: experiment
+      body: experiment,
     });
     const location = response.headers.get('Location');
     const key = location?.substring(location.lastIndexOf('/') + 1);
@@ -109,12 +108,12 @@ export async function upsertAndExecuteExperiment(experiment: Experiment): Promis
     const response = await executeApiCall({
       method: 'POST',
       path: '/api/experiments/execute',
-      body: experiment
+      body: experiment,
     });
     const body = await response.json();
     return {
       key: body.key,
-      location: response.headers.get('Location') ?? `/api/experiments/executions/${body.executionId}`
+      location: response.headers.get('Location') ?? `/api/experiments/executions/${body.executionId}`,
     };
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
@@ -127,8 +126,8 @@ export async function fetchExperiments(teamKey: string): Promise<ExperimentList>
       method: 'GET',
       path: '/api/experiments',
       queryParameters: {
-        team: teamKey
-      }
+        team: teamKey,
+      },
     });
     return await response.json();
   } catch (e: any) {
@@ -136,12 +135,11 @@ export async function fetchExperiments(teamKey: string): Promise<ExperimentList>
   }
 }
 
-
 export async function fetchExecutionsForExperiment(key: string): Promise<ExecutionList> {
   try {
     const response = await executeApiCall({
       method: 'GET',
-      path: `/api/experiments/${encodeURIComponent(key)}/executions`
+      path: `/api/experiments/${encodeURIComponent(key)}/executions`,
     });
     return await response.json();
   } catch (e: any) {

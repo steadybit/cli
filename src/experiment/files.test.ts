@@ -4,25 +4,18 @@
 import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
 import { resolveExperimentFiles } from './files';
 
-
 describe('experiment/files', () => {
   describe('resolveExperimentFiles', () => {
     let files: string[];
     let nestedFiles: string[];
 
     beforeAll(async () => {
-      files = await Promise.all([
-        writeYamlFile('experiment.yaml', {}),
-        writeYamlFile('experiment.yml', {})
-      ]);
+      files = await Promise.all([writeYamlFile('experiment.yaml', {}), writeYamlFile('experiment.yml', {})]);
       nestedFiles = await Promise.all([
         writeYamlFile('nested/experiment.yaml', {}),
-        writeYamlFile('nested/experiment.yml', {})
+        writeYamlFile('nested/experiment.yml', {}),
       ]);
-      await Promise.all([
-        writeYamlFile('other.txt', {}),
-        writeYamlFile('nested/other.txt', {})
-      ]);
+      await Promise.all([writeYamlFile('other.txt', {}), writeYamlFile('nested/other.txt', {})]);
     });
 
     it('should resolve all files recursive', async () => {

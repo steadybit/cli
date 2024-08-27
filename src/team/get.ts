@@ -11,8 +11,8 @@ export async function getAllTeams(onlyAccessible = true): Promise<Team[]> {
     method: 'get',
     path: '/api/teams',
     queryParameters: {
-      onlyAccessible: String(onlyAccessible)
-    }
+      onlyAccessible: String(onlyAccessible),
+    },
   });
   const summary: TeamSummary = await response.json();
   return summary.teams;

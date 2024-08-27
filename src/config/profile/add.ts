@@ -24,7 +24,7 @@ to run your first experiment via:
 interface Options {
   name: string;
   baseUrl?: string;
-  token:string
+  token: string;
 }
 
 export async function add(options: Options): Promise<void> {
@@ -34,7 +34,7 @@ export async function add(options: Options): Promise<void> {
     profile = {
       name: options.name,
       baseUrl: options.baseUrl,
-      apiAccessToken: options.token
+      apiAccessToken: options.token,
     };
   } else {
     console.clear();
@@ -84,6 +84,6 @@ the Steadybit servers. You can generate one through the following URL:
 
   return {
     ...answers1,
-    ...answers2
+    ...answers2,
   };
 }
