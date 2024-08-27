@@ -14,6 +14,6 @@ export async function getAllTeams(onlyAccessible = true): Promise<Team[]> {
       onlyAccessible: String(onlyAccessible),
     },
   });
-  const summary: TeamSummary = await response.json();
+  const summary = (await response.json()) as TeamSummary;
   return summary.teams;
 }

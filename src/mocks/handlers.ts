@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
-import { rest } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { Experiment } from '../experiment/types';
 
 let runSequence = 1;
@@ -95,55 +95,53 @@ export const EXPERIMENTS: Record<string, Experiment> = {
   },
 };
 
-const getExperimentHandler = rest.get('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = experimentStore[String(req.params.key)];
+const getExperimentHandler = http.get('http://example.com/api/experiments/:key', async ({ params }) => {
+  const experiment = experimentStore[String(params.key)];
   if (experiment) {
-    return res(ctx.json(experiment));
+    return HttpResponse.json(experiment);
   } else {
-    return res(ctx.status(404), ctx.body(''));
+    return HttpResponse.json('', { status: 404 });
   }
 });
 
-const deleteExperimentHandler = rest.delete('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = experimentStore[String(req.params.key)];
-  delete experimentStore[String(req.params.key)];
-  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
+const deleteExperimentHandler = http.delete('http://example.com/api/experiments/:key', async ({ params }) => {
+  const experiment = experimentStore[String(params.key)];
+  delete experimentStore[String(params.key)];
+  return HttpResponse.json('', { status: experiment ? 200 : 404 });
 });
 
-const updateExperimentHandler = rest.post('http://test/api/experiments/:key', async (req, res, ctx) => {
-  const experiment = experimentStore[String(req.params.key)];
+const updateExperimentHandler = http.post('http://example.com/api/experiments/:key', async ({ request, params }) => {
+  const experiment = experimentStore[String(params.key)];
   if (experiment) {
-    experimentStore[String(req.params.key)] = req.json();
+    experimentStore[String(params.key)] = request.json();
   }
-  return res(ctx.status(experiment ? 200 : 404), ctx.body(''));
+  return HttpResponse.json('', { status: experiment ? 200 : 404 });
 });
 
-const upsertExperimentHandler = rest.post('http://test/api/experiments', async (req, res, ctx) => {
+const upsertExperimentHandler = http.post('http://example.com/api/experiments', async ({ request }) => {
   const key = `NEW-${experimentSequence++}`;
-  experimentStore[key] = req.json();
-  return res(ctx.status(201), ctx.body(''), ctx.set({ location: `http://test/api/experiments/${key}` }));
+  experimentStore[key] = request.json();
+  return HttpResponse.json('', { status: 201, headers: { location: `http://example.com/api/experiments/${key}` } });
 });
 
-const executeExperimentHandler = rest.post('http://test/api/experiments/:key/execute', async (req, res, ctx) => {
-  const experiment = experimentStore[String(req.params.key)];
+const executeExperimentHandler = http.post('http://example.com/api/experiments/:key/execute', ({ params }) => {
+  const experiment = experimentStore[String(params.key)];
   if (experiment) {
-    return res(
-      ctx.status(201),
-      ctx.body(''),
-      ctx.set({ location: `http://test/api/experiments/executions/${runSequence++}` })
-    );
+    return HttpResponse.json('', {
+      status: 201,
+      headers: { location: `http://example.com/api/experiments/executions/${runSequence++}` },
+    });
   } else {
-    return res(ctx.status(404), ctx.body(''));
+    return HttpResponse.json('', { status: 404 });
   }
 });
 
-const executeUpsertExperimentHandler = rest.post('http://test/api/experiments/execute', async (req, res, ctx) => {
+const executeUpsertExperimentHandler = http.post('http://example.com/api/experiments/execute', ({ request }) => {
   const key = `NEW-${experimentSequence++}`;
-  experimentStore[key] = req.json();
-  return res(
-    ctx.status(201),
-    ctx.json({ key }),
-    ctx.set({ location: `http://test/api/experiments/executions/${runSequence++}` })
+  experimentStore[key] = request.json();
+  return HttpResponse.json(
+    { key },
+    { status: 201, headers: { location: `http://example.com/api/experiments/executions/${runSequence++}` } }
   );
 });
 

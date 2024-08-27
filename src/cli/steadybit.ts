@@ -6,7 +6,7 @@ import { Command } from 'commander';
 import colors from 'colors/safe';
 import { satisfies } from 'semver';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const requiredNodejsVersion = require('../../package.json').engines.node;
 const actualNodejsVersion = process.version;
 

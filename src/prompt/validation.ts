@@ -12,7 +12,7 @@ export function validateHttpUrl(input: string): boolean | string {
       return `Unsupported protocol ${url.protocol}. Only http: and https: are supported.`;
     }
     return true;
-  } catch (e) {
+  } catch {
     return 'Invalid URL. Please specify an absolute URL.';
   }
 }

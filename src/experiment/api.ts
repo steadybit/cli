@@ -45,7 +45,7 @@ export async function fetchExperiment(key: string): Promise<Experiment> {
       method: 'GET',
       path: `/api/experiments/${encodeURIComponent(key)}`,
     });
-    const experiment = await response.json();
+    const experiment = (await response.json()) as Experiment;
     delete experiment.version; // We remove the version (as this makes things complicated to use). Will be removed from API in the future.
     return experiment;
   } catch (e: any) {
@@ -110,7 +110,7 @@ export async function upsertAndExecuteExperiment(experiment: Experiment): Promis
       path: '/api/experiments/execute',
       body: experiment,
     });
-    const body = await response.json();
+    const body = (await response.json()) as Experiment;
     return {
       key: body.key,
       location: response.headers.get('Location') ?? `/api/experiments/executions/${body.executionId}`,
@@ -129,7 +129,7 @@ export async function fetchExperiments(teamKey: string): Promise<ExperimentList>
         team: teamKey,
       },
     });
-    return await response.json();
+    return (await response.json()) as ExperimentList;
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to get the experiments. HTTP request failed.');
   }
@@ -141,7 +141,7 @@ export async function fetchExecutionsForExperiment(key: string): Promise<Executi
       method: 'GET',
       path: `/api/experiments/${encodeURIComponent(key)}/executions`,
     });
-    return await response.json();
+    return (await response.json()) as ExecutionList;
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to get the executions. HTTP request failed.');
   }

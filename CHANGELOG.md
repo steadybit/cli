@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.2.0
+- Dependency updates
+- Requires Node >= 18
+
 ## v4.1.1
 - Dependency updates
 

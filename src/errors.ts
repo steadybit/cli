@@ -38,7 +38,7 @@ export async function abortExecutionWithError(error: any, msg: string, ...args: 
     try {
       const body = await (error.response as Response).json();
       message = `${message}: ${JSON.stringify(body, undefined, 2)}`;
-    } catch (e) {
+    } catch {
       // swallow silently - we just do our best to provide error insights, but do not promise anything.
     }
   }

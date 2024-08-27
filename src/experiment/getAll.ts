@@ -77,7 +77,7 @@ async function getAllExecutionsForExperiment(key: string, dir: string) {
         const execution = await getExperimentExecution(item.id, false);
         await writeYamlFile(`${dir}/execution-${item.id}.yaml`, execution);
         return 1;
-      } catch (e) {
+      } catch {
         return 0;
       }
     })

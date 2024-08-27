@@ -24,7 +24,6 @@ export async function getHeaders(): Promise<Record<string, string>> {
     Authorization: `accessToken ${config.apiAccessToken}`,
     'Content-Type': 'application/json',
     Accept: 'application/json, */*',
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     'User-Agent': `${packageJson.name}@${packageJson.version}`,
   };
 }
