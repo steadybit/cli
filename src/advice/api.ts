@@ -8,7 +8,7 @@ import { executeApiCall } from '../api/http';
 import { format } from 'util';
 
 async function fetchAdvice(offset: number, environment: string, query?: string): Promise<FetchAdviceResponse> {
-  var body: FetchAdviceRequest = {
+  const body: FetchAdviceRequest = {
     offset: offset,
     environmentName: environment,
   };
