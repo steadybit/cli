@@ -32,6 +32,7 @@ new Command()
   // more complicated to adapt the root dir accordingly.
   // eslint-disable-next-line
   .version(require('../../package.json').version)
+  .command('advice', 'Show/verify advice status.')
   .command('config', 'Show/modify the CLI configuration and authentication profiles.')
   .command('experiment', 'Check and run experiments.')
   .parseAsync(process.argv);

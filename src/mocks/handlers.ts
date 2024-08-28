@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { http, HttpResponse } from 'msw';
 import { Experiment } from '../experiment/types';
+import { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types';
 
 let runSequence = 1;
 let experimentSequence = 1;
@@ -145,6 +146,86 @@ const executeUpsertExperimentHandler = http.post('http://example.com/api/experim
   );
 });
 
+const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ request }) => {
+  const body = (await request.json()) as FetchAdviceRequest;
+  if (body.query === 'mock.response=ok') {
+    const response: FetchAdviceResponse = {
+      totalItems: 1,
+      items: [
+        {
+          target: {
+            reference: 'target-1-ref',
+            label: 'target-1',
+            type: 'host',
+          },
+          advice: {
+            type: 'advice-type-1',
+            label: 'advice-1',
+            status: 'Implemented',
+          },
+          url: 'http://example.com/api/advice/1111',
+        },
+      ],
+    };
+    return HttpResponse.json(response);
+  }
+  if (body.offset === 0) {
+    const response: FetchAdviceResponse = {
+      nextOffset: 2,
+      totalItems: 3,
+      items: [
+        {
+          target: {
+            reference: 'target-1-ref',
+            label: 'target-1',
+            type: 'host',
+          },
+          advice: {
+            type: 'advice-type-1',
+            label: 'advice-1',
+            status: 'Validation needed',
+          },
+          url: 'http://example.com/api/advice/1111',
+        },
+        {
+          target: {
+            reference: 'target-2-ref',
+            label: 'target-2',
+            type: 'host',
+          },
+          advice: {
+            type: 'advice-type-2',
+            label: 'advice-2',
+            status: 'Implemented',
+          },
+          url: 'http://example.com/api/advice/2222',
+        },
+      ],
+    };
+    return HttpResponse.json(response);
+  } else {
+    const response: FetchAdviceResponse = {
+      totalItems: 3,
+      items: [
+        {
+          target: {
+            reference: 'target-3-ref',
+            label: 'target-3',
+            type: 'host',
+          },
+          advice: {
+            type: 'advice-type-3',
+            label: 'advice-3',
+            status: 'Action needed',
+          },
+          url: 'http://example.com/api/advice/3333',
+        },
+      ],
+    };
+    return HttpResponse.json(response);
+  }
+});
+
 export const handlers = [
   executeUpsertExperimentHandler,
   executeExperimentHandler,
@@ -152,4 +233,5 @@ export const handlers = [
   updateExperimentHandler,
   deleteExperimentHandler,
   getExperimentHandler,
+  fetchAdviceHandler,
 ];

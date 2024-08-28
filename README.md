@@ -52,12 +52,17 @@ steadybit experiment run -f experiment.yml
 
 Run existing experiment:
 ```bash
-➜ steadybit experiment run -k ADM-1
+steadybit experiment run -k ADM-1
 ```
 
 Dump all experiments and executions from all teams:
 ```bash
-➜ steadybit experiment dump -d ./dump
+steadybit experiment dump -d ./dump
+```
+
+Validate advice status
+```bash
+steadybit validate-status -e "Global" -q "k8s.cluster-name=dev-demo and k8s.namespace=steadybit-demo"
 ```
 
 ## Container Image

@@ -4,6 +4,7 @@
 - Dependency updates
 - Requires Node >= 18
 - Renamed `experiment get-all` to `experiment dump` to prevent misuse.
+- Added `advice validate-status`
 
 ## v4.1.1
 - Dependency updates
