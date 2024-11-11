@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.1
+- Dependency updates (CVE-2024-21538)
+
 ## v4.2.0
 - Dependency updates
 - Requires Node >= 18
