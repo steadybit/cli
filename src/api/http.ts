@@ -7,7 +7,6 @@ import { getHeaders, toUrl } from './common';
 /*
  * This is required because we are supporting Node.js v14
  */
-import { AbortController } from 'node-abort-controller';
 import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess';
 import http from 'http';
 import https from 'https';
