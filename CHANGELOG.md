@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.2
+- Dependency updates
+
 ## v4.2.1
 - Dependency updates (CVE-2024-21538)
 
