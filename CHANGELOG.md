@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.3
+- Update base image to node 22 / npm 11 (CVE-2024-21538)
+
 ## v4.2.2
 - Dependency updates
 

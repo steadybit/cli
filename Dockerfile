@@ -1,4 +1,4 @@
-FROM node:18-alpine as builder
+FROM node:22-alpine as builder
 
 COPY ./ ./build
 WORKDIR ./build
@@ -6,11 +6,12 @@ RUN npm ci && \
     npm run build && \
     npm pack
 
-FROM node:18-alpine
+FROM node:22-alpine
 
 COPY --from=builder ./build/steadybit-*.tgz steadybit.tgz
 
-RUN npm -g install ./steadybit.tgz && \
+RUN npm install -g npm@11 && \
+    npm -g install ./steadybit.tgz && \
   rm ./steadybit.tgz
 
 ENTRYPOINT ["steadybit"]
