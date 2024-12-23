@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.5 (next release)
+- `advice validate-status` - parameter `query` is now optional
+
 ## v4.2.4
 - Removed unnecessary dependency
 
