@@ -1,7 +1,8 @@
 # Changelog
 
-## v4.2.5 (next release)
+## v4.2.5
 - `advice validate-status` - parameter `query` is now optional
+- Execution of experiments will now show a link to the ui.
 
 ## v4.2.4
 - Removed unnecessary dependency

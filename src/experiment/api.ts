@@ -20,7 +20,14 @@ export async function executeExperiment(key: string): Promise<ExecuteResult> {
       method: 'POST',
       path: `/api/experiments/${encodeURIComponent(key)}/execute`,
     });
-    return { location: response.headers.get('Location') ?? '' };
+
+    let uiLocation = 'please update your platform to get the UI location';
+    const body = await response.text();
+    if (body && body.length > 0) {
+      const json = JSON.parse(body);
+      uiLocation = json.uiLocation;
+    }
+    return { location: response.headers.get('Location') ?? '', uiLocation };
   } catch (e) {
     throw await abortExecutionWithError(e, 'Failed to run experiment %s (%s@%s)', key);
   }

@@ -53,13 +53,15 @@ export async function executeExperiments(options: Options) {
       }
 
       console.log('Executing experiment:', key);
-      console.log('Experiment run:', result.location);
+      console.log('Experiment run API:', result.location);
+      console.log('Experiment run UI:', result.uiLocation);
       /* eslint-disable @typescript-eslint/no-unused-expressions */
       options.wait && result.location && (await waitFor(result.location));
     }
   } else if (options.key) {
     const result = await api.executeExperiment(options.key);
-    console.log('Experiment run:', result.location);
+    console.log('Experiment run API:', result.location);
+    console.log('Experiment run UI:', result.uiLocation);
     console.log('Executing experiment:', options.key);
     /* eslint-disable @typescript-eslint/no-unused-expressions */
     options.wait && result.location && (await waitFor(result.location));

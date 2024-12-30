@@ -3,6 +3,7 @@
 
 export type ExecuteResult = {
   location?: string;
+  uiLocation?: string;
 };
 
 export type ExecutionResult = {
