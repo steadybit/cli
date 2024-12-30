@@ -117,10 +117,20 @@ export async function upsertAndExecuteExperiment(experiment: Experiment): Promis
       path: '/api/experiments/execute',
       body: experiment,
     });
-    const body = (await response.json()) as Experiment;
+    let uiLocation = 'please update your platform to get the UI location';
+    let key = experiment.key;
+    let executionId = undefined;
+    const body = await response.text();
+    if (body && body.length > 0) {
+      const json = JSON.parse(body);
+      uiLocation = json.uiLocation;
+      key = json.key;
+      executionId = json.executionId;
+    }
     return {
-      key: body.key,
-      location: response.headers.get('Location') ?? `/api/experiments/executions/${body.executionId}`,
+      key,
+      location: response.headers.get('Location') ?? `/api/experiments/executions/${executionId}`,
+      uiLocation,
     };
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');

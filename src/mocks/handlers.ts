@@ -127,11 +127,20 @@ const upsertExperimentHandler = http.post('http://example.com/api/experiments', 
 
 const executeExperimentHandler = http.post('http://example.com/api/experiments/:key/execute', ({ params }) => {
   const experiment = experimentStore[String(params.key)];
+  const run = runSequence++;
   if (experiment) {
-    return HttpResponse.json('', {
-      status: 201,
-      headers: { location: `http://example.com/api/experiments/executions/${runSequence++}` },
-    });
+    return HttpResponse.json(
+      {
+        key: params.key,
+        executionId: run,
+        apiLocation: `http://example.com/api/experiments/executions/${run}`,
+        uiLocation: `http://example.com/experiments/edit/${params.key}/executions/${run}?tenant=example&team=EXAMPLE`,
+      },
+      {
+        status: 201,
+        headers: { location: `http://example.com/api/experiments/executions/${run}` },
+      }
+    );
   } else {
     return HttpResponse.json('', { status: 404 });
   }
@@ -139,10 +148,16 @@ const executeExperimentHandler = http.post('http://example.com/api/experiments/:
 
 const executeUpsertExperimentHandler = http.post('http://example.com/api/experiments/execute', ({ request }) => {
   const key = `NEW-${experimentSequence++}`;
+  const run = runSequence++;
   experimentStore[key] = request.json();
   return HttpResponse.json(
-    { key },
-    { status: 201, headers: { location: `http://example.com/api/experiments/executions/${runSequence++}` } }
+    {
+      key: key,
+      executionId: run,
+      apiLocation: `http://example.com/api/experiments/executions/${run}`,
+      uiLocation: `http://example.com/experiments/edit/${key}/executions/${run}?tenant=example&team=EXAMPLE`,
+    },
+    { status: 201, headers: { location: `http://example.com/api/experiments/executions/${run}` } }
   );
 });
 

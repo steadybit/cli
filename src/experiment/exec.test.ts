@@ -19,7 +19,11 @@ describe('experiment', () => {
       await executeExperiments({ key: 'TST-1', recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
-      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run API:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith(
+        'Experiment run UI:',
+        'http://example.com/experiments/edit/TST-1/executions/1?tenant=example&team=EXAMPLE'
+      );
     });
 
     it('should run experiment by file with update', async () => {
@@ -29,7 +33,11 @@ describe('experiment', () => {
       await executeExperiments({ file: [file], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
-      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run API:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith(
+        'Experiment run UI:',
+        'http://example.com/experiments/edit/TST-1/executions/1?tenant=example&team=EXAMPLE'
+      );
     });
 
     it('should run experiment by file with upsert', async () => {
@@ -39,7 +47,11 @@ describe('experiment', () => {
       await executeExperiments({ file: [file], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
-      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run API:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith(
+        'Experiment run UI:',
+        'http://example.com/experiments/edit/TST-1/executions/1?tenant=example&team=EXAMPLE'
+      );
     });
 
     it('should run experiments from directory with upsert', async () => {
@@ -50,9 +62,16 @@ describe('experiment', () => {
       await executeExperiments({ file: [getTempDir()], recursive: false, yes: true });
 
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
-      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith('Experiment run API:', 'http://example.com/api/experiments/executions/1');
+      expect(logSpy).toHaveBeenCalledWith(
+        'Experiment run UI:',
+        'http://example.com/experiments/edit/NEW-1/executions/1?tenant=example&team=EXAMPLE'
+      );
       expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-2');
-      expect(logSpy).toHaveBeenCalledWith('Experiment run:', 'http://example.com/api/experiments/executions/2');
+      expect(logSpy).toHaveBeenCalledWith(
+        'Experiment run UI:',
+        'http://example.com/experiments/edit/NEW-2/executions/2?tenant=example&team=EXAMPLE'
+      );
     });
 
     it('should throw when key and two or more files are given', async () => {
