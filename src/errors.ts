@@ -46,6 +46,8 @@ export async function getExecutionErrorBody<T>(error: any): Promise<T | undefine
   if (typeof error?.response?.json === 'function') {
     try {
       return await (error.response as Response).json();
-    } catch {}
+    } catch {
+      // Ignore errors
+    }
   }
 }
