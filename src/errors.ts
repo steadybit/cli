@@ -34,14 +34,18 @@ export function abortExecutionWithOpts(
 export async function abortExecutionWithError(error: any, msg: string, ...args: unknown[]): Promise<Error> {
   let message = (error as Error)?.message ?? 'Unknown error';
 
-  if (typeof error?.response?.json === 'function') {
-    try {
-      const body = await (error.response as Response).json();
-      message = `${message}: ${JSON.stringify(body, undefined, 2)}`;
-    } catch {
-      // swallow silently - we just do our best to provide error insights, but do not promise anything.
-    }
+  const errorBody = await getExecutionErrorBody(error);
+  if (errorBody) {
+    message = `${message}: ${JSON.stringify(errorBody, undefined, 2)}`;
   }
 
   return abortExecution(`${msg}: %s`, ...args, message);
+}
+
+export async function getExecutionErrorBody<T>(error: any): Promise<T | undefined> {
+  if (typeof error?.response?.json === 'function') {
+    try {
+      return await (error.response as Response).json();
+    } catch {}
+  }
 }

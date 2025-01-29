@@ -3,6 +3,7 @@
 
 import {
   ExecuteResult,
+  ExecutionError,
   ExecutionList,
   ExecutionResult,
   Experiment,
@@ -11,14 +12,19 @@ import {
   UpsertResult,
 } from './types';
 
-import { abortExecution, abortExecutionWithError } from '../errors';
+import { abortExecution, abortExecutionWithError, getExecutionErrorBody } from '../errors';
 import { executeApiCall } from '../api/http';
+import { confirm } from '../prompt/confirm';
 
-export async function executeExperiment(key: string): Promise<ExecuteResult> {
+export async function executeExperiment(
+  key: string,
+  yes: boolean,
+  allowParallelExecutions: boolean = false
+): Promise<ExecuteResult> {
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/${encodeURIComponent(key)}/execute`,
+      path: `/api/experiments/${encodeURIComponent(key)}/execute?allowParallel=${String(allowParallelExecutions)}`,
     });
 
     let uiLocation = 'please update your platform to get the UI location';
@@ -29,7 +35,63 @@ export async function executeExperiment(key: string): Promise<ExecuteResult> {
     }
     return { location: response.headers.get('Location') ?? '', uiLocation };
   } catch (e) {
-    throw await abortExecutionWithError(e, 'Failed to run experiment %s (%s@%s)', key);
+    if (
+      !allowParallelExecutions &&
+      (await getExecutionErrorBody<ExecutionError>(e))?.type ===
+        'https://steadybit.com/problems/another-experiment-running-exception' &&
+      (yes ||
+        (await confirm(`There is already an experiment running. Do you want to start ${key} in parallel?`, {
+          defaultYes: false,
+          defaultWhenNonInteractive: false,
+        })))
+    ) {
+      // try again, but run in parallel
+      return executeExperiment(key, yes, true);
+    }
+    throw await abortExecutionWithError(e, 'Failed to run experiment (%s)', key);
+  }
+}
+
+export async function upsertAndExecuteExperiment(
+  experiment: Experiment,
+  allowParallelExecutions: boolean = false
+): Promise<UpsertAndExecuteResult> {
+  try {
+    const response = await executeApiCall({
+      method: 'POST',
+      path: `/api/experiments/execute?allowParallel=${String(allowParallelExecutions)}`,
+      body: experiment,
+    });
+
+    let uiLocation = 'please update your platform to get the UI location';
+    let key = experiment.key;
+    let executionId = undefined;
+    const body = await response.text();
+    if (body && body.length > 0) {
+      const json = JSON.parse(body);
+      uiLocation = json.uiLocation;
+      key = json.key;
+      executionId = json.executionId;
+    }
+    return {
+      key,
+      location: response.headers.get('Location') ?? `/api/experiments/executions/${executionId}`,
+      uiLocation,
+    };
+  } catch (e: any) {
+    if (
+      !allowParallelExecutions &&
+      (await getExecutionErrorBody<ExecutionError>(e))?.type ===
+        'https://steadybit.com/problems/another-experiment-running-exception' &&
+      (await confirm(`There is already an experiment running. Do you want to start ${experiment.key} in parallel?`, {
+        defaultYes: false,
+        defaultWhenNonInteractive: false,
+      }))
+    ) {
+      // try again, but run in parallel
+      return upsertAndExecuteExperiment(experiment, true);
+    }
+    throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
   }
 }
 
@@ -107,33 +169,6 @@ export async function upsertExperiment(experiment: Experiment): Promise<UpsertRe
     return { created: response.status === 201, key };
   } catch (e: any) {
     throw await abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
-  }
-}
-
-export async function upsertAndExecuteExperiment(experiment: Experiment): Promise<UpsertAndExecuteResult> {
-  try {
-    const response = await executeApiCall({
-      method: 'POST',
-      path: '/api/experiments/execute',
-      body: experiment,
-    });
-    let uiLocation = 'please update your platform to get the UI location';
-    let key = experiment.key;
-    let executionId = undefined;
-    const body = await response.text();
-    if (body && body.length > 0) {
-      const json = JSON.parse(body);
-      uiLocation = json.uiLocation;
-      key = json.key;
-      executionId = json.executionId;
-    }
-    return {
-      key,
-      location: response.headers.get('Location') ?? `/api/experiments/executions/${executionId}`,
-      uiLocation,
-    };
-  } catch (e: any) {
-    throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
   }
 }
 
