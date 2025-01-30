@@ -83,10 +83,13 @@ export async function upsertAndExecuteExperiment(
       !allowParallelExecutions &&
       (await getExecutionErrorBody<ExecutionError>(e))?.type ===
         'https://steadybit.com/problems/another-experiment-running-exception' &&
-      (await confirm(`There is already an experiment running. Do you want to start ${experiment.key} in parallel?`, {
-        defaultYes: false,
-        defaultWhenNonInteractive: false,
-      }))
+      (await confirm(
+        `There is already an experiment running. Do you want to start ${experiment.key || experiment.name || 'the experiment'} in parallel?`,
+        {
+          defaultYes: false,
+          defaultWhenNonInteractive: false,
+        }
+      ))
     ) {
       // try again, but run in parallel
       return upsertAndExecuteExperiment(experiment, true);
