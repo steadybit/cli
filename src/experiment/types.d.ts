@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
+export type ExecutionError = {
+  type: string;
+};
+
 export type ExecuteResult = {
   location?: string;
   uiLocation?: string;

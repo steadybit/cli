@@ -42,7 +42,7 @@ export async function executeExperiments(options: Options) {
 
       if (key) {
         await api.updateExperiment(key, experiment);
-        result = await api.executeExperiment(key);
+        result = await api.executeExperiment(key, !!options.yes);
       } else {
         const upsertResult = await api.upsertAndExecuteExperiment(experiment);
         key = upsertResult.key;
@@ -59,7 +59,7 @@ export async function executeExperiments(options: Options) {
       options.wait && result.location && (await waitFor(result.location));
     }
   } else if (options.key) {
-    const result = await api.executeExperiment(options.key);
+    const result = await api.executeExperiment(options.key, !!options.yes);
     console.log('Experiment run API:', result.location);
     console.log('Experiment run UI:', result.uiLocation);
     console.log('Executing experiment:', options.key);
