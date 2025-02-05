@@ -11,6 +11,13 @@ import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requireP
 import http from 'http';
 import https from 'https';
 
+const TOO_MANY_REQUESTS = 429;
+
+export const options = {
+  maxRetries: 2,
+  defaultWaitTime: 1000,
+};
+
 export interface ApiCallArguments {
   path: string;
   method: string;
@@ -48,27 +55,27 @@ export async function executeApiCall({
   const headers = await getHeaders();
 
   const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => controller.abort(), timeout);
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-      agent: getHttpAgent,
-      redirect,
-    });
-  } catch (e) {
-    throw new Error(
-      `Failed to call Steadybit API at ${method} ${url}: ${(e as Error)?.message ?? 'Unknown Cause'}`,
-      // @ts-expect-error TypeScript doesn't know about error causes yet
-      { cause: e }
-    );
-  } finally {
-    clearTimeout(timeoutHandle);
-  }
+  const response = await doWithRetry(async () => {
+    const timeoutHandle = setTimeout(() => controller.abort(), timeout);
+    try {
+      return await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+        agent: getHttpAgent,
+        redirect,
+      });
+    } catch (e) {
+      throw new Error(
+        `Failed to call Steadybit API at ${method} ${url}: ${(e as Error)?.message ?? 'Unknown Cause'}`,
+        // @ts-expect-error TypeScript doesn't know about error causes yet
+        { cause: e }
+      );
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
+  });
 
   if (expect2xx && !response.ok) {
     const error: any = new Error(
@@ -79,6 +86,29 @@ export async function executeApiCall({
   }
 
   return response;
+}
+
+async function doWithRetry(fn: () => Promise<fetch.Response>): Promise<fetch.Response> {
+  let response;
+  let retry = 0;
+  do {
+    response = await fn();
+    if (response.status !== TOO_MANY_REQUESTS) {
+      break;
+    }
+    const resetHeader = response.headers.get('RateLimit-Reset') || response.headers.get('Retry-After');
+    const retryInSeconds = (resetHeader && Number.parseInt(resetHeader) * 1000) || options.defaultWaitTime;
+    await sleep(retryInSeconds);
+  } while (retry++ <= options.maxRetries);
+  return response;
+}
+
+function sleep(millis: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, millis);
+  });
 }
 
 function getHttpAgent(parsedUrl: URL) {
