@@ -1,5 +1,8 @@
 # Changelog
 
+## (next)
+- add param alwaysCreateExperimentRun=true to run an experiment to create always an execution
+
 ## v4.2.5
 - `advice validate-status` - parameter `query` is now optional
 - Execution of experiments will now show a link to the ui.
