@@ -3,12 +3,15 @@
 import { http, HttpResponse } from 'msw';
 import { Experiment } from '../experiment/types';
 import { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types';
+import * as url from 'node:url';
 
+let retryCount = 0;
 let runSequence = 1;
 let experimentSequence = 1;
 let experimentStore: Record<string, Experiment> = {};
 
 export const resetExperiments = () => {
+  retryCount = 0;
   experimentSequence = 1;
   runSequence = 1;
   experimentStore = { 'TST-1': EXPERIMENTS['TST-1'] };
@@ -95,6 +98,25 @@ export const EXPERIMENTS: Record<string, Experiment> = {
     ],
   },
 };
+
+const getTooManyRequestsHandler = http.get('http://example.com/api/status', async ({ request }) => {
+  const headers: Record<string, string> = {};
+  const query = url.parse(request.url, true).query;
+  const reset = query.reset && String(query.reset);
+  const times = Number(query.times);
+  let code = Number(query.code) || 200;
+  if (reset) {
+    headers['RateLimit-Reset'] = reset;
+  }
+  if (times) {
+    if (retryCount < times) {
+      retryCount++;
+    } else {
+      code = 200;
+    }
+  }
+  return HttpResponse.json('', { status: code, headers: headers });
+});
 
 const getExperimentHandler = http.get('http://example.com/api/experiments/:key', async ({ params }) => {
   const experiment = experimentStore[String(params.key)];
@@ -249,4 +271,5 @@ export const handlers = [
   deleteExperimentHandler,
   getExperimentHandler,
   fetchAdviceHandler,
+  getTooManyRequestsHandler,
 ];
