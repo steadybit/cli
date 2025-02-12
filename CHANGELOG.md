@@ -1,7 +1,10 @@
 # Changelog
 
-## (next)
-- add param alwaysCreateExperimentRun=true to run an experiment to create always an execution
+## v4.2.7
+- add param forcePersist=true to run an experiment to create always an execution
+
+## v4.2.6
+- feat: allow parallel experiment executions
 
 ## v4.2.5
 - `advice validate-status` - parameter `query` is now optional

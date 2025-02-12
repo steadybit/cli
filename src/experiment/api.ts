@@ -24,7 +24,7 @@ export async function executeExperiment(
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/${encodeURIComponent(key)}/execute?alwaysCreateExperimentRun=true&allowParallel=${String(allowParallelExecutions)}`,
+      path: `/api/experiments/${encodeURIComponent(key)}/execute?forcePersist=true&allowParallel=${String(allowParallelExecutions)}`,
     });
 
     let uiLocation = 'please update your platform to get the UI location';
@@ -59,7 +59,7 @@ export async function upsertAndExecuteExperiment(
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/execute?alwaysCreateExperimentRun=true&allowParallel=${String(allowParallelExecutions)}`,
+      path: `/api/experiments/execute?forcePersist=true&allowParallel=${String(allowParallelExecutions)}`,
       body: experiment,
     });
 
