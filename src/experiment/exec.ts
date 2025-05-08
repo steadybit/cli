@@ -14,6 +14,7 @@ interface Options {
   yes?: boolean;
   wait?: boolean;
   recursive: boolean;
+  allowParallel?: boolean;
 }
 
 export async function executeExperiments(options: Options) {
@@ -42,9 +43,9 @@ export async function executeExperiments(options: Options) {
 
       if (key) {
         await api.updateExperiment(key, experiment);
-        result = await api.executeExperiment(key, !!options.yes);
+        result = await api.executeExperiment(key, !!options.yes, options.allowParallel);
       } else {
-        const upsertResult = await api.upsertAndExecuteExperiment(experiment);
+        const upsertResult = await api.upsertAndExecuteExperiment(experiment, options.allowParallel);
         key = upsertResult.key;
         result = upsertResult;
         if (!experiment.key) {
@@ -59,7 +60,7 @@ export async function executeExperiments(options: Options) {
       options.wait && result.location && (await waitFor(result.location));
     }
   } else if (options.key) {
-    const result = await api.executeExperiment(options.key, !!options.yes);
+    const result = await api.executeExperiment(options.key, !!options.yes, options.allowParallel);
     console.log('Experiment run API:', result.location);
     console.log('Experiment run UI:', result.uiLocation);
     console.log('Executing experiment:', options.key);

@@ -36,6 +36,12 @@ program
       'Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.'
     ).default(false)
   )
+  .addOption(
+    new Option(
+      '--allowParallel',
+      'Skip the prompt warning about another experiment running and allow always parallel execution.'
+    ).default(false)
+  )
   .action(requirePlatformAccess(executeExperiments));
 
 program

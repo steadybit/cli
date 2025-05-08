@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.8
+- add option --allowParallel to run an experiment in parallel to other experiments. e.g. `steadybit experiment run -k ADM-1 --allowParallel --yes`
+
 ## v4.2.7
 - add param forcePersist=true to run an experiment to create always an execution
 
