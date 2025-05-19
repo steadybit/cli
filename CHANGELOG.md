@@ -1,52 +1,72 @@
 # Changelog
 
+## v4.2.9
+
+- Dependency updates
+
 ## v4.2.8
-- add option --allowParallel to run an experiment in parallel to other experiments. e.g. `steadybit experiment run -k ADM-1 --allowParallel --yes`
+
+- add option --allowParallel to run an experiment in parallel to other experiments. e.g.
+  `steadybit experiment run -k ADM-1 --allowParallel --yes`
 
 ## v4.2.7
+
 - add param forcePersist=true to run an experiment to create always an execution
 
 ## v4.2.6
+
 - feat: allow parallel experiment executions
 
 ## v4.2.5
+
 - `advice validate-status` - parameter `query` is now optional
 - Execution of experiments will now show a link to the ui.
 
 ## v4.2.4
+
 - Removed unnecessary dependency
 
 ## v4.2.3
+
 - Update base image to node 22 / npm 11 (CVE-2024-21538)
 
 ## v4.2.2
+
 - Dependency updates
 
 ## v4.2.1
+
 - Dependency updates (CVE-2024-21538)
 
 ## v4.2.0
+
 - Dependency updates
 - Requires Node >= 18
 - Renamed `experiment get-all` to `experiment dump` to prevent misuse.
 - Added `advice validate-status`
 
 ## v4.1.1
+
 - Dependency updates
 
 ## v4.1.0
+
 - Add get-all command to fetch all experiments
 
 ## v4.0.3
+
 - Experiment execution shows error/failure reason
 
 ## v4.0.2
+
 - Fixed experiment execution via key / file
 
 ## v4.0.1
+
 - Added support to configure profiles non-interactively
 
 ## v4.0.0
+
 - **Breaking:** Policies feature has been removed from CLI and is not longer supported
 
 ## v3.0.4
@@ -56,7 +76,8 @@
 
 ## v3.0.3
 
-- Upgrade Node.js version in CLI Docker image to avoid [high severity security issues](https://nodejs.org/en/blog/release/v18.12.1/).
+- Upgrade Node.js version in CLI Docker image to
+  avoid [high severity security issues](https://nodejs.org/en/blog/release/v18.12.1/).
 
 ## v3.0.2
 
@@ -83,7 +104,8 @@
 
 ## v2.9.1
 
-- Changed `exec` and `execute` to `run` in all descriptions and commands to align the cli to the platforms wording. Added an alias `exec` for backward
+- Changed `exec` and `execute` to `run` in all descriptions and commands to align the cli to the platforms wording.
+  Added an alias `exec` for backward
   compatibility.
 
 ## v2.9.0
@@ -136,13 +158,16 @@
 ## v2.2.0
 
 - Node.js v14 support.
-- `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond successfully with teams.
-- The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the default service definition file name
+- `steadybit service init` gives more meaningful error messages in case the Steadybit servers fails to respond
+  successfully with teams.
+- The service definition file name may now be supplied via the `-f` option. By default, all commands assume that the
+  default service definition file name
   is `.steadybit.yml`.
 - Print a success message when a service definition was applied.
 - Change label from `pending` to `not checked` in `steadybit service verify` output.
 - `steadybit def-repo set-version` can be used to modify version numbers in a task and policy definition repository.
-- `steadybit def-repo check` can be used to check task and policy definition files in a repository for format, consistency and references.
+- `steadybit def-repo check` can be used to check task and policy definition files in a repository for format,
+  consistency and references.
 
 ## v2.1.1
 
@@ -154,16 +179,19 @@
 
 ## v2.0.1
 
-- `steadybit service verify` now correctly terminates with status code `1` when at least one task is either pending or failing.
+- `steadybit service verify` now correctly terminates with status code `1` when at least one task is either pending or
+  failing.
 
 ## v2.0.0
 
-- **Breaking:** The service definition yaml format was changed to directly specify policies and tasks instead of desired resilience levels.
+- **Breaking:** The service definition yaml format was changed to directly specify policies and tasks instead of desired
+  resilience levels.
 - **Breaking:** Health definition subsection was removed service definitions.
 - **Breaking:** Adapted the `steadybit service verify` behavior so that it is compatible with the reworked API model.
 - `steadybit service apply` now helps to resolve conflicts.
 - `steadybit service init` now asks for team and environment information.
-- `steadybit service apply` now attaches auto-generated tags to the service definition which provide information about the repository, commit and ref.
+- `steadybit service apply` now attaches auto-generated tags to the service definition which provide information about
+  the repository, commit and ref.
 
 ## v1.0.0
 
@@ -195,7 +223,8 @@
 - Support a `delete` command.
 - Rename `establish` to `apply` to be closer to the wording of kubectl.
 - Add `steadybit service` as an alias for `steadybit service-definition`.
-- Engines field defines unsupported Node.js version. Node.js >=14.17.0 is required because of our `AbortController` usage.
+- Engines field defines unsupported Node.js version. Node.js >=14.17.0 is required because of our `AbortController`
+  usage.
 - Define correct `Content-Type` header when making API calls with request bodies.
 
 ## v0.2.0
