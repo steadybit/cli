@@ -40,6 +40,58 @@ const httpAgentOptions = {
 const httpAgent = new http.Agent(httpAgentOptions);
 const httpsAgent = new https.Agent(httpAgentOptions);
 
+export function enableRequestLogging() {
+  process.env.REQUEST_LOGGING_ENABLED = 'true';
+}
+
+async function doFetch(
+  url: string,
+  method: string,
+  headers: Record<string, string>,
+  body: undefined | string,
+  controller: AbortController,
+  redirect: 'manual' | 'error' | undefined
+) {
+  if (process.env.REQUEST_LOGGING_ENABLED === 'true') {
+    console.log(`> HTTP ${method} ${url}`);
+    for (const [key, value] of Object.entries(headers)) {
+      console.log(`> ${key}: ${value}`);
+    }
+    console.log(`> `);
+    if (body) {
+      console.log(body);
+    }
+    console.log('');
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body,
+    signal: controller.signal,
+    agent: getHttpAgent,
+    redirect,
+  });
+
+  if (process.env.REQUEST_LOGGING_ENABLED === 'true') {
+    console.log(`< HTTP ${response.status} ${response.statusText}`);
+    for (const [key, value] of response.headers) {
+      console.log(`< ${key}: ${value}`);
+    }
+    console.log(`< `);
+    try {
+      const text = await response.clone().text();
+      if (text) {
+        console.log(text);
+      }
+    } catch {
+      // ignore
+    }
+    console.log('');
+  }
+  return response;
+}
+
 export async function executeApiCall({
   method,
   path,
@@ -58,14 +110,7 @@ export async function executeApiCall({
   const response = await doWithRetry(async () => {
     const timeoutHandle = setTimeout(() => controller.abort(), timeout);
     try {
-      return await fetch(url, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-        agent: getHttpAgent,
-        redirect,
-      });
+      return await doFetch(url, method, headers, body ? JSON.stringify(body) : undefined, controller, redirect);
     } catch (e) {
       throw new Error(
         `Failed to call Steadybit API at ${method} ${url}: ${(e as Error)?.message ?? 'Unknown Cause'}`,

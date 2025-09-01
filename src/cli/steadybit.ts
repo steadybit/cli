@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import colors from 'colors/safe';
 import { satisfies } from 'semver';
+import { enableRequestLogging } from '../api/http';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const requiredNodejsVersion = require('../../package.json').engines.node;
@@ -32,6 +33,12 @@ new Command()
   // more complicated to adapt the root dir accordingly.
   // eslint-disable-next-line
   .version(require('../../package.json').version)
+  .addOption(new Option('-v, --verbose', 'Enable verbose logging').default(false))
+  .hook('preSubcommand', thisCommand => {
+    if (thisCommand.opts().verbose) {
+      enableRequestLogging();
+    }
+  })
   .command('advice', 'Show/verify advice status.')
   .command('config', 'Show/modify the CLI configuration and authentication profiles.')
   .command('experiment', 'Check and run experiments.')
