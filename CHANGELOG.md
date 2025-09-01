@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.2.11
+
+- Dependency updates
+- add --verbose option for request logging
+
 ## v4.2.10
 
 - Dependency updates
