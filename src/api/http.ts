@@ -15,7 +15,7 @@ const TOO_MANY_REQUESTS = 429;
 
 export const options = {
   maxRetries: 2,
-  defaultWaitTime: 1000,
+  defaultWaitTime: 1000
 };
 
 export interface ApiCallArguments {
@@ -34,22 +34,22 @@ const httpAgentOptions = {
   keepAlive: true,
   keepAliveMsecs: 60000,
   timeout: 60000,
-  maxSockets: 64,
+  maxSockets: 64
 };
 
 const httpAgent = new http.Agent(httpAgentOptions);
 const httpsAgent = new https.Agent(httpAgentOptions);
 
 export async function executeApiCall({
-  method,
-  path,
-  queryParameters,
-  body,
-  timeout = 30000,
-  expect2xx = true,
-  redirect = 'error',
-  fullyQualifiedUrl = false,
-}: ApiCallArguments): Promise<Response> {
+                                       method,
+                                       path,
+                                       queryParameters,
+                                       body,
+                                       timeout = 30000,
+                                       expect2xx = true,
+                                       redirect = 'error',
+                                       fullyQualifiedUrl = false
+                                     }: ApiCallArguments): Promise<Response> {
   await ensurePlatformAccessConfigurationIsAvailable();
   const url = fullyQualifiedUrl ? path : await toUrl(path, queryParameters);
   const headers = await getHeaders();
@@ -64,7 +64,7 @@ export async function executeApiCall({
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
         agent: getHttpAgent,
-        redirect,
+        redirect
       });
     } catch (e) {
       throw new Error(
@@ -78,8 +78,14 @@ export async function executeApiCall({
   });
 
   if (expect2xx && !response.ok) {
+    let body = '';
+    try {
+      body = await response.text();
+    } catch {
+      // ignore
+    }
     const error: any = new Error(
-      `Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status}`
+      `Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status} - ${body ?? '<no body>'}`
     );
     error.response = response;
     throw error;
