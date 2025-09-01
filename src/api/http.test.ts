@@ -20,9 +20,10 @@ describe('http', () => {
           path: `/api/status`,
           queryParameters: {
             code: '500',
+            body: 'Internal Server Error',
           },
         })
-      ).rejects.toThrow('responded with unexpected status code: 500');
+      ).rejects.toThrow('responded with unexpected status code: 500 - Internal Server Error');
     });
 
     it('should retry on too many requests response', async () => {

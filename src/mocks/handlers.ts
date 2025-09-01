@@ -115,7 +115,7 @@ const getTooManyRequestsHandler = http.get('http://example.com/api/status', asyn
       code = 200;
     }
   }
-  return HttpResponse.json('', { status: code, headers: headers });
+  return HttpResponse.text(String(query.body), { status: code, headers: headers });
 });
 
 const getExperimentHandler = http.get('http://example.com/api/experiments/:key', async ({ params }) => {
