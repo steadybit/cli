@@ -24,13 +24,13 @@ npm install -g steadybit
 
 ## Authorization
 
-You need an API access token. You can grab one via our [platform](https://platform.steadybit.io/settings/api-tokens) through the `Settings -> API Access Tokens` page.
+You need an API access token. You can grab one via our [platform](https://platform.steadybit.com/settings/api-tokens) through the `Settings -> API Access Tokens` page.
 
 ```bash
 ➜ steadybit config profile add
 ? Profile name: steadybit
 ? API access token: [hidden]
-? Base URL of the Steadybit server: https://platform.steadybit.io
+? Base URL of the Steadybit server: https://platform.steadybit.com
 ```
 
 ## Usage
