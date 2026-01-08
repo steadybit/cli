@@ -29,3 +29,112 @@ lanes:
           percentage: 50
 "
 `;
+
+exports[`experiment get should output experiment to stdout JSON 1`] = `
+{
+  "environment": "Global",
+  "key": "TST-1",
+  "lanes": [
+    {
+      "steps": [
+        {
+          "actionType": "container-stop-attack",
+          "ignoreFailure": false,
+          "parameters": {
+            "graceful": "true",
+          },
+          "radius": {
+            "percentage": 50,
+            "predicate": {
+              "operator": "AND",
+              "predicates": [
+                {
+                  "key": "k8s.namespace",
+                  "operator": "EQUALS",
+                  "values": [
+                    "steadybit-demo",
+                  ],
+                },
+                {
+                  "key": "k8s.deployment",
+                  "operator": "EQUALS",
+                  "values": [
+                    "fashion-bestseller",
+                  ],
+                },
+              ],
+            },
+            "query": null,
+            "targetType": "container",
+          },
+          "type": "action",
+        },
+      ],
+    },
+  ],
+  "name": "Verify TTR fashion bestseller",
+  "team": "TST",
+}
+`;
+
+exports[`experiment get should output experiment to stdout YAML 1`] = `
+"key: TST-1
+name: Verify TTR fashion bestseller
+team: TST
+environment: Global
+lanes:
+  - steps:
+      - type: action
+        ignoreFailure: false
+        parameters:
+          graceful: 'true'
+        actionType: container-stop-attack
+        radius:
+          targetType: container
+          predicate:
+            operator: AND
+            predicates:
+              - key: k8s.namespace
+                operator: EQUALS
+                values:
+                  - steadybit-demo
+              - key: k8s.deployment
+                operator: EQUALS
+                values:
+                  - fashion-bestseller
+          query: null
+          percentage: 50
+"
+`;
+
+exports[`experiment get should write experiment to file with same data type JSON 1`] = `"{"key":"TST-1","name":"Verify TTR fashion bestseller","team":"TST","environment":"Global","lanes":[{"steps":[{"type":"action","ignoreFailure":false,"parameters":{"graceful":"true"},"actionType":"container-stop-attack","radius":{"targetType":"container","predicate":{"operator":"AND","predicates":[{"key":"k8s.namespace","operator":"EQUALS","values":["steadybit-demo"]},{"key":"k8s.deployment","operator":"EQUALS","values":["fashion-bestseller"]}]},"query":null,"percentage":50}}]}]}"`;
+
+exports[`experiment get should write experiment to file with same data type YAML 1`] = `
+"key: TST-1
+name: Verify TTR fashion bestseller
+team: TST
+environment: Global
+lanes:
+  - steps:
+      - type: action
+        ignoreFailure: false
+        parameters:
+          graceful: 'true'
+        actionType: container-stop-attack
+        radius:
+          targetType: container
+          predicate:
+            operator: AND
+            predicates:
+              - key: k8s.namespace
+                operator: EQUALS
+                values:
+                  - steadybit-demo
+              - key: k8s.deployment
+                operator: EQUALS
+                values:
+                  - fashion-bestseller
+          query: null
+          percentage: 50
+"
+`;

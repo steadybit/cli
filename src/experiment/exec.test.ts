@@ -3,7 +3,7 @@
 
 import { EXPERIMENTS } from '../mocks/handlers';
 import { executeExperiments } from './exec';
-import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
+import { getTempDir, writeFile } from '../mocks/tempFiles';
 
 describe('experiment', () => {
   describe('exec', () => {
@@ -27,7 +27,7 @@ describe('experiment', () => {
     });
 
     it('should run experiment by file with update', async () => {
-      const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['TST-1']);
+      const file = await writeFile('experiment.yaml', EXPERIMENTS['TST-1']);
       const logSpy = jest.spyOn(console, 'log');
 
       await executeExperiments({ file: [file], recursive: false, yes: true });
@@ -41,7 +41,7 @@ describe('experiment', () => {
     });
 
     it('should run experiment by file with upsert', async () => {
-      const file = await writeYamlFile('experiment.yaml', EXPERIMENTS['NEW']);
+      const file = await writeFile('experiment.yaml', EXPERIMENTS['NEW']);
       const logSpy = jest.spyOn(console, 'log');
 
       await executeExperiments({ file: [file], recursive: false, yes: true });
@@ -55,8 +55,8 @@ describe('experiment', () => {
     });
 
     it('should run experiments from directory with upsert', async () => {
-      await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
-      await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
+      await writeFile('experiment-1.yaml', EXPERIMENTS['NEW']);
+      await writeFile('experiment-2.yaml', EXPERIMENTS['NEW']);
       const logSpy = jest.spyOn(console, 'log');
 
       await executeExperiments({ file: [getTempDir()], recursive: false, yes: true });
@@ -75,8 +75,8 @@ describe('experiment', () => {
     });
 
     it('should throw when key and two or more files are given', async () => {
-      await writeYamlFile('experiment-1.yaml', EXPERIMENTS['NEW']);
-      await writeYamlFile('experiment-2.yaml', EXPERIMENTS['NEW']);
+      await writeFile('experiment-1.yaml', EXPERIMENTS['NEW']);
+      await writeFile('experiment-2.yaml', EXPERIMENTS['NEW']);
 
       await expect(
         executeExperiments({

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { confirm } from '../prompt/confirm';
-import { loadExperiment, resolveExperimentFiles, writeYamlFile } from './files';
+import { loadExperiment, resolveExperimentFiles, writeFile } from './files';
 import * as api from './api';
 import { filter, firstValueFrom, from, interval, switchMap, tap } from 'rxjs';
 import { abortExecution } from '../errors';
@@ -37,7 +37,7 @@ export async function executeExperiments(options: Options) {
     }
 
     for (const file of files) {
-      const experiment = await loadExperiment(file);
+      const { experiment, datatype } = await loadExperiment(file);
       let key = options.key || experiment.key;
       let result: ExecuteResult;
 
@@ -49,7 +49,7 @@ export async function executeExperiments(options: Options) {
         key = upsertResult.key;
         result = upsertResult;
         if (!experiment.key) {
-          await writeYamlFile(file, { key, ...experiment });
+          await writeFile(file, { key, ...experiment }, datatype);
         }
       }
 

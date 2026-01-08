@@ -5,10 +5,11 @@ import fs from 'fs/promises';
 import { getAllTeams } from '../team/get';
 import { Team } from '../team/types';
 import { fetchExecutionsForExperiment, fetchExperiment, fetchExperiments, getExperimentExecution } from './api';
-import { writeYamlFile } from './files';
+import { Datatype, writeFile } from './files';
 
 export interface Options {
   directory: string;
+  type?: Datatype;
 }
 
 export async function dump(options: Options) {
@@ -18,7 +19,11 @@ export async function dump(options: Options) {
 
   for (const team of await getAllTeams(false)) {
     process.stdout.write(`Fetching experiments for team ${team.name} (${team.key})... `);
-    const { countExperiments, countExecutions } = await getAllExperimentsForTeam(team, options.directory);
+    const { countExperiments, countExecutions } = await getAllExperimentsForTeam(
+      team,
+      options.directory,
+      options.type ?? 'yaml'
+    );
     totalExperiments += countExperiments;
     totalExecutions += countExecutions;
     process.stdout.write(`experiments: ${countExperiments}, executions: ${countExecutions}\n`);
@@ -43,7 +48,7 @@ function removeDeprecatedFields(experiment: Record<string, any>) {
   return experiment;
 }
 
-async function getAllExperimentsForTeam(team: Team, dir: string) {
+async function getAllExperimentsForTeam(team: Team, dir: string, datatype: Datatype) {
   const response = await fetchExperiments(team.key);
 
   const c = await Promise.all(
@@ -52,8 +57,12 @@ async function getAllExperimentsForTeam(team: Team, dir: string) {
       await ensureDirectoryExists(subdir);
 
       const experiment = await fetchExperiment(item.key);
-      await writeYamlFile(`${subdir}/experiment.yaml`, removeDeprecatedFields(experiment));
-      return await getAllExecutionsForExperiment(item.key, subdir);
+      await writeFile(
+        `${subdir}/experiment.${datatype === 'json' ? 'json' : 'yaml'}`,
+        removeDeprecatedFields(experiment),
+        datatype
+      );
+      return await getAllExecutionsForExperiment(item.key, subdir, datatype);
     })
   );
 
@@ -63,7 +72,7 @@ async function getAllExperimentsForTeam(team: Team, dir: string) {
   };
 }
 
-async function getAllExecutionsForExperiment(key: string, dir: string) {
+async function getAllExecutionsForExperiment(key: string, dir: string, datatype: Datatype) {
   const response = await fetchExecutionsForExperiment(key);
   await new Promise(resolve => setTimeout(resolve, 1000));
   const c: number[] = await Promise.all(
@@ -75,7 +84,7 @@ async function getAllExecutionsForExperiment(key: string, dir: string) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
         const execution = await getExperimentExecution(item.id, false);
-        await writeYamlFile(`${dir}/execution-${item.id}.yaml`, execution);
+        await writeFile(`${dir}/execution-${item.id}.${datatype === 'json' ? 'json' : 'yaml'}`, execution, datatype);
         return 1;
       } catch {
         return 0;

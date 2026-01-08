@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { getTempDir, writeYamlFile } from '../mocks/tempFiles';
+import { getTempDir, writeFile } from '../mocks/tempFiles';
 import { resolveExperimentFiles } from './files';
 
 describe('experiment/files', () => {
@@ -10,12 +10,12 @@ describe('experiment/files', () => {
     let nestedFiles: string[];
 
     beforeAll(async () => {
-      files = await Promise.all([writeYamlFile('experiment.yaml', {}), writeYamlFile('experiment.yml', {})]);
+      files = await Promise.all([writeFile('experiment.yaml', {}), writeFile('experiment.yml', {})]);
       nestedFiles = await Promise.all([
-        writeYamlFile('nested/experiment.yaml', {}),
-        writeYamlFile('nested/experiment.yml', {}),
+        writeFile('nested/experiment.yaml', {}),
+        writeFile('nested/experiment.yml', {}),
       ]);
-      await Promise.all([writeYamlFile('other.txt', {}), writeYamlFile('nested/other.txt', {})]);
+      await Promise.all([writeFile('other.txt', {}), writeFile('nested/other.txt', {})]);
     });
 
     it('should resolve all files recursive', async () => {

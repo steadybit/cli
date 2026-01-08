@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import yaml from 'js-yaml';
+import { Datatype } from '../experiment/files';
 
 let tempDir: string;
 
@@ -12,10 +13,10 @@ export async function createTempDir() {
   tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'steadybit-cli-test'));
 }
 
-export async function writeYamlFile(name: string, content: any) {
+export async function writeFile(name: string, content: any, datatype: Datatype = 'yaml') {
   const file = path.join(tempDir, name);
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, yaml.dump(content));
+  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : yaml.dump(content));
   return file;
 }
 

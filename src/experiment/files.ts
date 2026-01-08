@@ -7,6 +7,13 @@ import yaml from 'js-yaml';
 import { abortExecution } from '../errors';
 import path from 'path';
 
+export type Datatype = 'json' | 'yaml';
+
+export interface ExperimentFromFile {
+  experiment: Experiment;
+  datatype: Datatype;
+}
+
 export async function resolveExperimentFiles(files: string[], recursive: boolean): Promise<string[]> {
   const results = [];
 
@@ -44,11 +51,11 @@ export async function resolveExperimentFiles(files: string[], recursive: boolean
   return results;
 }
 
-export async function writeYamlFile(file: string, content: unknown): Promise<void> {
-  await fs.writeFile(file, yaml.dump(content), { encoding: 'utf8' });
+export async function writeFile(file: string, content: unknown, datatype: Datatype): Promise<void> {
+  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : yaml.dump(content), { encoding: 'utf8' });
 }
 
-export async function loadExperiment(file: string): Promise<Experiment> {
+export async function loadExperiment(file: string): Promise<ExperimentFromFile> {
   let fileContent: string;
   try {
     fileContent = await fs.readFile(file, { encoding: 'utf8' });
@@ -61,12 +68,18 @@ export async function loadExperiment(file: string): Promise<Experiment> {
   }
 
   try {
-    return yaml.load(fileContent) as Experiment;
-  } catch (e) {
-    throw abortExecution(
-      "Failed to parse experiment file at path '%s' as YAML/JSON: %s",
-      file,
-      (e as Error)?.message ?? 'Unknown Cause'
-    );
+    const experiment = JSON.parse(fileContent) as Experiment;
+    return { experiment, datatype: 'json' };
+  } catch {
+    try {
+      const experiment = yaml.load(fileContent) as Experiment;
+      return { experiment, datatype: 'yaml' };
+    } catch (e) {
+      throw abortExecution(
+        "Failed to parse experiment file at path '%s' as YAML/JSON: %s",
+        file,
+        (e as Error)?.message ?? 'Unknown Cause'
+      );
+    }
   }
 }

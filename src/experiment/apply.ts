@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { loadExperiment, resolveExperimentFiles, writeYamlFile } from './files';
+import { loadExperiment, resolveExperimentFiles, writeFile } from './files';
 import { updateExperiment, upsertExperiment } from './api';
 import { abortExecution } from '../errors';
 
@@ -19,7 +19,7 @@ export async function applyExperiments(options: Options) {
   }
 
   for (const file of files) {
-    const experiment = await loadExperiment(file);
+    const { experiment, datatype } = await loadExperiment(file);
     const key = options.key || experiment.key;
 
     console.log('key: ', key, 'file: ', file);
@@ -30,7 +30,7 @@ export async function applyExperiments(options: Options) {
     } else {
       const result = await upsertExperiment(experiment);
       if (result.created) {
-        await writeYamlFile(file, { key: result.key, ...experiment });
+        await writeFile(file, { key: result.key, ...experiment }, datatype);
         console.log('Experiment %s created.', result.key);
       } else {
         console.log('Experiment %s updated.', result.key);

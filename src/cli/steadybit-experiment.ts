@@ -49,12 +49,18 @@ program
   .description('Get an experiment from Steadybit. Output is written to file or stdout.')
   .addOption(new Option('-k, --key <key>', 'The experiment key.').makeOptionMandatory(true))
   .addOption(new Option('-f, --file <file>', 'The path to the experiment file.'))
+  .addOption(
+    new Option(
+      '-t, --type <type>',
+      'The output format of the experiment ("json" or "yaml"). (default: if a file with ".json"-suffix is given: "json", "yaml" otherwise.)' // intentionally documented here and not using .default(flags, description) as otherwise the file-extension-logic isn't working
+    )
+  )
   .action(requirePlatformAccess(getExperiment));
 
 program
   .command('apply')
   .description(
-    'Upload an experiment to Steadybit. If a key is provided, an update is performed. Otherwise, the externalId from the yaml is used to create or update the experiment.'
+    'Upload an experiment to Steadybit. If a key is provided, an update is performed. Otherwise, the externalId from the file is used to create or update the experiment.'
   )
   .addOption(new Option('-k, --key <key>', 'The experiment key.'))
   .addOption(
@@ -81,6 +87,7 @@ program
   .command('dump')
   .description('Dump all experiments and executions from all teams in Steadybit.')
   .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
+  .addOption(new Option('-t, --type <type>', 'The output format of the experiment ("json" or "yaml").').default('yaml'))
   .action(requirePlatformAccess(dump));
 
 program.parseAsync(process.argv);
