@@ -1,0 +1,7 @@
+vulnerabilities:
+  - id: CVE-2026-27903
+    statement: Waiting for npm version (>`11.11.0`) to include minimatch `10.2.2`
+    expired_at: 2026-03-09
+  - id: CVE-2026-27904
+    statement: Waiting for npm version (>`11.11.0`) to include minimatch `10.2.2`
+    expired_at: 2026-03-09
