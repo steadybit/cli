@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.2.22
+
+- Add `--retries` and `--retryInterval` options to `experiment run` command to retry on validation errors (e.g., missing targets)
+
 ## v4.2.21
 
 - Dependency updates
