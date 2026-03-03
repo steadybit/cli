@@ -51,12 +51,7 @@ program
       .argParser(parseInt)
   )
   .addOption(
-    new Option(
-      '--retryInterval <seconds>',
-      'Interval in seconds between retries.'
-    )
-      .default(10)
-      .argParser(parseInt)
+    new Option('--retryInterval <seconds>', 'Interval in seconds between retries.').default(10).argParser(parseInt)
   )
   .action(requirePlatformAccess(executeExperiments));
 

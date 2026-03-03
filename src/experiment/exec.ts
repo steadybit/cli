@@ -49,13 +49,13 @@ export async function executeExperiments(options: Options) {
         result = await executeWithRetry(
           () => api.executeExperiment(key!, !!options.yes, options.allowParallel, !hasRetries),
           options.retries,
-          options.retryInterval,
+          options.retryInterval
         );
       } else {
         const upsertResult = await executeWithRetry(
           () => api.upsertAndExecuteExperiment(experiment, options.allowParallel, !hasRetries),
           options.retries,
-          options.retryInterval,
+          options.retryInterval
         );
         key = upsertResult.key;
         result = upsertResult;
@@ -75,7 +75,7 @@ export async function executeExperiments(options: Options) {
     const result = await executeWithRetry(
       () => api.executeExperiment(options.key!, !!options.yes, options.allowParallel, !hasRetries),
       options.retries,
-      options.retryInterval,
+      options.retryInterval
     );
     console.log('Experiment run API:', result.location);
     console.log('Experiment run UI:', result.uiLocation);
@@ -91,7 +91,9 @@ async function executeWithRetry<T>(fn: () => Promise<T>, retries = 0, retryInter
       return await fn();
     } catch (e: any) {
       if (e.response?.status === 422 && attempt < retries) {
-        console.log(`Experiment has validation errors (attempt ${attempt + 1}/${retries + 1}). Retrying in ${retryInterval}s...`);
+        console.log(
+          `Experiment has validation errors (attempt ${attempt + 1}/${retries + 1}). Retrying in ${retryInterval}s...`
+        );
         await new Promise(resolve => setTimeout(resolve, retryInterval * 1000));
         continue;
       }
