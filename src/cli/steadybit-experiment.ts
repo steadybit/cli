@@ -42,6 +42,22 @@ program
       'Skip the prompt warning about another experiment running and allow always parallel execution.'
     ).default(false)
   )
+  .addOption(
+    new Option(
+      '--retries <number>',
+      'Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.'
+    )
+      .default(0)
+      .argParser(parseInt)
+  )
+  .addOption(
+    new Option(
+      '--retryInterval <seconds>',
+      'Interval in seconds between retries.'
+    )
+      .default(10)
+      .argParser(parseInt)
+  )
   .action(requirePlatformAccess(executeExperiments));
 
 program

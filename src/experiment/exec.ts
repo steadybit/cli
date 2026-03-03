@@ -5,7 +5,7 @@ import { confirm } from '../prompt/confirm';
 import { loadExperiment, resolveExperimentFiles, writeFile } from './files';
 import * as api from './api';
 import { filter, firstValueFrom, from, interval, switchMap, tap } from 'rxjs';
-import { abortExecution } from '../errors';
+import { abortExecution, abortExecutionWithError } from '../errors';
 import { ExecuteResult } from './types';
 
 interface Options {
@@ -15,6 +15,8 @@ interface Options {
   wait?: boolean;
   recursive: boolean;
   allowParallel?: boolean;
+  retries?: number;
+  retryInterval?: number;
 }
 
 export async function executeExperiments(options: Options) {
@@ -41,11 +43,20 @@ export async function executeExperiments(options: Options) {
       let key = options.key || experiment.key;
       let result: ExecuteResult;
 
+      const hasRetries = (options.retries ?? 0) > 0;
       if (key) {
         await api.updateExperiment(key, experiment);
-        result = await api.executeExperiment(key, !!options.yes, options.allowParallel);
+        result = await executeWithRetry(
+          () => api.executeExperiment(key!, !!options.yes, options.allowParallel, !hasRetries),
+          options.retries,
+          options.retryInterval,
+        );
       } else {
-        const upsertResult = await api.upsertAndExecuteExperiment(experiment, options.allowParallel);
+        const upsertResult = await executeWithRetry(
+          () => api.upsertAndExecuteExperiment(experiment, options.allowParallel, !hasRetries),
+          options.retries,
+          options.retryInterval,
+        );
         key = upsertResult.key;
         result = upsertResult;
         if (!experiment.key) {
@@ -60,13 +71,34 @@ export async function executeExperiments(options: Options) {
       options.wait && result.location && (await waitFor(result.location));
     }
   } else if (options.key) {
-    const result = await api.executeExperiment(options.key, !!options.yes, options.allowParallel);
+    const hasRetries = (options.retries ?? 0) > 0;
+    const result = await executeWithRetry(
+      () => api.executeExperiment(options.key!, !!options.yes, options.allowParallel, !hasRetries),
+      options.retries,
+      options.retryInterval,
+    );
     console.log('Experiment run API:', result.location);
     console.log('Experiment run UI:', result.uiLocation);
     console.log('Executing experiment:', options.key);
     /* eslint-disable @typescript-eslint/no-unused-expressions */
     options.wait && result.location && (await waitFor(result.location));
   }
+}
+
+async function executeWithRetry<T>(fn: () => Promise<T>, retries = 0, retryInterval = 10): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      if (e.response?.status === 422 && attempt < retries) {
+        console.log(`Experiment has validation errors (attempt ${attempt + 1}/${retries + 1}). Retrying in ${retryInterval}s...`);
+        await new Promise(resolve => setTimeout(resolve, retryInterval * 1000));
+        continue;
+      }
+      throw await abortExecutionWithError(e, 'Failed to execute experiment');
+    }
+  }
+  throw new Error('Unexpected end of retry loop');
 }
 
 async function waitFor(location: string): Promise<void> {

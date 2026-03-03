@@ -19,12 +19,13 @@ import { confirm } from '../prompt/confirm';
 export async function executeExperiment(
   key: string,
   yes: boolean,
-  allowParallelExecutions: boolean = false
+  allowParallelExecutions: boolean = false,
+  forcePersist: boolean = true
 ): Promise<ExecuteResult> {
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/${encodeURIComponent(key)}/execute?forcePersist=true&allowParallel=${String(allowParallelExecutions)}`,
+      path: `/api/experiments/${encodeURIComponent(key)}/execute?forcePersist=${String(forcePersist)}&allowParallel=${String(allowParallelExecutions)}`,
     });
 
     let uiLocation = 'please update your platform to get the UI location';
@@ -34,7 +35,10 @@ export async function executeExperiment(
       uiLocation = json.uiLocation;
     }
     return { location: response.headers.get('Location') ?? '', uiLocation };
-  } catch (e) {
+  } catch (e: any) {
+    if (e.response?.status === 422) {
+      throw e;
+    }
     if (
       !allowParallelExecutions &&
       (await getExecutionErrorBody<ExecutionError>(e))?.type ===
@@ -54,12 +58,13 @@ export async function executeExperiment(
 
 export async function upsertAndExecuteExperiment(
   experiment: Experiment,
-  allowParallelExecutions: boolean = false
+  allowParallelExecutions: boolean = false,
+  forcePersist: boolean = true
 ): Promise<UpsertAndExecuteResult> {
   try {
     const response = await executeApiCall({
       method: 'POST',
-      path: `/api/experiments/execute?forcePersist=true&allowParallel=${String(allowParallelExecutions)}`,
+      path: `/api/experiments/execute?forcePersist=${String(forcePersist)}&allowParallel=${String(allowParallelExecutions)}`,
       body: experiment,
     });
 
@@ -79,6 +84,9 @@ export async function upsertAndExecuteExperiment(
       uiLocation,
     };
   } catch (e: any) {
+    if (e.response?.status === 422) {
+      throw e;
+    }
     if (
       !allowParallelExecutions &&
       (await getExecutionErrorBody<ExecutionError>(e))?.type ===
