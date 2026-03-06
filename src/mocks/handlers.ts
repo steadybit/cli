@@ -9,12 +9,18 @@ let retryCount = 0;
 let runSequence = 1;
 let experimentSequence = 1;
 let experimentStore: Record<string, Experiment> = {};
+let validationFailuresRemaining = 0;
 
 export const resetExperiments = () => {
   retryCount = 0;
   experimentSequence = 1;
   runSequence = 1;
   experimentStore = { 'TST-1': EXPERIMENTS['TST-1'] };
+  validationFailuresRemaining = 0;
+};
+
+export const setValidationFailures = (count: number) => {
+  validationFailuresRemaining = count;
 };
 
 export const EXPERIMENTS: Record<string, Experiment> = {
@@ -147,8 +153,25 @@ const upsertExperimentHandler = http.post('http://example.com/api/experiments', 
   return HttpResponse.json('', { status: 201, headers: { location: `http://example.com/api/experiments/${key}` } });
 });
 
-const executeExperimentHandler = http.post('http://example.com/api/experiments/:key/execute', ({ params }) => {
+const executeExperimentHandler = http.post('http://example.com/api/experiments/:key/execute', ({ params, request }) => {
   const experiment = experimentStore[String(params.key)];
+  const requestUrl = new URL(request.url);
+  const forcePersist = requestUrl.searchParams.get('forcePersist');
+
+  if (validationFailuresRemaining > 0 && forcePersist === 'false') {
+    validationFailuresRemaining--;
+    return HttpResponse.json(
+      {
+        type: 'https://steadybit.com/problems/experiment-invalid-exception',
+        title:
+          'Had validation errors (lanes[0].steps[0].blastRadius.predicate: Please specify a query to select targets).',
+        status: 422,
+        instance: `/api/experiments/${params.key}/execute`,
+      },
+      { status: 422 }
+    );
+  }
+
   const run = runSequence++;
   if (experiment) {
     return HttpResponse.json(
@@ -169,6 +192,23 @@ const executeExperimentHandler = http.post('http://example.com/api/experiments/:
 });
 
 const executeUpsertExperimentHandler = http.post('http://example.com/api/experiments/execute', ({ request }) => {
+  const requestUrl = new URL(request.url);
+  const forcePersist = requestUrl.searchParams.get('forcePersist');
+
+  if (validationFailuresRemaining > 0 && forcePersist === 'false') {
+    validationFailuresRemaining--;
+    return HttpResponse.json(
+      {
+        type: 'https://steadybit.com/problems/experiment-invalid-exception',
+        title:
+          'Had validation errors (lanes[0].steps[0].blastRadius.predicate: Please specify a query to select targets).',
+        status: 422,
+        instance: '/api/experiments/execute',
+      },
+      { status: 422 }
+    );
+  }
+
   const key = `NEW-${experimentSequence++}`;
   const run = runSequence++;
   experimentStore[key] = request.json();

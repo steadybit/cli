@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { EXPERIMENTS } from '../mocks/handlers';
+import { EXPERIMENTS, setValidationFailures } from '../mocks/handlers';
 import { executeExperiments } from './exec';
 import { getTempDir, writeFile } from '../mocks/tempFiles';
 
@@ -72,6 +72,47 @@ describe('experiment', () => {
         'Experiment run UI:',
         'http://example.com/experiments/edit/NEW-2/executions/2?tenant=example&team=EXAMPLE'
       );
+    });
+
+    it('should retry on 422 validation error and succeed when resolved (by key)', async () => {
+      setValidationFailures(2);
+      const logSpy = jest.spyOn(console, 'log');
+
+      await executeExperiments({ key: 'TST-1', recursive: false, yes: true, retries: 3, retryInterval: 0 });
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Experiment has validation errors (attempt 1/4)'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Experiment has validation errors (attempt 2/4)'));
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
+    });
+
+    it('should retry on 422 validation error and succeed when resolved (by file with upsert)', async () => {
+      setValidationFailures(1);
+      const file = await writeFile('experiment.yaml', EXPERIMENTS['NEW']);
+      const logSpy = jest.spyOn(console, 'log');
+
+      await executeExperiments({ file: [file], recursive: false, yes: true, retries: 2, retryInterval: 0 });
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Experiment has validation errors (attempt 1/3)'));
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'NEW-1');
+    });
+
+    it('should fail after exhausting all retries on 422 validation error', async () => {
+      setValidationFailures(5);
+
+      await expect(
+        executeExperiments({ key: 'TST-1', recursive: false, yes: true, retries: 2, retryInterval: 0 })
+      ).rejects.toThrow();
+    });
+
+    it('should use forcePersist=true and skip validation when retries is 0', async () => {
+      setValidationFailures(1);
+      const logSpy = jest.spyOn(console, 'log').mockClear();
+
+      // With retries=0, forcePersist=true so the mock won't return 422
+      await executeExperiments({ key: 'TST-1', recursive: false, yes: true });
+
+      expect(logSpy).toHaveBeenCalledWith('Executing experiment:', 'TST-1');
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('validation errors'));
     });
 
     it('should throw when key and two or more files are given', async () => {
