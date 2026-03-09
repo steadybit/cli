@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.2.25
+
+- Dependency updates
+
 ## v4.2.23
 
 - Dependency updates
