@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.3.1
+
+- Dependency updates
+- Switch to npm trusted publishing
+
+## v4.3.0
+
+- Dependency updates
+
 ## v4.2.28
 
 - Dependency updates
