@@ -7,7 +7,7 @@
 
 ## v4.3.0
 
-- Dependency updates
+- Switch to npm trusted publishing
 
 ## v4.2.28
 
