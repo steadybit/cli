@@ -8,12 +8,15 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
       - run: git remote add test git@github.com:steadybit/cli.git
@@ -26,9 +29,7 @@ jobs:
         with:
           args: --prune-repeated-subdependencies
           command: monitor
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH_TOKEN }}
+      - run: npm publish --provenance --access public
   docker-push:
     runs-on: ubuntu-latest
     steps:
