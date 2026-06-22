@@ -1,4 +1,4 @@
 vulnerabilities:
-  - id: CVE-2026-33671
-    statement: Waiting for npm version (>`11.11.0`) to include picomatch 4.0.4
-    expired_at: 2026-05-01
+  - id: CVE-2026-12151
+    statement: Waiting for npm version include undici 6.27.0
+    expired_at: 2026-09-01
