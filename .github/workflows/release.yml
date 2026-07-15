@@ -48,7 +48,9 @@ jobs:
       - name: Extract Major Version
         run: echo "MAJOR_RELEASE_VERSION=$(echo ${{ env.RELEASE_VERSION }} | cut -d . -f 1)" >> $GITHUB_ENV
       - name: Build container image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: ./
           load: true
@@ -56,7 +58,9 @@ jobs:
       - name: Test container
         run: docker run --rm steadybit/cli:${{ env.RELEASE_VERSION }} -V
       - name: Push container image to Dockerhub
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: ./
           push: true
