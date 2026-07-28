@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 import { Command, Option } from 'commander';
-import { requirePlatformAccess } from './requirements';
-import { validateAdviceStatus } from '../advice/validateStatus';
+import { requirePlatformAccess } from './requirements.ts';
+import { validateAdviceStatus } from '../advice/validateStatus.ts';
 
 const program = new Command();
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import fs from 'fs/promises';
-import { getAllTeams } from '../team/get';
-import { Team } from '../team/types';
-import { fetchExecutionsForExperiment, fetchExperiment, fetchExperiments, getExperimentExecution } from './api';
-import { Datatype, writeFile } from './files';
+import fs from 'node:fs/promises';
+import { getAllTeams } from '../team/get.ts';
+import type { Team } from '../team/types.ts';
+import { fetchExecutionsForExperiment, fetchExperiment, fetchExperiments, getExperimentExecution } from './api.ts';
+import { type Datatype, writeFile } from './files.ts';
 
 export interface Options {
   directory: string;

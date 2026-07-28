@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { EXPERIMENTS } from '../mocks/handlers';
-import { applyExperiments } from './apply';
-import * as fileApi from './files';
-import { getTempDir, writeFile } from '../mocks/tempFiles';
+import { describe, expect, it, vi } from 'vitest';
+import { EXPERIMENTS } from '../mocks/handlers.ts';
+import { applyExperiments } from './apply.ts';
+import * as fileApi from './files.ts';
+import { getTempDir, writeFile } from '../mocks/tempFiles.ts';
 
 describe('experiment', () => {
   describe('apply', () => {
     it('should update experiment from file', async () => {
       const file = await writeFile('experiment.yaml', EXPERIMENTS['TST-1']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await applyExperiments({ file: [file], recursive: false });
 
@@ -19,7 +20,7 @@ describe('experiment', () => {
 
     it('should upsert experiment from file', async () => {
       const file = await writeFile('experiment.yaml', EXPERIMENTS['NEW']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await applyExperiments({ file: [file], recursive: false });
 
@@ -29,7 +30,7 @@ describe('experiment', () => {
     it('should upsert experiment from directory', async () => {
       await writeFile('experiment-1.yaml', EXPERIMENTS['NEW']);
       await writeFile('experiment-2.yaml', EXPERIMENTS['NEW']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await applyExperiments({ file: [getTempDir()], recursive: false });
 
@@ -48,7 +49,7 @@ describe('experiment', () => {
 
     it('should keep file data type YML', async () => {
       const file = await writeFile('experiment.yaml', { ...EXPERIMENTS['TST-1'], key: undefined });
-      const logSpy = jest.spyOn(fileApi, 'writeFile');
+      const logSpy = vi.spyOn(fileApi, 'writeFile');
 
       await applyExperiments({ file: [file], recursive: false });
 
@@ -57,7 +58,7 @@ describe('experiment', () => {
 
     it('should keep file data type JSON', async () => {
       const file = await writeFile('experiment.json', { ...EXPERIMENTS['TST-1'], key: undefined }, 'json');
-      const logSpy = jest.spyOn(fileApi, 'writeFile');
+      const logSpy = vi.spyOn(fileApi, 'writeFile');
 
       await applyExperiments({ file: [file], recursive: false });
 

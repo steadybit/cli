@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess';
+import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess.ts';
 
 export type ActionFn = (...args: any[]) => void | Promise<void>;
 

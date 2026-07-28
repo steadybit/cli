@@ -4,7 +4,7 @@
 
 import { Command } from 'commander';
 
-import { show } from '../config/show';
+import { show } from '../config/show.ts';
 
 const program = new Command();
 

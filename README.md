@@ -13,11 +13,12 @@ You can retrieve, create or adjust experiment designs as well as running them st
 ## Prerequisites
 
 - You need to have a Steadybit account. You can create a free account [via our website](https://www.steadybit.com/get-started/).
-- at least Node.js 16 as local runtime
+- at least Node.js 22.13 as local runtime
 
 ## Installation
 
 Via npm
+
 ```sh
 npm install -g steadybit
 ```
@@ -36,31 +37,37 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ## Usage
 
 Get an existing experiment yaml from Steadybit and write it to file:
+
 ```bash
 steadybit experiment get -k ADM-1 -f experiment.yml
 ```
 
 Only apply the experiment:
+
 ```bash
 steadybit experiment apply -f experiment.yml
 ```
 
 Apply and run the experiment in one step:
+
 ```bash
 steadybit experiment run -f experiment.yml
 ```
 
 Run existing experiment:
+
 ```bash
 steadybit experiment run -k ADM-1
 ```
 
 Dump all experiments and executions from all teams:
+
 ```bash
 steadybit experiment dump -d ./dump
 ```
 
 Validate advice status
+
 ```bash
 steadybit validate-status -e "Global" -q "k8s.cluster-name=dev-demo and k8s.namespace=steadybit-demo"
 ```

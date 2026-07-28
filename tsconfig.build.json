@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "rootDir": "src",
+    // Stated rather than left to the default: this file governs the published package,
+    // which ships dist/ without src/, so any map emitted here would point at a source
+    // file that is not in the tarball.
+    "sourceMap": false
+  },
+  "exclude": ["src/**/*.test.ts", "src/mocks", "src/setupTests.ts"]
+}

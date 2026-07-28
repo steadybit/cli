@@ -2,26 +2,25 @@ name: Verify
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [18, 20, 22]
+        node: [22, 24]
     steps:
-    - uses: actions/checkout@v6
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: ${{ matrix.node }}
-        cache: 'npm'
-    - run: git remote add test git@github.com:steadybit/cli.git
-    - run: npm ci
-    - run: npm run ci
+      - uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run ci
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +34,7 @@ jobs:
       - name: Build container
         uses: docker/build-push-action@v7
         env:
-          DOCKER_BUILD_RECORD_UPLOAD: "false"
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
         with:
           context: ./
           load: true

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { homedir } from 'os';
-import fs from 'fs/promises';
-import path from 'path';
+import { homedir } from 'node:os';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import { abortExecution } from '../../errors';
-import { Profile } from './types';
+import { abortExecution, errorMessage } from '../../errors.ts';
+import type { Profile } from './types.ts';
 
 const configDir = path.join(homedir(), '.steadybit');
 const profilesFile = path.join(configDir, 'profiles.json');
@@ -39,17 +39,13 @@ export async function getProfiles(): Promise<Profile[]> {
       return [];
     }
 
-    throw abortExecution("Failed to read file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution("Failed to read file '%s': %s", profilesFile, errorMessage(e));
   }
 
   try {
     return JSON.parse(fileContent);
   } catch (e) {
-    throw abortExecution(
-      "Failed to parse file '%s' as JSON: %s",
-      profilesFile,
-      (e as Error)?.message ?? 'Unknown error'
-    );
+    throw abortExecution("Failed to parse file '%s' as JSON: %s", profilesFile, errorMessage(e));
   }
 }
 
@@ -59,7 +55,7 @@ async function writeProfiles(profiles: Profile[]): Promise<void> {
   try {
     await fs.writeFile(profilesFile, JSON.stringify(profiles, undefined, 2));
   } catch (e) {
-    throw abortExecution("Failed to write to file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution("Failed to write to file '%s': %s", profilesFile, errorMessage(e));
   }
 }
 
@@ -77,7 +73,7 @@ export async function getActiveProfile(): Promise<Profile | undefined> {
     activeProfileName = activeProfileName.trim();
   } catch (e) {
     if ((e as any)?.code !== 'ENOENT') {
-      throw abortExecution("Failed to read file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+      throw abortExecution("Failed to read file '%s': %s", profilesFile, errorMessage(e));
     }
   }
 
@@ -92,10 +88,6 @@ export async function setActiveProfile(profileName: string): Promise<void> {
   try {
     await fs.writeFile(activeProfileFile, profileName);
   } catch (e) {
-    throw abortExecution(
-      "Failed to write to file '%s': %s",
-      activeProfileFile,
-      (e as Error)?.message ?? 'Unknown error'
-    );
+    throw abortExecution("Failed to write to file '%s': %s", activeProfileFile, errorMessage(e));
   }
 }

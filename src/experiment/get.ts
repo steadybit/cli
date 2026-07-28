@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import yaml from 'js-yaml';
-import { Datatype, writeFile } from './files';
-import { fetchExperiment } from './api';
+import { dump } from '../yaml.ts';
+import { type Datatype, writeFile } from './files.ts';
+import { fetchExperiment } from './api.ts';
 
 export interface Options {
   key: string;
@@ -19,7 +19,7 @@ export async function getExperiment(options: Options) {
     if (datatype === 'json') {
       console.log(experiment);
     } else {
-      console.log(yaml.dump(experiment));
+      console.log(dump(experiment));
     }
   } else {
     await writeFile(options.file, experiment, datatype);

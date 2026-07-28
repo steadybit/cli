@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { http, HttpResponse } from 'msw';
-import { Experiment } from '../experiment/types';
-import { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types';
+import type { Experiment } from '../experiment/types.ts';
+import type { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types.ts';
 import * as url from 'node:url';
 
 let retryCount = 0;
@@ -303,7 +303,12 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
   }
 });
 
+const getProblemHandler = http.get('http://example.com/api/problem', () =>
+  HttpResponse.json({ type: 'https://steadybit.com/problems/another-experiment-running-exception' }, { status: 409 })
+);
+
 export const handlers = [
+  getProblemHandler,
   executeUpsertExperimentHandler,
   executeExperimentHandler,
   upsertExperimentHandler,

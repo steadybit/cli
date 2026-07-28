@@ -1,42 +1,51 @@
-// @ts-check
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-/*
- * Copyright 2024 steadybit GmbH. All rights reserved.
- */
+// @ts-check
 
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
+import { spdxHeader } from './eslint-rules/spdx-header.mjs';
 
 export default tseslint.config(
+  // A config object containing only `ignores` acts as a global ignore. Combining it
+  // with `files` would scope the ignores to that single object instead.
   {
-    ignores: ['**/node_modules', '**/dist'],
-    files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
   },
-  eslint.configs.recommended,
-  ...tseslint.configs.recommended,
   {
+    files: ['**/*.js', '**/*.mjs', '**/*.ts'],
+    extends: [eslint.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: {
         ...globals.node,
       },
     },
+    plugins: {
+      steadybit: {
+        rules: { 'spdx-header': spdxHeader },
+      },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 0,
-      // Temporary disable - wait for fix -
-      // 'header/header': [
-      //   2,
-      //   'line',
-      //   [
-      //     ' SPDX-License-Identifier: MIT',
-      //     {
-      //       template: ` SPDX-FileCopyrightText: ${new Date().getFullYear()} Steadybit GmbH`,
-      //       pattern: /^ SPDX-FileCopyrightText: \d{4} Steadybit GmbH/,
-      //     },
-      //   ],
-      //   1,
-      //   { lineEndings: 'unix' },
-      // ],
+      'steadybit/spdx-header': 'error',
+      // Both wrappers exist to correct a dependency default, and reaching past them
+      // fails silently: raw js-yaml drops merge keys and timestamps from experiment
+      // files, raw picocolors puts ANSI escapes into piped output.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'js-yaml', message: "Use '../yaml.ts', which restores the tag set experiment files rely on." },
+            { name: 'picocolors', message: "Use '../colors.ts', which only colours a real terminal." },
+          ],
+        },
+      ],
     },
+  },
+  {
+    files: ['src/yaml.ts', 'src/colors.ts'],
+    rules: { 'no-restricted-imports': 0 },
   }
 );

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import inquirer from 'inquirer';
+import selectPrompt from '@inquirer/select';
+import { cancelable } from '../../prompt/cancellation.ts';
 
-import { setActiveProfile, getProfiles } from './service';
-import { abortExecution } from '../../errors';
+import { setActiveProfile, getProfiles } from './service.ts';
+import { abortExecution } from '../../errors.ts';
 
 export async function select(): Promise<void> {
   const activeProfileName = await promptProfileSelection('Choose the new active profile:');
@@ -17,14 +18,10 @@ export async function promptProfileSelection(message: string): Promise<string> {
     throw abortExecution('No profiles configured.');
   }
 
-  const { activeProfileName } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'activeProfileName',
+  return await cancelable(
+    selectPrompt({
       message,
       choices: profiles.map(p => p.name),
-    },
-  ]);
-
-  return activeProfileName;
+    })
+  );
 }

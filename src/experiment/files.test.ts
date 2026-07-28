@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { getTempDir, writeFile } from '../mocks/tempFiles';
-import { resolveExperimentFiles } from './files';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { getTempDir, writeFile } from '../mocks/tempFiles.ts';
+import { resolveExperimentFiles } from './files.ts';
 
 describe('experiment/files', () => {
   describe('resolveExperimentFiles', () => {

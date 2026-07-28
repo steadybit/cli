@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { removeExperiment } from './api';
+import { removeExperiment } from './api.ts';
 
 export interface Options {
   key: string;

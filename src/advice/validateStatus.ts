@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
-import { fetchAllAdvice } from './api';
+import { fetchAllAdvice } from './api.ts';
 import { COLOR, Table } from 'console-table-printer';
-import { abortExecution } from '../errors';
+import { abortExecution } from '../errors.ts';
 
 export interface Options {
   environment: string;

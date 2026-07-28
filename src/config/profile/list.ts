@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import colors from 'colors/safe';
+import colors from '../../colors.ts';
 
-import { getActiveProfile, getProfiles } from './service';
+import { getActiveProfile, getProfiles } from './service.ts';
 
 export async function list(): Promise<void> {
   const profiles = await getProfiles();

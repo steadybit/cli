@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import {
+import type {
   ExecuteResult,
   ExecutionError,
   ExecutionList,
@@ -10,11 +10,12 @@ import {
   ExperimentList,
   UpsertAndExecuteResult,
   UpsertResult,
-} from './types';
+} from './types.ts';
 
-import { abortExecution, abortExecutionWithError, getExecutionErrorBody } from '../errors';
-import { executeApiCall } from '../api/http';
-import { confirm } from '../prompt/confirm';
+import { abortExecution, abortExecutionWithError, getExecutionErrorBody } from '../errors.ts';
+import { ApiError } from '../api/error.ts';
+import { executeApiCall } from '../api/http.ts';
+import { confirm } from '../prompt/confirm.ts';
 
 export async function executeExperiment(
   key: string,
@@ -35,13 +36,13 @@ export async function executeExperiment(
       uiLocation = json.uiLocation;
     }
     return { location: response.headers.get('Location') ?? '', uiLocation };
-  } catch (e: any) {
-    if (e.response?.status === 422) {
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) {
       throw e;
     }
     if (
       !allowParallelExecutions &&
-      (await getExecutionErrorBody<ExecutionError>(e))?.type ===
+      getExecutionErrorBody<ExecutionError>(e)?.type ===
         'https://steadybit.com/problems/another-experiment-running-exception' &&
       (yes ||
         (await confirm(`There is already an experiment running. Do you want to start ${key} in parallel?`, {
@@ -52,7 +53,7 @@ export async function executeExperiment(
       // try again, but run in parallel
       return executeExperiment(key, yes, true);
     }
-    throw await abortExecutionWithError(e, 'Failed to run experiment (%s)', key);
+    throw abortExecutionWithError(e, 'Failed to run experiment (%s)', key);
   }
 }
 
@@ -83,13 +84,13 @@ export async function upsertAndExecuteExperiment(
       location: response.headers.get('Location') ?? `/api/experiments/executions/${executionId}`,
       uiLocation,
     };
-  } catch (e: any) {
-    if (e.response?.status === 422) {
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) {
       throw e;
     }
     if (
       !allowParallelExecutions &&
-      (await getExecutionErrorBody<ExecutionError>(e))?.type ===
+      getExecutionErrorBody<ExecutionError>(e)?.type ===
         'https://steadybit.com/problems/another-experiment-running-exception' &&
       (await confirm(
         `There is already an experiment running. Do you want to start ${experiment.key || experiment.name || 'the experiment'} in parallel?`,
@@ -102,7 +103,7 @@ export async function upsertAndExecuteExperiment(
       // try again, but run in parallel
       return upsertAndExecuteExperiment(experiment, true);
     }
-    throw await abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
+    throw abortExecutionWithError(e, 'Failed to save and run the experiment. HTTP request failed.');
   }
 }
 
@@ -111,11 +112,10 @@ export async function getExperimentExecutionUsingUrl(url: string): Promise<Execu
     const response = await executeApiCall({
       method: 'GET',
       path: url,
-      fullyQualifiedUrl: true,
     });
     return (await response.json()) as ExecutionResult;
   } catch (e) {
-    throw await abortExecutionWithError(e, 'Failed to get experiment run ');
+    throw abortExecutionWithError(e, 'Failed to get experiment run ');
   }
 }
 
@@ -128,11 +128,11 @@ export async function fetchExperiment(key: string): Promise<Experiment> {
     const experiment = (await response.json()) as Experiment;
     delete experiment.version; // We remove the version (as this makes things complicated to use). Will be removed from API in the future.
     return experiment;
-  } catch (e: any) {
-    if (e.response?.status === 404) {
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
       throw abortExecution('Experiment %s not found.', key);
     } else {
-      throw await abortExecutionWithError(e, 'Failed to get the experiment. HTTP request failed.');
+      throw abortExecutionWithError(e, 'Failed to get the experiment. HTTP request failed.');
     }
   }
 }
@@ -144,11 +144,11 @@ export async function updateExperiment(key: string, experiment: Experiment): Pro
       path: `/api/experiments/${encodeURIComponent(key)}`,
       body: experiment,
     });
-  } catch (e: any) {
-    if (e.response.status === 404) {
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
       throw abortExecution('Experiment %s not found.', key);
     } else {
-      throw await abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
+      throw abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
     }
   }
 }
@@ -159,11 +159,11 @@ export async function removeExperiment(key: string): Promise<void> {
       method: 'DELETE',
       path: `/api/experiments/${encodeURIComponent(key)}`,
     });
-  } catch (e: any) {
-    if (e.response.status === 404) {
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
       throw abortExecution('Experiment %s not found.', key);
     } else {
-      throw await abortExecutionWithError(e, 'Failed to delete the experiment. HTTP request failed.');
+      throw abortExecutionWithError(e, 'Failed to delete the experiment. HTTP request failed.');
     }
   }
 }
@@ -178,8 +178,8 @@ export async function upsertExperiment(experiment: Experiment): Promise<UpsertRe
     const location = response.headers.get('Location');
     const key = location?.substring(location.lastIndexOf('/') + 1);
     return { created: response.status === 201, key };
-  } catch (e: any) {
-    throw await abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
+  } catch (e) {
+    throw abortExecutionWithError(e, 'Failed to save the experiment. HTTP request failed.');
   }
 }
 
@@ -193,8 +193,8 @@ export async function fetchExperiments(teamKey: string): Promise<ExperimentList>
       },
     });
     return (await response.json()) as ExperimentList;
-  } catch (e: any) {
-    throw await abortExecutionWithError(e, 'Failed to get the experiments. HTTP request failed.');
+  } catch (e) {
+    throw abortExecutionWithError(e, 'Failed to get the experiments. HTTP request failed.');
   }
 }
 
@@ -205,8 +205,8 @@ export async function fetchExecutionsForExperiment(key: string): Promise<Executi
       path: `/api/experiments/${encodeURIComponent(key)}/executions`,
     });
     return (await response.json()) as ExecutionList;
-  } catch (e: any) {
-    throw await abortExecutionWithError(e, 'Failed to get the executions. HTTP request failed.');
+  } catch (e) {
+    throw abortExecutionWithError(e, 'Failed to get the executions. HTTP request failed.');
   }
 }
 
@@ -219,7 +219,7 @@ export async function getExperimentExecution(id: number, abortOnError = true): P
     return (await response.json()) as ExecutionResult;
   } catch (e) {
     if (abortOnError) {
-      throw await abortExecutionWithError(e, 'Failed to get experiment run ');
+      throw abortExecutionWithError(e, 'Failed to get experiment run ');
     } else {
       throw e;
     }
