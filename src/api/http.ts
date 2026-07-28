@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { getHeaders, toUrl } from './common.ts';
 import { ApiError } from './error.ts';
 import { errorMessage } from '../errors.ts';
+import { rateLimiter } from './rateLimit.ts';
 import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess.ts';
 
 const TOO_MANY_REQUESTS = 429;
@@ -12,6 +13,7 @@ const TOO_MANY_REQUESTS = 429;
 export const options = {
   maxRetries: 2,
   defaultWaitTime: 1000,
+  rateLimitBudget: 120000,
 };
 
 export interface ApiCallArguments {
@@ -83,7 +85,8 @@ export async function executeApiCall({
   const url = await toUrl(path, queryParameters);
   const headers = await getHeaders();
 
-  const response = await doWithRetry(async () => {
+  const response = await doWithRetry(method, async () => {
+    await rateLimiter.acquire();
     // The deadline stays attached to the response, so it bounds reading the body as
     // well and not just the wait for the status line. Clearing it once the headers
     // arrive would leave a stalled body download running forever.
@@ -114,19 +117,60 @@ export async function executeApiCall({
   return response;
 }
 
-async function doWithRetry(fn: () => Promise<Response>): Promise<Response> {
-  // maxRetries has always allowed one more retry than its name suggests. The count is
-  // kept as-is to avoid shortening how long the CLI rides out a rate limit.
-  const maxAttempts = options.maxRetries + 2;
-  for (let attempt = 1; ; attempt++) {
-    const response = await fn();
-    if (response.status !== TOO_MANY_REQUESTS || attempt >= maxAttempts) {
+// Repeating a request that may already have been applied is only safe for methods
+// defined to be idempotent: a POST that failed in transit might still have started an
+// experiment run, so it is reported rather than retried.
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE']);
+
+async function doWithRetry(method: string, fn: () => Promise<Response>): Promise<Response> {
+  // A rate limit says the request was rejected, not applied, so waiting it out is safe
+  // whatever the method. What it needs is time, not a number of tries: an attempt count
+  // multiplied by the reset interval gave up after roughly eighteen seconds, which a
+  // fan-out like `experiment dump` exceeds routinely because every rejected request
+  // retries into the same window. A transport failure is still capped by attempts, since
+  // repeating it is the part that carries risk.
+  //
+  // The budget counts time actually spent waiting on 429s, not elapsed time. A deadline
+  // taken at the start would have been spent by the pacing in rateLimiter.acquire(),
+  // which under a large dump can hold a request back for minutes — leaving no budget for
+  // the rate limit the pacing exists to survive.
+  const maxTransportAttempts = options.maxRetries + 2;
+  const mayRepeat = IDEMPOTENT_METHODS.has(method.toUpperCase());
+  let rateLimitWait = 0;
+  let transportAttempt = 1;
+
+  for (;;) {
+    let response: Response;
+    try {
+      response = await fn();
+    } catch (e) {
+      // Transport failures used to end the command outright, which meant one flaky DNS
+      // lookup out of the hundreds a dump makes discarded the whole run.
+      if (!mayRepeat || transportAttempt >= maxTransportAttempts) {
+        throw e;
+      }
+      await sleep(withJitter(options.defaultWaitTime * transportAttempt));
+      transportAttempt++;
+      continue;
+    }
+
+    if (response.status !== TOO_MANY_REQUESTS) {
       return response;
     }
     const resetHeader = response.headers.get('RateLimit-Reset') || response.headers.get('Retry-After');
     const retryInMillis = (resetHeader && Number.parseInt(resetHeader) * 1000) || options.defaultWaitTime;
+    if (rateLimitWait + retryInMillis > options.rateLimitBudget) {
+      return response;
+    }
     await sleep(retryInMillis);
+    rateLimitWait += retryInMillis;
   }
+}
+
+// Without this, requests that failed together — a dump shares one DNS resolver and one
+// connection pool — would come back together and fail together again.
+function withJitter(millis: number): number {
+  return millis / 2 + Math.random() * (millis / 2);
 }
 
 const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie', 'proxy-authorization']);

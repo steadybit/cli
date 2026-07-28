@@ -119,7 +119,7 @@ export async function getExperimentExecutionUsingUrl(url: string): Promise<Execu
   }
 }
 
-export async function fetchExperiment(key: string): Promise<Experiment> {
+export async function fetchExperiment(key: string, abortOnError = true): Promise<Experiment> {
   try {
     const response = await executeApiCall({
       method: 'GET',
@@ -129,6 +129,9 @@ export async function fetchExperiment(key: string): Promise<Experiment> {
     delete experiment.version; // We remove the version (as this makes things complicated to use). Will be removed from API in the future.
     return experiment;
   } catch (e) {
+    if (!abortOnError) {
+      throw e;
+    }
     if (e instanceof ApiError && e.status === 404) {
       throw abortExecution('Experiment %s not found.', key);
     } else {
@@ -198,7 +201,7 @@ export async function fetchExperiments(teamKey: string): Promise<ExperimentList>
   }
 }
 
-export async function fetchExecutionsForExperiment(key: string): Promise<ExecutionList> {
+export async function fetchExecutionsForExperiment(key: string, abortOnError = true): Promise<ExecutionList> {
   try {
     const response = await executeApiCall({
       method: 'GET',
@@ -206,6 +209,9 @@ export async function fetchExecutionsForExperiment(key: string): Promise<Executi
     });
     return (await response.json()) as ExecutionList;
   } catch (e) {
+    if (!abortOnError) {
+      throw e;
+    }
     throw abortExecutionWithError(e, 'Failed to get the executions. HTTP request failed.');
   }
 }

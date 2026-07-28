@@ -34,6 +34,21 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ? Base URL of the Steadybit server: https://platform.steadybit.com
 ```
 
+## Rate limiting
+
+The platform meters API requests with a token bucket: a burst of 100 requests, refilling
+by 25 every 15 seconds. The CLI paces itself to that allowance, so a command that walks a
+large tenant &mdash; `experiment dump` above all &mdash; takes a while rather than being
+rejected part way through. It warns up front when a dump covers more than 100 experiments.
+
+Override the allowance if your deployment is configured differently:
+
+| Variable                        | Default | Meaning                          |
+| ------------------------------- | ------- | -------------------------------- |
+| `STEADYBIT_RATE_LIMIT_BURST`    | `100`   | Requests allowed before pacing   |
+| `STEADYBIT_RATE_LIMIT_REFILL`   | `25`    | Requests restored each interval  |
+| `STEADYBIT_RATE_LIMIT_INTERVAL` | `15`    | Length of that interval, seconds |
+
 ## Usage
 
 Get an existing experiment yaml from Steadybit and write it to file:
