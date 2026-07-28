@@ -1,4 +1,4 @@
 vulnerabilities:
-  - id: CVE-2026-12151
-    statement: Waiting for npm version include undici 6.27.0
+  - id: CVE-2026-14257
+    statement: Waiting for npm version include braces-expansion >= 5.0.8
     expired_at: 2026-09-01
