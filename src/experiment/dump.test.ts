@@ -53,6 +53,24 @@ describe('experiment dump', () => {
     process.exitCode = undefined;
   });
 
+  // The list-gathering phase is paced like everything else, so without this the CLI can
+  // sit silent for minutes before its first line of output.
+  it('should report progress while gathering the experiment lists', async () => {
+    const written: string[] = [];
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(chunk => {
+      written.push(String(chunk));
+      return true;
+    });
+
+    await dump({ directory: freshDirectory() });
+
+    stdout.mockRestore();
+    const output = written.join('');
+    expect(output).toContain('Listing experiments for 1 team');
+    // The dot lands before the per-team walk starts, not after it.
+    expect(output.indexOf('.\n')).toBeLessThan(output.indexOf('Fetching experiments for team'));
+  });
+
   it('should write the experiment and its executions', async () => {
     givenExecutions('TST-1', [1, 2, 3]);
     const directory = freshDirectory();

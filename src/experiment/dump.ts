@@ -36,11 +36,16 @@ export async function dump(options: Options) {
 
   // The experiment lists are fetched up front, which costs nothing extra because each
   // team needs one anyway, so that the size of the walk is known before it starts.
+  // These requests are paced like any other, so on a tenant with many teams, or a
+  // reduced allowance, they take long enough that silence here reads as a hang.
   const teams = selectTeams(await getAllTeams(false), options.team);
+  process.stdout.write(`Listing experiments for ${teams.length} ${teams.length === 1 ? 'team' : 'teams'}`);
   const listPerTeam = new Map<string, ExperimentList>();
   for (const team of teams) {
     listPerTeam.set(team.key, await fetchExperiments(team.key));
+    process.stdout.write('.');
   }
+  process.stdout.write('\n');
   warnAboutLargeDump([...listPerTeam.values()].reduce((total, list) => total + list.experiments.length, 0));
 
   for (const team of teams) {
