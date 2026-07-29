@@ -2,15 +2,26 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { Command, Option } from 'commander';
-import { executeExperiments } from '../experiment/exec';
-import { getExperiment } from '../experiment/get';
-import { dump } from '../experiment/dump';
-import { applyExperiments } from '../experiment/apply';
-import { deleteExperiment } from '../experiment/delete';
-import { requirePlatformAccess } from './requirements';
+import { Command, InvalidArgumentError, Option } from 'commander';
+import { executeExperiments } from '../experiment/exec.ts';
+import { getExperiment } from '../experiment/get.ts';
+import { dump } from '../experiment/dump.ts';
+import { applyExperiments } from '../experiment/apply.ts';
+import { deleteExperiment } from '../experiment/delete.ts';
+import { requirePlatformAccess } from './requirements.ts';
 
 const program = new Command();
+
+// Not `parseInt` directly: commander invokes an argument parser as (value, previous),
+// so passing it wholesale turns the previous value into the radix. Repeating an option
+// then parses the second value in the base of the first, silently and wrongly.
+function parseDecimal(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    throw new InvalidArgumentError(`'${value}' is not a number.`);
+  }
+  return parsed;
+}
 
 program
   .command('run')
@@ -48,10 +59,10 @@ program
       'Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.'
     )
       .default(0)
-      .argParser(parseInt)
+      .argParser(parseDecimal)
   )
   .addOption(
-    new Option('--retryInterval <seconds>', 'Interval in seconds between retries.').default(10).argParser(parseInt)
+    new Option('--retryInterval <seconds>', 'Interval in seconds between retries.').default(10).argParser(parseDecimal)
   )
   .action(requirePlatformAccess(executeExperiments));
 
@@ -99,6 +110,9 @@ program
   .description('Dump all experiments and executions from all teams in Steadybit.')
   .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
   .addOption(new Option('-t, --type <type>', 'The output format of the experiment ("json" or "yaml").').default('yaml'))
+  .addOption(
+    new Option('--team <keys...>', 'Only dump the given teams, by team key. Defaults to every accessible team.')
+  )
   .action(requirePlatformAccess(dump));
 
 program.parseAsync(process.argv);

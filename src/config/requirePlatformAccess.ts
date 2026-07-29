@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import colors from 'colors/safe';
+import colors from '../colors.ts';
 
-import { abortExecutionWithOpts } from '../errors';
-import { getConfiguration } from './index';
+import { abortExecutionWithOpts } from '../errors.ts';
+import { getConfiguration } from './index.ts';
 
 const platformAccessConfigurationMissingHelp = `
 No API access token configuration was found for Steadybit platform access.

@@ -1,7 +1,30 @@
 # Changelog
 
-## v4.3.7
+## v5.0.0
 
+- **Breaking:** Node.js 22.13.0 or later is now required. Node.js 18 and 20 have reached
+  end of life and the CLI's dependencies no longer support them.
+- The CLI is now published as an ES module.
+- **Security:** `-v, --verbose` no longer prints the API access token. Commander passes the
+  flag on to spawned subcommands, so CI jobs using it had the token in their logs.
+- **Security:** requests are only ever sent to the configured platform. An absolute URL in a
+  platform response, such as the `Location` header of a started run, now has its origin
+  replaced by the configured one so that the access token cannot be sent elsewhere.
+- Fixed experiment files being corrupted on `apply` and `get`: merge keys (`<<:`) parsed into
+  a literal `"<<"` property and timestamps into strings. `js-yaml` 5 narrowed its default
+  schema, and the tag set the CLI relies on is now requested explicitly.
+- Fixed `--wait` failing when the platform returns a relative `Location` header.
+- Fixed `--retries` and `--retryInterval` being misparsed when given more than once, which
+  could turn `--retryInterval 30 --retryInterval 25` into a 65 second wait. Both now reject a
+  non-numeric value instead of silently disabling retries.
+- Fixed the "an experiment is already running, run in parallel?" recovery never triggering,
+  because the response body it inspects had already been consumed.
+- Fixed the rate-limit retry loop waiting out a full window after its final attempt, delaying
+  a 429 it already had by up to five minutes.
+- `experiment dump` now bounds its concurrent requests instead of scaling them with the size
+  of the tenant.
+- Replaced `inquirer` with the `@inquirer/*` prompt packages and `colors` with `picocolors`.
+- Replaced `node-fetch` with the Node.js built-in `fetch`.
 - Dependency updates
 
 ## v4.3.2

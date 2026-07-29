@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { Command, Option } from 'commander';
-import { remove } from '../config/profile/remove';
-import { select } from '../config/profile/select';
-import { list } from '../config/profile/list';
-import { add } from '../config/profile/add';
-import { defaultBaseUrl } from '../config';
+import { remove } from '../config/profile/remove.ts';
+import { select } from '../config/profile/select.ts';
+import { list } from '../config/profile/list.ts';
+import { add } from '../config/profile/add.ts';
+import { defaultBaseUrl } from '../config/index.ts';
 
 const program = new Command();
 

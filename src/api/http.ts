@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import fetch, { Response } from 'node-fetch';
-import { getHeaders, toUrl } from './common';
-
-/*
- * This is required because we are supporting Node.js v14
- */
-import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess';
-import http from 'http';
-import https from 'https';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { getHeaders, toUrl } from './common.ts';
+import { ApiError } from './error.ts';
+import { errorMessage } from '../errors.ts';
+import { rateLimiter } from './rateLimit.ts';
+import { ensurePlatformAccessConfigurationIsAvailable } from '../config/requirePlatformAccess.ts';
 
 const TOO_MANY_REQUESTS = 429;
 
 export const options = {
   maxRetries: 2,
   defaultWaitTime: 1000,
+  rateLimitBudget: 120000,
 };
 
 export interface ApiCallArguments {
@@ -24,21 +22,7 @@ export interface ApiCallArguments {
   queryParameters?: Record<string, string>;
   body?: unknown;
   timeout?: number; // defaults to 30000
-  expect2xx?: boolean; // defaults to true
-  // https://github.com/node-fetch/node-fetch#manual-redirect
-  redirect?: 'manual' | 'error';
-  fullyQualifiedUrl?: boolean;
 }
-
-const httpAgentOptions = {
-  keepAlive: true,
-  keepAliveMsecs: 60000,
-  timeout: 60000,
-  maxSockets: 64,
-};
-
-const httpAgent = new http.Agent(httpAgentOptions);
-const httpsAgent = new https.Agent(httpAgentOptions);
 
 export function enableRequestLogging() {
   process.env.REQUEST_LOGGING_ENABLED = 'true';
@@ -49,13 +33,12 @@ async function doFetch(
   method: string,
   headers: Record<string, string>,
   body: undefined | string,
-  controller: AbortController,
-  redirect: 'manual' | 'error' | undefined
+  signal: AbortSignal
 ) {
   if (process.env.REQUEST_LOGGING_ENABLED === 'true') {
     console.log(`> HTTP ${method} ${url}`);
     for (const [key, value] of Object.entries(headers)) {
-      console.log(`> ${key}: ${value}`);
+      console.log(`> ${key}: ${maskSensitiveHeader(key, value)}`);
     }
     console.log(`> `);
     if (body) {
@@ -68,15 +51,14 @@ async function doFetch(
     method,
     headers,
     body,
-    signal: controller.signal,
-    agent: getHttpAgent,
-    redirect,
+    signal,
+    redirect: 'error',
   });
 
   if (process.env.REQUEST_LOGGING_ENABLED === 'true') {
     console.log(`< HTTP ${response.status} ${response.statusText}`);
     for (const [key, value] of response.headers) {
-      console.log(`< ${key}: ${value}`);
+      console.log(`< ${key}: ${maskSensitiveHeader(key, value)}`);
     }
     console.log(`< `);
     try {
@@ -98,74 +80,109 @@ export async function executeApiCall({
   queryParameters,
   body,
   timeout = 30000,
-  expect2xx = true,
-  redirect = 'error',
-  fullyQualifiedUrl = false,
 }: ApiCallArguments): Promise<Response> {
   await ensurePlatformAccessConfigurationIsAvailable();
-  const url = fullyQualifiedUrl ? path : await toUrl(path, queryParameters);
+  const url = await toUrl(path, queryParameters);
   const headers = await getHeaders();
 
-  const controller = new AbortController();
-  const response = await doWithRetry(async () => {
-    const timeoutHandle = setTimeout(() => controller.abort(), timeout);
+  const response = await doWithRetry(method, async () => {
+    await rateLimiter.acquire();
+    // The deadline stays attached to the response, so it bounds reading the body as
+    // well and not just the wait for the status line. Clearing it once the headers
+    // arrive would leave a stalled body download running forever.
+    const signal = AbortSignal.timeout(timeout);
     try {
-      return await doFetch(url, method, headers, body ? JSON.stringify(body) : undefined, controller, redirect);
+      return await doFetch(url, method, headers, body ? JSON.stringify(body) : undefined, signal);
     } catch (e) {
-      throw new Error(
-        `Failed to call Steadybit API at ${method} ${url}: ${(e as Error)?.message ?? 'Unknown Cause'}`,
-        // @ts-expect-error TypeScript doesn't know about error causes yet
-        { cause: e }
-      );
-    } finally {
-      clearTimeout(timeoutHandle);
+      throw new Error(`Failed to call Steadybit API at ${method} ${url}: ${describeFetchError(e)}`, {
+        cause: e,
+      });
     }
   });
 
-  if (expect2xx && !response.ok) {
+  if (!response.ok) {
     let body = '';
     try {
       body = await response.text();
     } catch {
       // ignore
     }
-    const error: any = new Error(
-      `Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status} - ${body ?? '<no body>'}`
+    throw new ApiError(
+      `Steadybit API at ${method} ${url} responded with unexpected status code: ${response.status} - ${body || '<no body>'}`,
+      response,
+      body
     );
-    error.response = response;
-    throw error;
   }
 
   return response;
 }
 
-async function doWithRetry(fn: () => Promise<fetch.Response>): Promise<fetch.Response> {
-  let response;
-  let retry = 0;
-  do {
-    response = await fn();
+// Repeating a request that may already have been applied is only safe for methods
+// defined to be idempotent: a POST that failed in transit might still have started an
+// experiment run, so it is reported rather than retried.
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE']);
+
+async function doWithRetry(method: string, fn: () => Promise<Response>): Promise<Response> {
+  // A rate limit says the request was rejected, not applied, so waiting it out is safe
+  // whatever the method. What it needs is time, not a number of tries: an attempt count
+  // multiplied by the reset interval gave up after roughly eighteen seconds, which a
+  // fan-out like `experiment dump` exceeds routinely because every rejected request
+  // retries into the same window. A transport failure is still capped by attempts, since
+  // repeating it is the part that carries risk.
+  //
+  // The budget counts time actually spent waiting on 429s, not elapsed time. A deadline
+  // taken at the start would have been spent by the pacing in rateLimiter.acquire(),
+  // which under a large dump can hold a request back for minutes — leaving no budget for
+  // the rate limit the pacing exists to survive.
+  const maxTransportAttempts = options.maxRetries + 2;
+  const mayRepeat = IDEMPOTENT_METHODS.has(method.toUpperCase());
+  let rateLimitWait = 0;
+  let transportAttempt = 1;
+
+  for (;;) {
+    let response: Response;
+    try {
+      response = await fn();
+    } catch (e) {
+      // Transport failures used to end the command outright, which meant one flaky DNS
+      // lookup out of the hundreds a dump makes discarded the whole run.
+      if (!mayRepeat || transportAttempt >= maxTransportAttempts) {
+        throw e;
+      }
+      await sleep(withJitter(options.defaultWaitTime * transportAttempt));
+      transportAttempt++;
+      continue;
+    }
+
     if (response.status !== TOO_MANY_REQUESTS) {
-      break;
+      return response;
     }
     const resetHeader = response.headers.get('RateLimit-Reset') || response.headers.get('Retry-After');
-    const retryInSeconds = (resetHeader && Number.parseInt(resetHeader) * 1000) || options.defaultWaitTime;
-    await sleep(retryInSeconds);
-  } while (retry++ <= options.maxRetries);
-  return response;
-}
-
-function sleep(millis: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve();
-    }, millis);
-  });
-}
-
-function getHttpAgent(parsedUrl: URL) {
-  if (parsedUrl.protocol == 'http:') {
-    return httpAgent;
-  } else {
-    return httpsAgent;
+    const retryInMillis = (resetHeader && Number.parseInt(resetHeader) * 1000) || options.defaultWaitTime;
+    if (rateLimitWait + retryInMillis > options.rateLimitBudget) {
+      return response;
+    }
+    await sleep(retryInMillis);
+    rateLimitWait += retryInMillis;
   }
+}
+
+// Without this, requests that failed together — a dump shares one DNS resolver and one
+// connection pool — would come back together and fail together again.
+function withJitter(millis: number): number {
+  return millis / 2 + Math.random() * (millis / 2);
+}
+
+const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie', 'proxy-authorization']);
+
+function maskSensitiveHeader(name: string, value: string): string {
+  return SENSITIVE_HEADERS.has(name.toLowerCase()) ? '<redacted>' : value;
+}
+
+// The global fetch reports every transport failure as "fetch failed" and carries the
+// actual reason (DNS, TLS, ECONNREFUSED) on the cause chain.
+function describeFetchError(e: unknown): string {
+  const message = errorMessage(e);
+  const causeMessage = (e as { cause?: Error })?.cause?.message;
+  return causeMessage && causeMessage !== message ? `${message}: ${causeMessage}` : message;
 }

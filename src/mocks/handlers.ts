@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 import { http, HttpResponse } from 'msw';
-import { Experiment } from '../experiment/types';
-import { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types';
+import type { Experiment } from '../experiment/types.ts';
+import type { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types.ts';
 import * as url from 'node:url';
 
 let retryCount = 0;
@@ -10,6 +10,18 @@ let runSequence = 1;
 let experimentSequence = 1;
 let experimentStore: Record<string, Experiment> = {};
 let validationFailuresRemaining = 0;
+let executionsPerExperiment: Record<string, number[]> = {};
+let unfetchableExecutions = new Set<number>();
+
+function executionsFor(key: string): { id: number }[] {
+  return (executionsPerExperiment[key] ?? []).map(id => ({ id }));
+}
+
+// Lets a dump test set up an experiment whose executions cannot all be fetched.
+export const givenExecutions = (key: string, ids: number[], unfetchable: number[] = []) => {
+  executionsPerExperiment[key] = ids;
+  unfetchable.forEach(id => unfetchableExecutions.add(id));
+};
 
 export const resetExperiments = () => {
   retryCount = 0;
@@ -17,6 +29,8 @@ export const resetExperiments = () => {
   runSequence = 1;
   experimentStore = { 'TST-1': EXPERIMENTS['TST-1'] };
   validationFailuresRemaining = 0;
+  executionsPerExperiment = {};
+  unfetchableExecutions = new Set();
 };
 
 export const setValidationFailures = (count: number) => {
@@ -303,7 +317,41 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
   }
 });
 
+// The dump walk: teams, then each team's experiments, then each experiment's executions.
+const getTeamsHandler = http.get('http://example.com/api/teams', () =>
+  HttpResponse.json({ teams: [{ key: 'TST', name: 'Test Team' }] })
+);
+
+const listExperimentsHandler = http.get('http://example.com/api/experiments', ({ request }) => {
+  const team = new URL(request.url).searchParams.get('team');
+  const experiments = Object.values(experimentStore)
+    .filter(experiment => experiment.team === team)
+    .map(experiment => ({ key: experiment.key, name: experiment.name }));
+  return HttpResponse.json({ experiments });
+});
+
+const listExecutionsHandler = http.get('http://example.com/api/experiments/:key/executions', ({ params }) =>
+  experimentStore[String(params.key)]
+    ? HttpResponse.json({ executions: executionsFor(String(params.key)) })
+    : HttpResponse.json({ title: 'Not Found' }, { status: 404 })
+);
+
+const getExecutionHandler = http.get('http://example.com/api/experiments/executions/:id', ({ params }) =>
+  unfetchableExecutions.has(Number(params.id))
+    ? HttpResponse.json({ title: 'Server Error' }, { status: 500 })
+    : HttpResponse.json({ id: Number(params.id), key: 'TST-1', state: 'COMPLETED' })
+);
+
+const getProblemHandler = http.get('http://example.com/api/problem', () =>
+  HttpResponse.json({ type: 'https://steadybit.com/problems/another-experiment-running-exception' }, { status: 409 })
+);
+
 export const handlers = [
+  getTeamsHandler,
+  listExecutionsHandler,
+  getExecutionHandler,
+  listExperimentsHandler,
+  getProblemHandler,
   executeUpsertExperimentHandler,
   executeExperimentHandler,
   upsertExperimentHandler,

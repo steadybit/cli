@@ -1,19 +1,19 @@
 {
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "src/**/*.test.ts"
-  ],
+  "include": ["src/**/*.ts", "vitest.config.ts"],
   "compilerOptions": {
     "strict": true,
-    "target": "es2015",
+    "target": "es2023",
     "outDir": "dist",
-    "lib": ["ES2021", "dom"],
-    "module": "CommonJS",
-    "esModuleInterop": true,
-    "declaration": true,
-    "resolveJsonModule": true,
-    "sourceMap": true
+    "module": "nodenext",
+    // Lets relative imports name the .ts file that is actually on disk; the extension
+    // is rewritten to .js on emit, which is what Node's ESM resolver needs.
+    "rewriteRelativeImportExtensions": true,
+    // Declared explicitly so that an unrelated @types package cannot leak globals.
+    // TypeScript 7 additionally requires this, as it no longer includes @types/* implicitly.
+    "types": ["node"],
+    // Required because "dom" is intentionally absent from lib: some dependencies ship
+    // declarations that assume it. Omitting dom is what makes fetch/Response resolve
+    // to the Node types rather than the browser ones.
+    "skipLibCheck": true
   }
 }

@@ -13,11 +13,12 @@ You can retrieve, create or adjust experiment designs as well as running them st
 ## Prerequisites
 
 - You need to have a Steadybit account. You can create a free account [via our website](https://www.steadybit.com/get-started/).
-- at least Node.js 16 as local runtime
+- at least Node.js 22.13 as local runtime
 
 ## Installation
 
 Via npm
+
 ```sh
 npm install -g steadybit
 ```
@@ -33,34 +34,61 @@ You need an API access token. You can grab one via our [platform](https://platfo
 ? Base URL of the Steadybit server: https://platform.steadybit.com
 ```
 
+## Rate limiting
+
+The platform meters API requests with a token bucket: a burst of 100 requests, refilling
+by 25 every 15 seconds. The CLI paces itself to that allowance, so a command that walks a
+large tenant &mdash; `experiment dump` above all &mdash; takes a while rather than being
+rejected part way through. It warns up front when a dump covers more than 100 experiments.
+
+Override the allowance if your deployment is configured differently:
+
+| Variable                        | Default | Meaning                          |
+| ------------------------------- | ------- | -------------------------------- |
+| `STEADYBIT_RATE_LIMIT_BURST`    | `100`   | Requests allowed before pacing   |
+| `STEADYBIT_RATE_LIMIT_REFILL`   | `25`    | Requests restored each interval  |
+| `STEADYBIT_RATE_LIMIT_INTERVAL` | `15`    | Length of that interval, seconds |
+
 ## Usage
 
 Get an existing experiment yaml from Steadybit and write it to file:
+
 ```bash
 steadybit experiment get -k ADM-1 -f experiment.yml
 ```
 
 Only apply the experiment:
+
 ```bash
 steadybit experiment apply -f experiment.yml
 ```
 
 Apply and run the experiment in one step:
+
 ```bash
 steadybit experiment run -f experiment.yml
 ```
 
 Run existing experiment:
+
 ```bash
 steadybit experiment run -k ADM-1
 ```
 
 Dump all experiments and executions from all teams:
+
 ```bash
 steadybit experiment dump -d ./dump
 ```
 
+Dump only certain teams, by team key:
+
+```bash
+steadybit experiment dump -d ./dump --team ADM WEBHOOK
+```
+
 Validate advice status
+
 ```bash
 steadybit validate-status -e "Global" -q "k8s.cluster-name=dev-demo and k8s.namespace=steadybit-demo"
 ```

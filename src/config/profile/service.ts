@@ -1,16 +1,39 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { homedir } from 'os';
-import fs from 'fs/promises';
-import path from 'path';
+import { homedir } from 'node:os';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import { abortExecution } from '../../errors';
-import { Profile } from './types';
+import { abortExecution, errorMessage } from '../../errors.ts';
+import type { Profile } from './types.ts';
 
 const configDir = path.join(homedir(), '.steadybit');
 const profilesFile = path.join(configDir, 'profiles.json');
 const activeProfileFile = path.join(configDir, 'activeProfile');
+
+// The profile files are read on every API call, three times per call via
+// getConfiguration(). Reading them once per process turns thousands of redundant
+// syscalls into a handful during commands like `experiment dump`. Failures are not
+// cached, so they stay retryable, and the writers below drop the cache.
+function readOnce<T>(read: () => Promise<T>): (() => Promise<T>) & { forget: () => void } {
+  let cached: Promise<T> | undefined;
+  const cachingRead = () => {
+    cached ??= read().catch(e => {
+      cached = undefined;
+      throw e;
+    });
+    return cached;
+  };
+  cachingRead.forget = () => {
+    cached = undefined;
+  };
+  return cachingRead;
+}
+
+const ensureConfigDirectoryExists = readOnce(async () => {
+  await fs.mkdir(configDir, { recursive: true });
+});
 
 export async function addProfile(profile: Profile): Promise<void> {
   const profiles = await getProfiles();
@@ -28,7 +51,7 @@ export async function removeProfile(profileName: string): Promise<void> {
   await writeProfiles(updatedProfiles);
 }
 
-export async function getProfiles(): Promise<Profile[]> {
+const readProfiles = readOnce(async (): Promise<Profile[]> => {
   await ensureConfigDirectoryExists();
 
   let fileContent: string;
@@ -39,18 +62,18 @@ export async function getProfiles(): Promise<Profile[]> {
       return [];
     }
 
-    throw abortExecution("Failed to read file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution("Failed to read file '%s': %s", profilesFile, errorMessage(e));
   }
 
   try {
     return JSON.parse(fileContent);
   } catch (e) {
-    throw abortExecution(
-      "Failed to parse file '%s' as JSON: %s",
-      profilesFile,
-      (e as Error)?.message ?? 'Unknown error'
-    );
+    throw abortExecution("Failed to parse file '%s' as JSON: %s", profilesFile, errorMessage(e));
   }
+});
+
+export function getProfiles(): Promise<Profile[]> {
+  return readProfiles();
 }
 
 async function writeProfiles(profiles: Profile[]): Promise<void> {
@@ -59,30 +82,29 @@ async function writeProfiles(profiles: Profile[]): Promise<void> {
   try {
     await fs.writeFile(profilesFile, JSON.stringify(profiles, undefined, 2));
   } catch (e) {
-    throw abortExecution("Failed to write to file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+    throw abortExecution("Failed to write to file '%s': %s", profilesFile, errorMessage(e));
   }
+  readProfiles.forget();
 }
 
-async function ensureConfigDirectoryExists() {
-  await fs.mkdir(configDir, { recursive: true });
-}
-
-export async function getActiveProfile(): Promise<Profile | undefined> {
+const readActiveProfileName = readOnce(async (): Promise<string | undefined> => {
   await ensureConfigDirectoryExists();
 
-  let activeProfileName: string | undefined;
   try {
-    activeProfileName = await fs.readFile(activeProfileFile, { encoding: 'utf8' });
     // Users opening and saving the file might end up adding a trailing new line character.
-    activeProfileName = activeProfileName.trim();
+    return (await fs.readFile(activeProfileFile, { encoding: 'utf8' })).trim();
   } catch (e) {
     if ((e as any)?.code !== 'ENOENT') {
-      throw abortExecution("Failed to read file '%s': %s", profilesFile, (e as Error)?.message ?? 'Unknown error');
+      throw abortExecution("Failed to read file '%s': %s", profilesFile, errorMessage(e));
     }
+    return undefined;
   }
+});
 
+export async function getActiveProfile(): Promise<Profile | undefined> {
+  const activeProfileName = await readActiveProfileName();
   const profiles = await getProfiles();
-  const activeProfile: Profile | undefined = profiles.find(p => p.name === activeProfileName?.trim()) ?? profiles[0];
+  const activeProfile: Profile | undefined = profiles.find(p => p.name === activeProfileName) ?? profiles[0];
   return activeProfile;
 }
 
@@ -92,10 +114,7 @@ export async function setActiveProfile(profileName: string): Promise<void> {
   try {
     await fs.writeFile(activeProfileFile, profileName);
   } catch (e) {
-    throw abortExecution(
-      "Failed to write to file '%s': %s",
-      activeProfileFile,
-      (e as Error)?.message ?? 'Unknown error'
-    );
+    throw abortExecution("Failed to write to file '%s': %s", activeProfileFile, errorMessage(e));
   }
+  readActiveProfileName.forget();
 }

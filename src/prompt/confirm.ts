@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import inquirer from 'inquirer';
+import { cancelable } from './cancellation.ts';
 
 export interface ConfirmOptions {
   defaultYes?: boolean;
@@ -16,14 +16,8 @@ export async function confirm(
     return defaultWhenNonInteractive;
   }
 
-  const answers = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'confirm',
-      message,
-      default: defaultYes,
-    },
-  ]);
-
-  return answers.confirm;
+  // Loaded lazily so that non-interactive runs, the common case in CI, never pay
+  // the cost of importing the prompt implementation.
+  const { default: confirmPrompt } = await import('@inquirer/confirm');
+  return await cancelable(confirmPrompt({ message, default: defaultYes }));
 }

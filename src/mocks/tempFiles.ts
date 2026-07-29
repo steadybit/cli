@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
-import yaml from 'js-yaml';
-import { Datatype } from '../experiment/files';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { dump } from '../yaml.ts';
+import type { Datatype } from '../experiment/files.ts';
 
 let tempDir: string;
 
@@ -16,7 +16,7 @@ export async function createTempDir() {
 export async function writeFile(name: string, content: any, datatype: Datatype = 'yaml') {
   const file = path.join(tempDir, name);
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : yaml.dump(content));
+  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : dump(content));
   return file;
 }
 

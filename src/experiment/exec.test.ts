@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { EXPERIMENTS, setValidationFailures } from '../mocks/handlers';
-import { executeExperiments } from './exec';
-import { getTempDir, writeFile } from '../mocks/tempFiles';
+import { describe, expect, it, vi } from 'vitest';
+import { EXPERIMENTS, setValidationFailures } from '../mocks/handlers.ts';
+import { executeExperiments } from './exec.ts';
+import { getTempDir, writeFile } from '../mocks/tempFiles.ts';
 
 describe('experiment', () => {
   describe('exec', () => {
@@ -14,7 +15,7 @@ describe('experiment', () => {
     });
 
     it('should run experiment by key', async () => {
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ key: 'TST-1', recursive: false, yes: true });
 
@@ -28,7 +29,7 @@ describe('experiment', () => {
 
     it('should run experiment by file with update', async () => {
       const file = await writeFile('experiment.yaml', EXPERIMENTS['TST-1']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ file: [file], recursive: false, yes: true });
 
@@ -42,7 +43,7 @@ describe('experiment', () => {
 
     it('should run experiment by file with upsert', async () => {
       const file = await writeFile('experiment.yaml', EXPERIMENTS['NEW']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ file: [file], recursive: false, yes: true });
 
@@ -57,7 +58,7 @@ describe('experiment', () => {
     it('should run experiments from directory with upsert', async () => {
       await writeFile('experiment-1.yaml', EXPERIMENTS['NEW']);
       await writeFile('experiment-2.yaml', EXPERIMENTS['NEW']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ file: [getTempDir()], recursive: false, yes: true });
 
@@ -76,7 +77,7 @@ describe('experiment', () => {
 
     it('should retry on 422 validation error and succeed when resolved (by key)', async () => {
       setValidationFailures(2);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ key: 'TST-1', recursive: false, yes: true, retries: 3, retryInterval: 0 });
 
@@ -88,7 +89,7 @@ describe('experiment', () => {
     it('should retry on 422 validation error and succeed when resolved (by file with upsert)', async () => {
       setValidationFailures(1);
       const file = await writeFile('experiment.yaml', EXPERIMENTS['NEW']);
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await executeExperiments({ file: [file], recursive: false, yes: true, retries: 2, retryInterval: 0 });
 
@@ -106,7 +107,7 @@ describe('experiment', () => {
 
     it('should use forcePersist=true and skip validation when retries is 0', async () => {
       setValidationFailures(1);
-      const logSpy = jest.spyOn(console, 'log').mockClear();
+      const logSpy = vi.spyOn(console, 'log').mockClear();
 
       // With retries=0, forcePersist=true so the mock won't return 422
       await executeExperiments({ key: 'TST-1', recursive: false, yes: true });

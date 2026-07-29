@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
-import colors from 'colors/safe';
-import inquirer from 'inquirer';
+import colors from '../../colors.ts';
+import input from '@inquirer/input';
+import password from '@inquirer/password';
 
-import { validateNotBlank, validateHttpUrl } from '../../prompt/validation';
-import { addProfile } from './service';
-import { defaultBaseUrl } from '..';
-import { Profile } from './types';
+import { cancelable } from '../../prompt/cancellation.ts';
+import { validateNotBlank, validateHttpUrl } from '../../prompt/validation.ts';
+import { addProfile } from './service.ts';
+import { defaultBaseUrl } from '../index.ts';
+import type { Profile } from './types.ts';
 
 const startHelp = `
 Configuration profiles enable you to use the CLI without repeatedly providing
@@ -28,21 +30,10 @@ interface Options {
 }
 
 export async function add(options: Options): Promise<void> {
-  let profile: Profile | undefined;
-  console.log(options);
-  if (options?.name && options?.token) {
-    profile = {
-      name: options.name,
-      baseUrl: options.baseUrl,
-      apiAccessToken: options.token,
-    };
-  } else {
-    console.clear();
-    console.log(startHelp);
-    console.log();
-
-    profile = await ask();
-  }
+  const profile: Profile =
+    options?.name && options?.token
+      ? { name: options.name, baseUrl: options.baseUrl, apiAccessToken: options.token }
+      : await ask();
   await addProfile(profile);
 
   console.log();
@@ -50,40 +41,38 @@ export async function add(options: Options): Promise<void> {
 }
 
 async function ask(): Promise<Profile> {
-  const answers1 = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
+  console.clear();
+  console.log(startHelp);
+  console.log();
+
+  const name = await cancelable(
+    input({
       message: 'Profile name:',
       validate: validateNotBlank,
-    },
-    {
-      type: 'input',
-      name: 'baseUrl',
+    })
+  );
+
+  const baseUrl = await cancelable(
+    input({
       message: 'Base URL of the Steadybit server:',
       default: defaultBaseUrl,
       validate: validateHttpUrl,
-    },
-  ]);
+    })
+  );
 
   console.log(`
 The CLI will need an API access token of ${colors.bold('type team')} to communicate with
 the Steadybit servers. You can generate one through the following URL:
 
-          ${answers1.baseUrl.replace(/\/$/, '')}/settings/api-tokens
+          ${baseUrl.replace(/\/$/, '')}/settings/api-tokens
 `);
 
-  const answers2 = await inquirer.prompt([
-    {
-      type: 'password',
-      name: 'apiAccessToken',
+  const apiAccessToken = await cancelable(
+    password({
       message: 'API access token:',
       validate: validateNotBlank,
-    },
-  ]);
+    })
+  );
 
-  return {
-    ...answers1,
-    ...answers2,
-  };
+  return { name, baseUrl, apiAccessToken };
 }

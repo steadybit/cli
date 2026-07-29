@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { Command, Option } from 'commander';
-import colors from 'colors/safe';
+import colors from '../colors.ts';
 import { satisfies } from 'semver';
-import { enableRequestLogging } from '../api/http';
+import { enableRequestLogging } from '../api/http.ts';
+import { packageJson } from '../packageJson.ts';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const requiredNodejsVersion = require('../../package.json').engines.node;
+const requiredNodejsVersion = packageJson.engines.node;
 const actualNodejsVersion = process.version;
 
 if (!satisfies(actualNodejsVersion, requiredNodejsVersion)) {
@@ -28,11 +28,7 @@ using the Node Version Manager (NVM):
 }
 
 new Command()
-  // Prefer to load at runtime directly from the package.json to simplify
-  // the TypeScript build. Without this, we would have to make the build
-  // more complicated to adapt the root dir accordingly.
-  // eslint-disable-next-line
-  .version(require('../../package.json').version)
+  .version(packageJson.version)
   .addOption(new Option('-v, --verbose', 'Enable verbose logging').default(false))
   .hook('preSubcommand', thisCommand => {
     if (thisCommand.opts().verbose) {

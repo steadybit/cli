@@ -31,3 +31,7 @@ node_modules
 
 /.steadybit.yml
 .idea
+
+.env
+.env.local
+.env.*.local

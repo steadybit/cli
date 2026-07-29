@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { loadExperiment, resolveExperimentFiles, writeFile } from './files';
-import { updateExperiment, upsertExperiment } from './api';
-import { abortExecution } from '../errors';
+import { loadExperiment, resolveExperimentFiles, writeFile } from './files.ts';
+import { updateExperiment, upsertExperiment } from './api.ts';
+import { abortExecution } from '../errors.ts';
 
 export interface Options {
   key?: string;

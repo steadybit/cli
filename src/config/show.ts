@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import yaml from 'js-yaml';
+import { dump } from '../yaml.ts';
 
-import { getConfiguration } from './index';
+import { getConfiguration } from './index.ts';
 
 export async function show(): Promise<void> {
   const configuration = await getConfiguration();
-  console.log(yaml.dump(configuration));
+  console.log(dump(configuration));
 }

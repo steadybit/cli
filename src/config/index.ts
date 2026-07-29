@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
-import { getActiveProfile } from './profile/service';
-import { Configuration } from './types';
+import { getActiveProfile } from './profile/service.ts';
+import type { Configuration } from './types.ts';
 
 export const defaultBaseUrl = 'https://platform.steadybit.com';
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { Experiment } from './types';
-import fs from 'fs/promises';
-import yaml from 'js-yaml';
-import { abortExecution } from '../errors';
-import path from 'path';
+import type { Experiment } from './types.ts';
+import fs from 'node:fs/promises';
+import { dump, load } from '../yaml.ts';
+import { abortExecution, errorMessage } from '../errors.ts';
+import path from 'node:path';
 
 export type Datatype = 'json' | 'yaml';
 
@@ -52,7 +52,7 @@ export async function resolveExperimentFiles(files: string[], recursive: boolean
 }
 
 export async function writeFile(file: string, content: unknown, datatype: Datatype): Promise<void> {
-  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : yaml.dump(content), { encoding: 'utf8' });
+  await fs.writeFile(file, datatype === 'json' ? JSON.stringify(content) : dump(content), { encoding: 'utf8' });
 }
 
 export async function loadExperiment(file: string): Promise<ExperimentFromFile> {
@@ -60,11 +60,7 @@ export async function loadExperiment(file: string): Promise<ExperimentFromFile> 
   try {
     fileContent = await fs.readFile(file, { encoding: 'utf8' });
   } catch (e) {
-    throw abortExecution(
-      "Failed to read experiment file at path '%s': %s",
-      file,
-      (e as Error)?.message ?? 'Unknown Cause'
-    );
+    throw abortExecution("Failed to read experiment file at path '%s': %s", file, errorMessage(e));
   }
 
   try {
@@ -72,14 +68,10 @@ export async function loadExperiment(file: string): Promise<ExperimentFromFile> 
     return { experiment, datatype: 'json' };
   } catch {
     try {
-      const experiment = yaml.load(fileContent) as Experiment;
+      const experiment = load(fileContent) as Experiment;
       return { experiment, datatype: 'yaml' };
     } catch (e) {
-      throw abortExecution(
-        "Failed to parse experiment file at path '%s' as YAML/JSON: %s",
-        file,
-        (e as Error)?.message ?? 'Unknown Cause'
-      );
+      throw abortExecution("Failed to parse experiment file at path '%s' as YAML/JSON: %s", file, errorMessage(e));
     }
   }
 }

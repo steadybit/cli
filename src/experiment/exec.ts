@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { confirm } from '../prompt/confirm';
-import { loadExperiment, resolveExperimentFiles, writeFile } from './files';
-import * as api from './api';
-import { filter, firstValueFrom, from, interval, switchMap, tap } from 'rxjs';
-import { abortExecution, abortExecutionWithError } from '../errors';
-import { ExecuteResult } from './types';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { confirm } from '../prompt/confirm.ts';
+import { loadExperiment, resolveExperimentFiles, writeFile } from './files.ts';
+import * as api from './api.ts';
+import { ApiError } from '../api/error.ts';
+import { abortExecution, abortExecutionWithError } from '../errors.ts';
+import type { ExecuteResult } from './types.ts';
 
 interface Options {
   key?: string;
@@ -89,21 +90,25 @@ async function executeWithRetry<T>(fn: () => Promise<T>, retries = 0, retryInter
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn();
-    } catch (e: any) {
-      if (e.response?.status === 422 && attempt < retries) {
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422 && attempt < retries) {
         console.log(
           `Experiment has validation errors (attempt ${attempt + 1}/${retries + 1}). Retrying in ${retryInterval}s...`
         );
-        await new Promise(resolve => setTimeout(resolve, retryInterval * 1000));
+        await sleep(retryInterval * 1000);
         continue;
       }
-      throw await abortExecutionWithError(e, 'Failed to execute experiment');
+      throw abortExecutionWithError(e, 'Failed to execute experiment');
     }
   }
   throw new Error('Unexpected end of retry loop');
 }
 
 async function waitFor(location: string): Promise<void> {
+  // Loaded lazily because polling a run is the only thing in the CLI that needs rxjs,
+  // and importing it costs far more than the rest of this subcommand's module graph.
+  const { filter, firstValueFrom, from, interval, switchMap, tap } = await import('rxjs');
+
   const executionResult = await firstValueFrom(
     interval(5000)
       .pipe(switchMap(() => from(api.getExperimentExecutionUsingUrl(location ?? ''))))

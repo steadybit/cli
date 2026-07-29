@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { deleteExperiment } from './delete';
+import { describe, expect, it, vi } from 'vitest';
+import { deleteExperiment } from './delete.ts';
 
 describe('experiment', () => {
   describe('delete', () => {
     it('should delete an experiment', async () => {
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
 
       await deleteExperiment({ key: 'TST-1' });
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
-import { AdviceStatus, FetchAdviceRequest, FetchAdviceResponse } from './types';
+import type { AdviceStatus, FetchAdviceRequest, FetchAdviceResponse } from './types.ts';
 
-import { abortExecutionWithError } from '../errors';
-import { executeApiCall } from '../api/http';
-import { format } from 'util';
+import { abortExecutionWithError } from '../errors.ts';
+import { executeApiCall } from '../api/http.ts';
+import { format } from 'node:util';
 
 async function fetchAdvice(offset: number, environment: string, query?: string): Promise<FetchAdviceResponse> {
   const body: FetchAdviceRequest = {
@@ -22,8 +22,8 @@ async function fetchAdvice(offset: number, environment: string, query?: string):
       body,
     });
     return (await response.json()) as FetchAdviceResponse;
-  } catch (e: any) {
-    throw await abortExecutionWithError(e, 'Failed to fetch advice status. HTTP request failed.');
+  } catch (e) {
+    throw abortExecutionWithError(e, 'Failed to fetch advice status. HTTP request failed.');
   }
 }
 

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
-import { getExperiment } from './get';
-import path from 'path';
-import fs from 'fs/promises';
-import { getTempDir, writeFile } from '../mocks/tempFiles';
-import { EXPERIMENTS } from '../mocks/handlers';
+import { describe, expect, it, vi } from 'vitest';
+import { getExperiment } from './get.ts';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { getTempDir, writeFile } from '../mocks/tempFiles.ts';
+import { EXPERIMENTS } from '../mocks/handlers.ts';
 
 describe('experiment', () => {
   describe('get', () => {
@@ -19,7 +20,7 @@ describe('experiment', () => {
     });
 
     it('should output experiment to stdout JSON', async () => {
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
       logSpy.mockClear();
 
       await getExperiment({ key: 'TST-1', type: 'json' });
@@ -29,7 +30,7 @@ describe('experiment', () => {
     });
 
     it('should output experiment to stdout YAML', async () => {
-      const logSpy = jest.spyOn(console, 'log');
+      const logSpy = vi.spyOn(console, 'log');
       logSpy.mockClear();
 
       await getExperiment({ key: 'TST-1' });
