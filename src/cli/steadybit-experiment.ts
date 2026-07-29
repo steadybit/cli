@@ -110,6 +110,9 @@ program
   .description('Dump all experiments and executions from all teams in Steadybit.')
   .addOption(new Option('-d, --directory <dir>', 'The path to dump all the experiments to').default('.'))
   .addOption(new Option('-t, --type <type>', 'The output format of the experiment ("json" or "yaml").').default('yaml'))
+  .addOption(
+    new Option('--team <keys...>', 'Only dump the given teams, by team key. Defaults to every accessible team.')
+  )
   .action(requirePlatformAccess(dump));
 
 program.parseAsync(process.argv);

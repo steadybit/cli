@@ -81,6 +81,12 @@ Dump all experiments and executions from all teams:
 steadybit experiment dump -d ./dump
 ```
 
+Dump only certain teams, by team key:
+
+```bash
+steadybit experiment dump -d ./dump --team ADM WEBHOOK
+```
+
 Validate advice status
 
 ```bash

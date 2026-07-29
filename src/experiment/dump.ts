@@ -3,9 +3,10 @@
 
 import fs from 'node:fs/promises';
 import { mapWithConcurrency } from '../concurrency.ts';
-import { errorMessage } from '../errors.ts';
+import { abortExecution, errorMessage } from '../errors.ts';
 import { rateLimiter } from '../api/rateLimit.ts';
 import { getAllTeams } from '../team/get.ts';
+import type { Team } from '../team/types.ts';
 import { fetchExecutionsForExperiment, fetchExperiment, fetchExperiments, getExperimentExecution } from './api.ts';
 import { type Datatype, writeFile } from './files.ts';
 import type { ExecutionList, ExperimentList } from './types.ts';
@@ -13,6 +14,7 @@ import type { ExecutionList, ExperimentList } from './types.ts';
 export interface Options {
   directory: string;
   type?: Datatype;
+  team?: string[];
 }
 
 // A dump walks every experiment of every team and every execution of every experiment.
@@ -34,7 +36,7 @@ export async function dump(options: Options) {
 
   // The experiment lists are fetched up front, which costs nothing extra because each
   // team needs one anyway, so that the size of the walk is known before it starts.
-  const teams = await getAllTeams(false);
+  const teams = selectTeams(await getAllTeams(false), options.team);
   const listPerTeam = new Map<string, ExperimentList>();
   for (const team of teams) {
     listPerTeam.set(team.key, await fetchExperiments(team.key));
@@ -75,6 +77,31 @@ export async function dump(options: Options) {
     );
     process.exitCode = 1;
   }
+}
+
+// Keys are matched case-insensitively because that is how they are shown and typed. An
+// unknown one aborts rather than being skipped: a dump that quietly covers less than was
+// asked for is indistinguishable from one that covered everything.
+export function selectTeams(teams: Team[], keys: string[] | undefined): Team[] {
+  if (!keys || keys.length === 0) {
+    return teams;
+  }
+
+  const wanted = new Set(keys.map(key => key.toUpperCase()));
+  const selected = teams.filter(team => wanted.has(team.key.toUpperCase()));
+
+  const missing = [...wanted].filter(key => !selected.some(team => team.key.toUpperCase() === key));
+  if (missing.length > 0) {
+    throw abortExecution(
+      'No accessible team with key %s. Available: %s',
+      missing.join(', '),
+      teams
+        .map(team => team.key)
+        .sort()
+        .join(', ')
+    );
+  }
+  return selected;
 }
 
 // Every experiment costs at least two requests, its design and its execution list, and
