@@ -6,16 +6,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-// service.ts resolves the config directory from the home directory at module load, so
-// HOME is redirected to a scratch directory before importing it. The guard below refuses
-// to run the suite if that ever stops working, since these tests write profile files.
+import { addProfile, getActiveProfile, getProfiles, setActiveProfile } from './service.ts';
+
+// These tests write profile files, so HOME is redirected to a scratch directory. The
+// guard refuses to run the suite if that ever stops working. A plain import is enough
+// because service.ts resolves the config directory per call rather than at module load.
 const fakeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'steadybit-service-test-'));
 process.env.HOME = fakeHome;
 if (!os.homedir().startsWith(fakeHome)) {
   throw new Error(`refusing to run: home directory is ${os.homedir()}, not the scratch directory`);
 }
-
-const { addProfile, getActiveProfile, getProfiles, setActiveProfile } = await import('./service.ts');
 
 const profilesFile = path.join(fakeHome, '.steadybit', 'profiles.json');
 
@@ -58,5 +58,22 @@ describe('profile service', () => {
     await addProfile({ name: 'third', baseUrl: 'https://three.example.com', apiAccessToken: 'c' });
 
     expect((await getProfiles()).map(p => p.name)).toContain('third');
+  });
+
+  // The config directory used to be computed at module load, which meant nothing could
+  // point the CLI at a different home once this module had been imported.
+  it('should follow a home directory that changes after import', async () => {
+    const otherHome = await fs.mkdtemp(path.join(os.tmpdir(), 'steadybit-other-home-'));
+    const previous = process.env.HOME;
+    process.env.HOME = otherHome;
+
+    try {
+      await setActiveProfile('written-elsewhere');
+      expect(await fs.readFile(path.join(otherHome, '.steadybit', 'activeProfile'), 'utf8')).toEqual(
+        'written-elsewhere'
+      );
+    } finally {
+      process.env.HOME = previous;
+    }
   });
 });
