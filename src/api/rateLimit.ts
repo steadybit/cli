@@ -37,14 +37,14 @@ const systemClock: Clock = {
 // 429 itself, by which point remaining is zero.
 export function bucketFromEnvironment(env: NodeJS.ProcessEnv = process.env): BucketOptions {
   return {
-    burst: positiveNumber(env.STEADYBIT_RATE_LIMIT_BURST, 'STEADYBIT_RATE_LIMIT_BURST', defaultBucket.burst),
-    refillTokens: positiveNumber(
+    burst: positiveInteger(env.STEADYBIT_RATE_LIMIT_BURST, 'STEADYBIT_RATE_LIMIT_BURST', defaultBucket.burst),
+    refillTokens: positiveInteger(
       env.STEADYBIT_RATE_LIMIT_REFILL,
       'STEADYBIT_RATE_LIMIT_REFILL',
       defaultBucket.refillTokens
     ),
     refillIntervalMillis:
-      positiveNumber(
+      positiveInteger(
         env.STEADYBIT_RATE_LIMIT_INTERVAL,
         'STEADYBIT_RATE_LIMIT_INTERVAL',
         defaultBucket.refillIntervalMillis / 1000
@@ -52,18 +52,23 @@ export function bucketFromEnvironment(env: NodeJS.ProcessEnv = process.env): Buc
   };
 }
 
-function positiveNumber(value: string | undefined, name: string, fallback: number): number {
+// Plain decimal digits only. `Number` would also have taken '1e3', '0x10' and '2.5',
+// which are not how anyone means to write a request count, and reading '0x10' as 16
+// would quietly change how hard the CLI hits the platform.
+const POSITIVE_INTEGER = /^\d+$/;
+
+function positiveInteger(value: string | undefined, name: string, fallback: number): number {
   if (value === undefined || value.trim() === '') {
     return fallback;
   }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  const trimmed = value.trim();
+  if (!POSITIVE_INTEGER.test(trimmed) || Number(trimmed) <= 0) {
     // Warned about rather than ignored: a typo here silently changes how hard the CLI
     // hits the platform, which is the last thing that should fail quietly.
-    console.error(`Ignoring ${name}: '${value}' is not a positive number. Using ${fallback}.`);
+    console.error(`Ignoring ${name}: '${value}' is not a positive whole number. Using ${fallback}.`);
     return fallback;
   }
-  return parsed;
+  return Number(trimmed);
 }
 
 export class RateLimiter {

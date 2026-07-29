@@ -107,18 +107,27 @@ describe('RateLimiter', () => {
       ).toEqual({ burst: 10, refillTokens: 5, refillIntervalMillis: 30000 });
     });
 
-    it.each(['0', '-1', 'abc', 'NaN'])('should fall back and complain about %s', value => {
-      const complaints: string[] = [];
-      const original = console.error;
-      console.error = (m: string) => complaints.push(m);
-      try {
-        expect(bucketFromEnvironment({ STEADYBIT_RATE_LIMIT_BURST: value }).burst).toEqual(defaultBucket.burst);
-      } finally {
-        console.error = original;
-      }
-      expect(complaints).toHaveLength(1);
-      expect(complaints[0]).toContain('STEADYBIT_RATE_LIMIT_BURST');
+    it('should take a value with surrounding whitespace', () => {
+      expect(bucketFromEnvironment({ STEADYBIT_RATE_LIMIT_BURST: ' 10 ' }).burst).toEqual(10);
     });
+
+    // `Number` would have read these as 1000, 16 and 2.5. None is how a request count
+    // gets written on purpose, and accepting them changes the pacing silently.
+    it.each(['0', '-1', 'abc', 'NaN', '1e3', '0x10', '2.5', '10,5', '+5'])(
+      'should fall back and complain about %s',
+      value => {
+        const complaints: string[] = [];
+        const original = console.error;
+        console.error = (m: string) => complaints.push(m);
+        try {
+          expect(bucketFromEnvironment({ STEADYBIT_RATE_LIMIT_BURST: value }).burst).toEqual(defaultBucket.burst);
+        } finally {
+          console.error = original;
+        }
+        expect(complaints).toHaveLength(1);
+        expect(complaints[0]).toContain('STEADYBIT_RATE_LIMIT_BURST');
+      }
+    );
   });
 
   it('should default to the allowance the platform documents', () => {
