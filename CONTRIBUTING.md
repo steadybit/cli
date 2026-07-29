@@ -22,7 +22,7 @@ levels get slower and harder to debug as you go down this list.
 | --------- | ---------------------------------- | ------------------------------------------------------ |
 | Unit      | vitest                             | A single function or class, no I/O                     |
 | Command   | vitest + msw + `@inquirer/testing` | A command end to end in process, including its prompts |
-| Container | `Dockerfile.e2e` + expect          | Only what needs a real process                         |
+| Container | `e2e/run.sh` + expect              | Only what needs a real process                         |
 
 Prompts are driven through `@inquirer/testing`. Mock the prompt package with
 `wrapPrompt` so the application's own call is intercepted, and use the helpers in
@@ -43,10 +43,15 @@ the packaged artifact &mdash; and they assert exit status and a line of output, 
 content. Anything checking structure belongs at the command level.
 
 ```sh
-docker build -t steadybit/cli:latest .
-docker build --build-arg IMAGE=steadybit/cli:latest -f Dockerfile.e2e -t steadybit/cli:smoke-test .
-docker run --rm steadybit/cli:smoke-test
+docker build -t steadybit/cli:under-test .
+docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh steadybit/cli:under-test /e2e/run.sh
 ```
+
+The scripts are mounted into the image rather than baked into a derived one, and CI tags
+the image it builds by commit rather than `latest`. Both guard the same mistake: a
+`FROM steadybit/cli:latest` is resolved by tag, and under the buildx container driver
+that tag resolves from Docker Hub rather than from the build under test — so the suite
+passes while exercising the previous release.
 
 ### Local CLI Execution
 

@@ -38,21 +38,16 @@ jobs:
         with:
           context: ./
           load: true
-          tags: steadybit/cli:latest
+          # Tagged by commit, not `latest`. A tag that also exists on Docker Hub can be
+          # resolved from there instead of from this build without anything failing, so
+          # the smoke tests would quietly exercise the last release.
+          tags: steadybit/cli:ci-${{ github.sha }}
       - name: Test container
-        run: docker run --rm steadybit/cli:latest -V
+        run: docker run --rm steadybit/cli:ci-${{ github.sha }} -V
       # Everything these cover needs a real process: an exit status, a terminal, or the
       # spawn of a subcommand. They run against the image users install, built from the
       # npm tarball, so the packaging is exercised too.
-      - name: Build smoke test container
-        uses: docker/build-push-action@v7
-        env:
-          DOCKER_BUILD_RECORD_UPLOAD: 'false'
-        with:
-          context: ./
-          file: ./Dockerfile.e2e
-          build-args: IMAGE=steadybit/cli:latest
-          load: true
-          tags: steadybit/cli:smoke-test
       - name: Run container smoke tests
-        run: docker run --rm steadybit/cli:smoke-test
+        run: |
+          docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh \
+            steadybit/cli:ci-${{ github.sha }} /e2e/run.sh

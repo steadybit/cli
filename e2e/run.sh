@@ -10,6 +10,17 @@
 set -u
 failures=0
 
+# Driving the prompts needs a pty allocator, which the shipped image has no reason to
+# carry. Installed here rather than baked into a second image: a derived image has to
+# name its base by tag, and a tag can silently resolve to something from a registry
+# instead of the build under test.
+if ! command -v expect >/dev/null 2>&1; then
+  apk add --no-cache expect >/dev/null 2>&1 || {
+    echo "cannot install expect, which the interactive checks need"
+    exit 1
+  }
+fi
+
 check() {
   description=$1
   shift
