@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@inquirer/testing": "^3.3.9",
     "@types/node": "^22.19.4",
     "@types/semver": "^7.3.9",
     "eslint": "^10.8.0",
