@@ -1,0 +1,9 @@
+# Ctrl+C at the first question must exit quietly with the SIGINT status.
+log_user 0
+set timeout 20
+spawn steadybit config profile add
+expect "Profile name:"
+send "\003"
+expect eof
+catch wait result
+exit [lindex $result 3]

@@ -1,0 +1,13 @@
+# Colour is gated on stdout being a terminal, so the CLI has to be given one. Piping
+# its output into a matcher would remove the very thing under test.
+#
+# The pattern is the escape character alone: expect matches globs by default, in which
+# a "[" opens a character class rather than matching itself.
+log_user 0
+set timeout 20
+spawn env STEADYBIT_TOKEN= steadybit experiment get -k ADM-1
+expect {
+  "\033" { catch { exp_close }; exit 0 }
+  eof      { exit 1 }
+  timeout  { exit 1 }
+}
