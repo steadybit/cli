@@ -21,8 +21,21 @@
   because the response body it inspects had already been consumed.
 - Fixed the rate-limit retry loop waiting out a full window after its final attempt, delaying
   a 429 it already had by up to five minutes.
-- `experiment dump` now bounds its concurrent requests instead of scaling them with the size
-  of the tenant.
+- `experiment dump` now survives a large tenant. It bounds its concurrent requests instead
+  of scaling them with the size of the tenant, paces them to the allowance the platform
+  meters (a burst of 100, refilling by 25 every 15 seconds), and no longer discards the
+  whole run when one experiment or execution cannot be fetched — those are reported and
+  counted, and leave a non-zero exit status so an incomplete dump is not mistaken for a
+  complete one. It reports how many experiments it is about to walk, and how long that
+  will take, before starting.
+- `experiment dump --team <keys...>` restricts the walk to the named teams. An unknown key
+  is refused and the accessible ones listed, rather than quietly dumping less than asked.
+- Requests that fail in transit, such as a flaky DNS lookup, are retried for methods that
+  are safe to repeat. A single such failure used to end a command outright.
+- `STEADYBIT_RATE_LIMIT_BURST`, `STEADYBIT_RATE_LIMIT_REFILL` and
+  `STEADYBIT_RATE_LIMIT_INTERVAL` override the assumed rate limit for deployments
+  configured differently. A value that is not a positive whole number is reported and
+  ignored rather than silently changing how hard the CLI polls.
 - Replaced `inquirer` with the `@inquirer/*` prompt packages and `colors` with `picocolors`.
 - Replaced `node-fetch` with the Node.js built-in `fetch`.
 - Dependency updates
