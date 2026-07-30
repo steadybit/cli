@@ -14,6 +14,9 @@
   a literal `"<<"` property and timestamps into strings. `js-yaml` 5 narrowed its default
   schema, and the tag set the CLI relies on is now requested explicitly.
 - Fixed `--wait` failing when the platform returns a relative `Location` header.
+- Fixed `experiment get -t json` printing to stdout in a format no JSON reader accepts,
+  with unquoted keys and single quotes, so piping it into `jq` failed. Writing to a file
+  was unaffected.
 - Fixed `--retries` and `--retryInterval` being misparsed when given more than once, which
   could turn `--retryInterval 30 --retryInterval 25` into a 65 second wait. Both now reject a
   non-numeric value instead of silently disabling retries.

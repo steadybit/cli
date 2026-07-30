@@ -19,6 +19,8 @@ describe('experiment', () => {
       expect(content).toMatchSnapshot();
     });
 
+    // The snapshot alone would have kept passing while stdout held Node's inspect
+    // format, which looks close enough to JSON to read but no parser accepts.
     it('should output experiment to stdout JSON', async () => {
       const logSpy = vi.spyOn(console, 'log');
       logSpy.mockClear();
@@ -26,6 +28,8 @@ describe('experiment', () => {
       await getExperiment({ key: 'TST-1', type: 'json' });
 
       const [stdout] = logSpy.mock.calls[0];
+      expect(typeof stdout).toEqual('string');
+      expect(JSON.parse(String(stdout))).toEqual(EXPERIMENTS['TST-1']);
       expect(stdout).toMatchSnapshot();
     });
 

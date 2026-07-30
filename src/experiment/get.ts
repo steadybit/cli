@@ -16,11 +16,9 @@ export async function getExperiment(options: Options) {
   const datatype: Datatype = options.type ? options.type : options.file?.endsWith('.json') ? 'json' : 'yaml';
 
   if (!options.file) {
-    if (datatype === 'json') {
-      console.log(experiment);
-    } else {
-      console.log(dump(experiment));
-    }
+    // Serialised, not handed to console.log as an object: that prints Node's inspect
+    // format, with unquoted keys and single quotes, which no JSON reader accepts.
+    console.log(datatype === 'json' ? JSON.stringify(experiment, undefined, 2) : dump(experiment));
   } else {
     await writeFile(options.file, experiment, datatype);
     console.log('Experiment %s written to %s.', options.key, options.file);
