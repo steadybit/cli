@@ -47,11 +47,10 @@ docker build -t steadybit/cli:under-test .
 docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh steadybit/cli:under-test /e2e/run.sh
 ```
 
-The scripts are mounted into the image rather than baked into a derived one, and CI tags
-the image it builds by commit rather than `latest`. Both guard the same mistake: a
-`FROM steadybit/cli:latest` is resolved by tag, and under the buildx container driver
-that tag resolves from Docker Hub rather than from the build under test — so the suite
-passes while exercising the previous release.
+The scripts are mounted into the image rather than baked into a derived one, and CI runs
+the image by id rather than by name. Both avoid the same mistake: a name is resolved
+against a registry when it cannot be found locally, so the suite can end up exercising
+the last release while reporting success.
 
 ### Local CLI Execution
 

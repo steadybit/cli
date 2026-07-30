@@ -32,22 +32,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build container
+        id: build
         uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_RECORD_UPLOAD: 'false'
         with:
           context: ./
           load: true
-          # Tagged by commit, not `latest`. A tag that also exists on Docker Hub can be
-          # resolved from there instead of from this build without anything failing, so
-          # the smoke tests would quietly exercise the last release.
-          tags: steadybit/cli:ci-${{ github.sha }}
+      # By image id rather than a tag. `docker run` pulls a tag it cannot find locally,
+      # so a name like steadybit/cli:latest would quietly fall back to the last release
+      # if this build ever stopped being loaded. An id is never looked up in a registry.
       - name: Test container
-        run: docker run --rm steadybit/cli:ci-${{ github.sha }} -V
+        run: docker run --rm ${{ steps.build.outputs.imageid }} -V
       # Everything these cover needs a real process: an exit status, a terminal, or the
       # spawn of a subcommand. They run against the image users install, built from the
       # npm tarball, so the packaging is exercised too.
       - name: Run container smoke tests
         run: |
           docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh \
-            steadybit/cli:ci-${{ github.sha }} /e2e/run.sh
+            ${{ steps.build.outputs.imageid }} /e2e/run.sh
