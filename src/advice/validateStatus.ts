@@ -19,7 +19,11 @@ const green_color: COLOR = 'green';
 // the command failed even when every piece of advice was implemented. Case and the
 // separator are both ignored, so either spelling works whichever way round it is given.
 function sameStatus(reported: string, expected: string): boolean {
-  const normalise = (status: string) => status.trim().toLowerCase().replace(/[\s_-]+/g, '_');
+  const normalise = (status: string) =>
+    status
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '_');
   return normalise(reported) === normalise(expected);
 }
 
