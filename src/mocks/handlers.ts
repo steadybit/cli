@@ -3,7 +3,6 @@
 import { http, HttpResponse } from 'msw';
 import type { Experiment } from '../experiment/types.ts';
 import type { FetchAdviceRequest, FetchAdviceResponse } from '../advice/types.ts';
-import * as url from 'node:url';
 
 let retryCount = 0;
 let runSequence = 1;
@@ -129,10 +128,10 @@ export const EXPERIMENTS: Record<string, Experiment> = {
 
 const getTooManyRequestsHandler = http.get('http://example.com/api/status', async ({ request }) => {
   const headers: Record<string, string> = {};
-  const query = url.parse(request.url, true).query;
-  const reset = query.reset && String(query.reset);
-  const times = Number(query.times);
-  let code = Number(query.code) || 200;
+  const query = new URL(request.url).searchParams;
+  const reset = query.get('reset');
+  const times = Number(query.get('times'));
+  let code = Number(query.get('code')) || 200;
   if (reset) {
     headers['RateLimit-Reset'] = reset;
   }
@@ -143,7 +142,7 @@ const getTooManyRequestsHandler = http.get('http://example.com/api/status', asyn
       code = 200;
     }
   }
-  return HttpResponse.text(String(query.body), { status: code, headers: headers });
+  return HttpResponse.text(String(query.get('body')), { status: code, headers: headers });
 });
 
 const getExperimentHandler = http.get('http://example.com/api/experiments/:key', async ({ params }) => {
