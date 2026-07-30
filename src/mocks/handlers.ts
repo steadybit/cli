@@ -271,7 +271,7 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
           advice: {
             type: 'advice-type-1',
             label: 'advice-1',
-            status: 'Implemented',
+            status: 'IMPLEMENTED',
           },
           url: 'http://example.com/api/advice/1111',
         },
@@ -293,7 +293,7 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
           advice: {
             type: 'advice-type-1',
             label: 'advice-1',
-            status: 'Validation needed',
+            status: 'VALIDATION_NEEDED',
           },
           url: 'http://example.com/api/advice/1111',
         },
@@ -306,7 +306,7 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
           advice: {
             type: 'advice-type-2',
             label: 'advice-2',
-            status: 'Implemented',
+            status: 'IMPLEMENTED',
           },
           url: 'http://example.com/api/advice/2222',
         },
@@ -326,7 +326,7 @@ const fetchAdviceHandler = http.post('http://example.com/api/advice', async ({ r
           advice: {
             type: 'advice-type-3',
             label: 'advice-3',
-            status: 'Action needed',
+            status: 'ACTION_NEEDED',
           },
           url: 'http://example.com/api/advice/3333',
         },

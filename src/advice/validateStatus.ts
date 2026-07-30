@@ -14,6 +14,15 @@ export interface Options {
 const red_color: COLOR = 'red';
 const green_color: COLOR = 'green';
 
+// The platform reports IMPLEMENTED, ACTION_NEEDED and VALIDATION_NEEDED, while the
+// default for --status is written Implemented, so an exact comparison never matched and
+// the command failed even when every piece of advice was implemented. Case and the
+// separator are both ignored, so either spelling works whichever way round it is given.
+function sameStatus(reported: string, expected: string): boolean {
+  const normalise = (status: string) => status.trim().toLowerCase().replace(/[\s_-]+/g, '_');
+  return normalise(reported) === normalise(expected);
+}
+
 export async function validateAdviceStatus(options: Options) {
   const allAdvice = await fetchAllAdvice(options.environment, options.query);
   if (allAdvice.length === 0) {
@@ -23,7 +32,7 @@ export async function validateAdviceStatus(options: Options) {
   let errorCount = 0;
   const p = new Table();
   for (const advice of allAdvice) {
-    const statusMatch = advice.advice.status === options.status;
+    const statusMatch = sameStatus(advice.advice.status, options.status);
     if (!statusMatch) {
       errorCount++;
     }

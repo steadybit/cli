@@ -13,6 +13,11 @@
 - Fixed experiment files being corrupted on `apply` and `get`: merge keys (`<<:`) parsed into
   a literal `"<<"` property and timestamps into strings. `js-yaml` 5 narrowed its default
   schema, and the tag set the CLI relies on is now requested explicitly.
+- Fixed `advice validate-status` reporting every advice as not matching, whatever its real
+  status. The platform reports `IMPLEMENTED` while the default for `--status` is written
+  `Implemented`, and the two were compared exactly, so the check failed even when all
+  advice was implemented. Case and the separator are now both ignored, so `IMPLEMENTED`,
+  `Implemented` and `action needed` all work.
 - Fixed `--wait` failing when the platform returns a relative `Location` header.
 - Fixed `experiment get -t json` printing to stdout in a format no JSON reader accepts,
   with unquoted keys and single quotes, so piping it into `jq` failed. Writing to a file
