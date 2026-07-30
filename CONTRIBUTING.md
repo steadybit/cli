@@ -13,6 +13,45 @@ npm ci
 Run `npm run ci` before pushing. It type-checks, tests, lints and builds, and is the
 same script CI runs.
 
+## Tests
+
+Tests sit at three levels. Put a test at the lowest one that can hold it &mdash; the
+levels get slower and harder to debug as you go down this list.
+
+| Level     | Tool                               | Covers                                                 |
+| --------- | ---------------------------------- | ------------------------------------------------------ |
+| Unit      | vitest                             | A single function or class, no I/O                     |
+| Command   | vitest + msw + `@inquirer/testing` | A command end to end in process, including its prompts |
+| Container | `e2e/run.sh` + expect              | Only what needs a real process                         |
+
+Prompts are driven through `@inquirer/testing`. Mock the prompt package with
+`wrapPrompt` so the application's own call is intercepted, and use the helpers in
+`src/mocks/prompts.ts` rather than writing to the screen directly:
+
+```ts
+vi.mock('@inquirer/input', async importOriginal => {
+  const actual = await importOriginal<typeof import('@inquirer/input')>();
+  return { ...actual, default: wrapPrompt(actual.default) };
+});
+
+await answerPrompt('Profile name:', 'my-profile');
+```
+
+The container tests are deliberately thin. They exist for the four things no in-process
+test can reach &mdash; real exit codes, a real terminal, the spawn of a subcommand, and
+the packaged artifact &mdash; and they assert exit status and a line of output, never
+content. Anything checking structure belongs at the command level.
+
+```sh
+docker build -t steadybit/cli:under-test .
+docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh steadybit/cli:under-test /e2e/run.sh
+```
+
+The scripts are mounted into the image rather than baked into a derived one, and CI runs
+the image by id rather than by name. Both avoid the same mistake: a name is resolved
+against a registry when it cannot be found locally, so the suite can end up exercising
+the last release while reporting success.
+
 ### Local CLI Execution
 
 ```sh

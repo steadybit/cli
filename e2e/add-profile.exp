@@ -1,0 +1,10 @@
+# Drives `config profile add` through a real pty.
+log_user 0
+set timeout 20
+spawn steadybit config profile add
+expect "Profile name:"     { send "e2e\r" }
+expect "Base URL"          { send "https://platform.example.com\r" }
+expect "API access token:" { send "s3cr3t\r" }
+expect eof
+catch wait result
+exit [lindex $result 3]
