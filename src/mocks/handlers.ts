@@ -12,6 +12,13 @@ let experimentStore: Record<string, Experiment> = {};
 let validationFailuresRemaining = 0;
 let executionsPerExperiment: Record<string, number[]> = {};
 let unfetchableExecutions = new Set<number>();
+let anotherExperimentRunning = false;
+
+// Lets a test reach the "an experiment is already running, run it in parallel?" recovery,
+// which the platform only offers when the caller has not already asked for parallel.
+export const givenAnotherExperimentIsRunning = () => {
+  anotherExperimentRunning = true;
+};
 
 function executionsFor(key: string): { id: number }[] {
   return (executionsPerExperiment[key] ?? []).map(id => ({ id }));
@@ -31,6 +38,7 @@ export const resetExperiments = () => {
   validationFailuresRemaining = 0;
   executionsPerExperiment = {};
   unfetchableExecutions = new Set();
+  anotherExperimentRunning = false;
 };
 
 export const setValidationFailures = (count: number) => {
@@ -183,6 +191,18 @@ const executeExperimentHandler = http.post('http://example.com/api/experiments/:
         instance: `/api/experiments/${params.key}/execute`,
       },
       { status: 422 }
+    );
+  }
+
+  if (anotherExperimentRunning && requestUrl.searchParams.get('allowParallel') !== 'true') {
+    return HttpResponse.json(
+      {
+        type: 'https://steadybit.com/problems/another-experiment-running-exception',
+        title: 'Another experiment is currently running.',
+        status: 409,
+        instance: `/api/experiments/${params.key}/execute`,
+      },
+      { status: 409 }
     );
   }
 

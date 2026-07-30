@@ -76,4 +76,26 @@ describe('profile service', () => {
       process.env.HOME = previous;
     }
   });
+
+  // The directory memo followed HOME while the read memo did not, so a changed home
+  // produced correct directories with the previous home's contents in them.
+  it('should read from a home directory that changes after import', async () => {
+    const otherHome = await fs.mkdtemp(path.join(os.tmpdir(), 'steadybit-other-home-'));
+    await fs.mkdir(path.join(otherHome, '.steadybit'), { recursive: true });
+    await fs.writeFile(
+      path.join(otherHome, '.steadybit', 'profiles.json'),
+      JSON.stringify([{ name: 'only-over-here', apiAccessToken: 'z' }])
+    );
+
+    const previous = process.env.HOME;
+    process.env.HOME = otherHome;
+    try {
+      expect((await getProfiles()).map(p => p.name)).toEqual(['only-over-here']);
+    } finally {
+      process.env.HOME = previous;
+    }
+
+    // ...and the original home is still answered correctly afterwards.
+    expect((await getProfiles()).map(p => p.name)).toContain('first');
+  });
 });

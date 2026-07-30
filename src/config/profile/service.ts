@@ -16,44 +16,38 @@ const profilesFile = () => path.join(configDir(), 'profiles.json');
 const activeProfileFile = () => path.join(configDir(), 'activeProfile');
 
 // The profile files are read on every API call, three times per call via
-// getConfiguration(). Reading them once per process turns thousands of redundant
-// syscalls into a handful during commands like `experiment dump`. Failures are not
-// cached, so they stay retryable, and the writers below drop the cache.
-function readOnce<T>(read: () => Promise<T>): (() => Promise<T>) & { forget: () => void } {
-  let cached: Promise<T> | undefined;
-  const cachingRead = () => {
-    cached ??= read().catch(e => {
-      cached = undefined;
-      throw e;
-    });
-    return cached;
-  };
-  cachingRead.forget = () => {
-    cached = undefined;
-  };
-  return cachingRead;
-}
-
-// Keyed by directory rather than memoised outright: the path follows HOME, and caching
-// a single "already created" flag would leave a later directory unmade while the writes
-// into it fail. Failures are not cached, so an unwritable home stays retryable.
-const createdDirectories = new Map<string, Promise<void>>();
-
-function ensureConfigDirectoryExists(): Promise<void> {
-  const directory = configDir();
-  let created = createdDirectories.get(directory);
-  if (!created) {
-    created = fs.mkdir(directory, { recursive: true }).then(
-      () => undefined,
-      e => {
-        createdDirectories.delete(directory);
+// getConfiguration(). Doing the work once turns thousands of redundant syscalls into a
+// handful during commands like `experiment dump`.
+//
+// Remembered against the config directory rather than outright, because that directory
+// follows HOME: a single cached value would answer for whichever home happened to be
+// current first, and for the directory-creation entry that meant leaving a later
+// directory unmade while every write into it failed. Failures are not remembered, so an
+// unreadable or unwritable home stays retryable, and the writers below forget the entry
+// for the home they wrote to.
+function oncePerConfigDirectory<T>(work: () => Promise<T>): (() => Promise<T>) & { forget: () => void } {
+  const done = new Map<string, Promise<T>>();
+  const runOnce = () => {
+    const directory = configDir();
+    let result = done.get(directory);
+    if (!result) {
+      result = work().catch(e => {
+        done.delete(directory);
         throw e;
-      }
-    );
-    createdDirectories.set(directory, created);
-  }
-  return created;
+      });
+      done.set(directory, result);
+    }
+    return result;
+  };
+  runOnce.forget = () => {
+    done.delete(configDir());
+  };
+  return runOnce;
 }
+
+const ensureConfigDirectoryExists = oncePerConfigDirectory(async () => {
+  await fs.mkdir(configDir(), { recursive: true });
+});
 
 export async function addProfile(profile: Profile): Promise<void> {
   const profiles = await getProfiles();
@@ -71,7 +65,7 @@ export async function removeProfile(profileName: string): Promise<void> {
   await writeProfiles(updatedProfiles);
 }
 
-const readProfiles = readOnce(async (): Promise<Profile[]> => {
+const readProfiles = oncePerConfigDirectory(async (): Promise<Profile[]> => {
   await ensureConfigDirectoryExists();
 
   let fileContent: string;
@@ -107,7 +101,7 @@ async function writeProfiles(profiles: Profile[]): Promise<void> {
   readProfiles.forget();
 }
 
-const readActiveProfileName = readOnce(async (): Promise<string | undefined> => {
+const readActiveProfileName = oncePerConfigDirectory(async (): Promise<string | undefined> => {
   await ensureConfigDirectoryExists();
 
   try {

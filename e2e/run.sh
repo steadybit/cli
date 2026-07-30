@@ -59,8 +59,15 @@ check "an unreachable platform fails" exits_with 1 \
 # Colour is gated on stdout being a terminal. Both halves are checked here rather than
 # depending on how the container was started: the pipe below is genuinely not a
 # terminal, and expect genuinely provides one.
-check "output is clean when piped" sh -c \
-  '! env STEADYBIT_TOKEN= steadybit experiment get -k ADM-1 2>&1 | grep -q "$(printf "\033")"'
+# Asserting only the absence of escapes would also hold if nothing were printed at all,
+# so the output has to be there first.
+check "output is clean when piped" sh -c '
+  out=$(env STEADYBIT_TOKEN= steadybit experiment get -k ADM-1 2>&1)
+  # Something the CLI itself prints. Merely having output would also be satisfied by the
+  # shell reporting that there is no such command.
+  echo "$out" | grep -q "No API access token" || exit 1
+  ! printf "%s" "$out" | grep -q "$(printf "\033")"
+'
 check "output is coloured on a terminal" expect /e2e/colour-on-tty.exp
 
 # The interactive flow, driven through a pty. Writes into the container's own home.
@@ -75,9 +82,12 @@ check "ctrl-c during a prompt exits 130" sh -c '
   [ $? -eq 130 ]
 '
 
+# Same trap: no stack trace and no profile are both true of a CLI that never ran, so
+# the prompt has to be shown to have been reached.
 check "ctrl-c leaves no stack trace and no profile" sh -c '
   rm -rf "$HOME/.steadybit"
   out=$(expect /e2e/cancel-profile.exp 2>&1)
+  echo "$out" | grep -q "REACHED_PROMPT" || exit 1
   echo "$out" | grep -q "ExitPromptError" && exit 1
   [ ! -f "$HOME/.steadybit/profiles.json" ]
 '

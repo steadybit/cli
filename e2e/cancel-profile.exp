@@ -2,7 +2,7 @@
 log_user 0
 set timeout 20
 spawn steadybit config profile add
-expect "Profile name:"
+expect "Profile name:" { puts "REACHED_PROMPT" }
 send "\003"
 expect eof
 catch wait result

@@ -30,5 +30,7 @@ export async function answerPrompt(prompt: string, answer: string, { replace = f
 }
 
 export function pressCtrlC(): void {
-  screen.input.write('');
+  // Written as an escape rather than the literal byte, which is invisible in an editor
+  // and reads as an empty string.
+  screen.input.write('\x03');
 }
