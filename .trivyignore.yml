@@ -5,6 +5,6 @@ vulnerabilities:
   - id: CVE-2026-69192
     statement: Waiting for an updated npm version
     expired_at: 2027-01-01
-  - id: CVE-2026-69192
+  - id: CVE-2026-69152
     statement: Waiting for an updated npm version
     expired_at: 2027-01-01
