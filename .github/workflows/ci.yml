@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: 'npm'
+      - run: npm install -g npm@12
       - run: npm ci
       - run: npm run ci
 
@@ -37,6 +38,7 @@ jobs:
           node-version: 24
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@12
       - run: npm ci
       - name: 'snyk monitor'
         uses: snyk/actions/node@master
