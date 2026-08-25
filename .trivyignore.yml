@@ -8,3 +8,8 @@ vulnerabilities:
   - id: CVE-2026-69152
     statement: Waiting for an updated npm version
     expired_at: 2027-01-01
+  - id: CVE-2026-73566
+    paths:
+      - usr/local/lib/node_modules/npm/node_modules/tar/package.json
+    statement: waiting on npm upstream fix
+    expired_at: 2027-02-01
