@@ -188,6 +188,17 @@ steadybit service-profile list --origin custom
 steadybit service-profile apply -f profile.yml
 ```
 
+## Everyday use
+
+```bash
+steadybit experiment init                     # create an experiment from a template, answering its placeholders
+steadybit execution watch -k ADM-1            # follow the latest run of an experiment live
+steadybit experiment get -k ADM-1 --profile prod   # use another configured profile for one command
+```
+
+Shell completion (`steadybit completion --help`) completes experiment keys, team keys and
+the ids of templates, schedules, services and service profiles from the platform.
+
 ## GitOps
 
 Keep a team's experiments, schedules, services and custom service profiles in Git:
