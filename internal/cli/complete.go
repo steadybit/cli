@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/config"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/config"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 // Shell completion offers what exists on the platform: experiment keys, team keys and

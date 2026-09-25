@@ -13,10 +13,10 @@ import (
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/table"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/table"
 )
 
 // The version is dropped as `service get` drops it: kept in a file, it turns every apply

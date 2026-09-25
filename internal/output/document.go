@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steadybit/cli/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
 	"go.yaml.in/yaml/v3"
 )
 

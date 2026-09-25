@@ -7,10 +7,10 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/action"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/target"
+	"github.com/steadybit/cli/v6/internal/action"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/target"
 )
 
 const listTypeHelp = `Print the list as "json" or "yaml" instead of a table.`

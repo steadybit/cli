@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pmezard/go-difflib/difflib"
-	"github.com/steadybit/cli/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
 )
 
 // Comparable projects the platform's version of a document onto the file's: every field

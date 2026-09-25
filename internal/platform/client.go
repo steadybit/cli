@@ -16,16 +16,31 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/config"
-	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/config"
+	"github.com/steadybit/cli/v6/internal/output"
 )
 
+// Version is set at build time for releases, with -ldflags -X, which only works on a
+// variable initialised to a constant. Read it through CurrentVersion.
 var Version = "dev"
+
+// CurrentVersion is the release version, or for a binary built with `go install`, the
+// module version its build info carries.
+func CurrentVersion() string {
+	if Version != "dev" {
+		return Version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return Version
+}
 
 // ErrNoAccessToken is reported with the setup help, before any request is made.
 var ErrNoAccessToken = errors.New("no API access token")
@@ -109,7 +124,7 @@ func New() (*Client, error) {
 	authorize := func(_ context.Context, req *http.Request) error {
 		req.Header.Set("Authorization", "accessToken "+cfg.APIAccessToken)
 		req.Header.Set("Accept", "application/json, */*")
-		req.Header.Set("User-Agent", "steadybit@"+Version)
+		req.Header.Set("User-Agent", "steadybit@"+CurrentVersion())
 		return nil
 	}
 	client, err := api.NewClientWithResponses(cfg.BaseURL, api.WithHTTPClient(httpClient), api.WithRequestEditorFn(authorize))

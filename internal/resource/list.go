@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 // ListTypeHelp describes the -t flag of listings.

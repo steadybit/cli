@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/platformtest"
-	"github.com/steadybit/cli/internal/service"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/steadybit/cli/internal/platformtest"
-	"github.com/steadybit/cli/internal/property"
+	"github.com/steadybit/cli/v6/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/property"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

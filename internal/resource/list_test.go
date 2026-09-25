@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platformtest"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

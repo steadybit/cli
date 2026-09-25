@@ -14,7 +14,7 @@ COPY api ./api
 COPY cmd ./cmd
 COPY internal ./internal
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
-    -ldflags "-s -w -X github.com/steadybit/cli/internal/platform.Version=${VERSION}" \
+    -ldflags "-s -w -X github.com/steadybit/cli/v6/internal/platform.Version=${VERSION}" \
     -o /steadybit ./cmd/steadybit
 
 # Alpine rather than scratch: pipelines use the image with a shell, and the e2e suite

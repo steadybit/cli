@@ -7,8 +7,8 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/auditlog"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/auditlog"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 func newAuditLog() *cobra.Command {

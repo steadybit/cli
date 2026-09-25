@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/gitops"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/gitops"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 func newExperiment() *cobra.Command {

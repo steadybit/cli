@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/property"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/property"
+	"github.com/steadybit/cli/v6/internal/resource"
 )
 
 const associationID = "0190d7b2-9e8f-7c6d-b5a4-3f2e1d0c9b8a"

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/integration"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/internal/integration"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
 )
 
 const integrationID = "0190d7b2-7d3e-7a4b-8c5d-6e7f8a9b0c1d"

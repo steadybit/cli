@@ -106,7 +106,9 @@ jobs:
           load: true
           build-args: VERSION=${{ steps.tags.outputs.version }}
       - name: Test container
-        run: docker run --rm ${{ steps.build.outputs.imageid }} -V
+        # The version is stamped in at build time; a binary reporting anything else was built
+        # without it.
+        run: test "$(docker run --rm ${{ steps.build.outputs.imageid }} -V)" = "${{ steps.tags.outputs.version }}"
       - name: Run container smoke tests
         run: |
           docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh \
@@ -142,7 +144,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -150,11 +151,6 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@12
       - name: Binaries, archives and the GitHub release
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -162,15 +158,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: npm packages from the same binaries
-        run: go run ./internal/tools/npmpkg -version "${GITHUB_REF_NAME}" -dist dist -out npm/dist
-      - name: Publish to npm
-        # The platform packages first: `steadybit` depends on them.
-        run: |
-          for dir in npm/dist/cli-*; do
-            (cd "$dir" && npm publish --provenance --access public)
-          done
-          (cd npm/dist/steadybit && npm publish --provenance --access public)
       - name: 'snyk monitor'
         uses: snyk/actions/golang@master
         env:

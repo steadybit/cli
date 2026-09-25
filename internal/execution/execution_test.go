@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/steadybit/cli/internal/execution"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/execution"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platformtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

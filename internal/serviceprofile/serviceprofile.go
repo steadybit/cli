@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/service"
-	"github.com/steadybit/cli/internal/table"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/service"
+	"github.com/steadybit/cli/v6/internal/table"
 )
 
 // Only what can be sent back is kept. Whether a profile is the default is changed in the
