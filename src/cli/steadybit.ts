@@ -41,6 +41,8 @@ const program = new Command()
   .command('execution', 'Inspect, cancel and annotate experiment runs, and download their artifacts.')
   .command('experiment', 'Check and run experiments.')
   .command('schedule', 'Schedule experiments.')
+  .command('service', 'Manage services, their experiments, variables and risk.')
+  .command('service-profile', 'Manage the service profiles that provide experiments to services.')
   .command('template', 'Find experiment templates to create experiments from.');
 
 withExamples(program, [

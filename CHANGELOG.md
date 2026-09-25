@@ -16,6 +16,12 @@
   files its actions attached.
 - `schedule` commands to `list`, `get`, `create`, `update`, `enable`, `disable` and `delete`
   experiment schedules, and `apply` to manage them as files in Git, like experiments.
+- `service` commands to `list`, `get`, `apply` and `delete` services, managing them as files
+  in Git like experiments. `service risk` shows a service's risk, and with `--fail-above`
+  fails a pipeline when it is too high. `service experiment` lists, links, unlinks and
+  provides (from a profile template) a service's experiments, and `service variable` gets,
+  merges or replaces its variables.
+- `service-profile` commands to `list`, `get`, `apply` and `delete` service profiles.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.

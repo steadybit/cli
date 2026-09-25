@@ -52,7 +52,7 @@ check "an unknown command fails" exits_with 1 steadybit definitely-not-a-command
 
 # Every command group is its own executable, spawned by name. One that is missing
 # from the package only shows when it is actually invoked.
-for group in advice config execution experiment schedule template; do
+for group in advice config execution experiment schedule service service-profile template; do
   check "the $group subcommand is spawned" exits_with 0 steadybit "$group" --help
 done
 
@@ -75,7 +75,7 @@ commands_without_examples() {
   done
 }
 every_command_has_examples() {
-  missing=$(for group in advice config execution experiment schedule template; do
+  missing=$(for group in advice config execution experiment schedule service service-profile template; do
     commands_without_examples "$group"
   done)
   [ -z "$missing" ] || {
