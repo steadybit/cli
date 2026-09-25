@@ -49,6 +49,8 @@
   `services-by-category` and `services-average`. Teams are filtered by key and environments
   by name.
 - `audit-log` shows who changed what and when, as a table or with `-t json|yaml`.
+- `killswitch status`, `activate` and `deactivate`. Activating asks for confirmation unless
+  `--yes` is given, as it stops every running experiment of the tenant.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
