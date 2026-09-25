@@ -9,32 +9,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
+	"github.com/steadybit/cli/internal/interrupt"
 	"golang.org/x/term"
 )
 
-var (
-	reader = bufio.NewReader(os.Stdin)
-	// Set while a password is being read, which turns echo off. An interrupt then has
-	// to turn it back on, or the user is left with a terminal that shows nothing typed.
-	restoreTerminal func()
-)
-
-func init() {
-	interrupts := make(chan os.Signal, 1)
-	signal.Notify(interrupts, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-interrupts
-		if restoreTerminal != nil {
-			restoreTerminal()
-		}
-		fmt.Println()
-		os.Exit(130)
-	}()
-}
+var reader = bufio.NewReader(os.Stdin)
 
 type Validator func(string) error
 
@@ -86,10 +67,12 @@ func Password(message string, validate Validator) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			restoreTerminal = func() { _ = term.Restore(fd, state) }
+			// Reading a password turns echo off. An interrupt meanwhile has to turn it back
+			// on, or the user is left with a terminal that shows nothing typed.
+			pop := interrupt.Push(func(os.Signal) { _ = term.Restore(fd, state) })
 			bytes, err := term.ReadPassword(fd)
-			restoreTerminal()
-			restoreTerminal = nil
+			_ = term.Restore(fd, state)
+			pop()
 			fmt.Println()
 			if err != nil {
 				return "", err
