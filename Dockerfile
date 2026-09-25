@@ -3,7 +3,7 @@
 
 # Built natively for the build platform and cross-compiled, so a multi-arch build does
 # not run the Go toolchain under emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
