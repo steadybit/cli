@@ -87,6 +87,19 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	return nil
 }
 
+// Delete removes an experiment.
+func Delete(ctx context.Context, c *platform.Client, key string) error {
+	_, _, err := platform.Read(c.DeleteExperiment(ctx, key))
+	if platform.IsStatus(err, http.StatusNotFound) {
+		return fmt.Errorf("Experiment %s not found.", key)
+	}
+	if err != nil {
+		return platform.Failed(err, "Failed to delete the experiment. HTTP request failed.")
+	}
+	fmt.Printf("Experiment %s deleted.\n", key)
+	return nil
+}
+
 // ResolveFiles expands directories into their YAML files, recursively on request.
 func ResolveFiles(paths []string, recursive bool) ([]string, error) {
 	var files []string
