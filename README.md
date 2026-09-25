@@ -143,6 +143,39 @@ steadybit schedule get -i <schedule-id> -f schedule.yml
 steadybit schedule apply -f ./schedules -R
 ```
 
+### Services
+
+Keep services in Git like experiments. `apply` writes the id of a new service back into
+its file, so that applying it again updates it:
+
+```bash
+steadybit service list --team ADM
+steadybit service get -i <service-id> -f service.yml
+steadybit service apply -f ./services -R
+```
+
+Gate a pipeline on the risk of a service:
+
+```bash
+steadybit service risk -i <service-id> --fail-above 50
+```
+
+Manage the experiments and variables of a service:
+
+```bash
+steadybit service experiment list -i <service-id>
+steadybit service experiment provide -i <service-id> --template <template-id> -p REPLICAS=3
+steadybit service experiment link -i <service-id> -k ADM-1 --category Redundancy
+steadybit service variable set -i <service-id> endpoint=http://shop.internal region=eu
+```
+
+Service profiles work the same way:
+
+```bash
+steadybit service-profile list --origin custom
+steadybit service-profile apply -f profile.yml
+```
+
 ## Container Image
 
 You can also use the cli via our container image:
