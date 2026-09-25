@@ -54,6 +54,8 @@
 - `target query` lists the targets of an environment, by type and query, with the
   attributes asked for as columns; `target attribute keys|values` lists what can be
   queried. `action list` and `action get` show the actions experiments can use.
+- `hub` commands to `list`, `get`, `apply`, `delete` and `resync` the hubs templates are
+  imported from.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
