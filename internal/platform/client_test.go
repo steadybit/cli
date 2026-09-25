@@ -84,7 +84,7 @@ func TestRetriesTransportFailuresOnlyForIdempotentMethods(t *testing.T) {
 		}
 	}()
 	t.Cleanup(func() { _ = listener.Close() })
-	t.Setenv("HOME", t.TempDir())
+	platformtest.Home(t)
 	t.Setenv("STEADYBIT_URL", "http://"+listener.Addr().String())
 	t.Setenv("STEADYBIT_TOKEN", "t")
 	client, err := platform.New()

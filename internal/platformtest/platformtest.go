@@ -61,7 +61,7 @@ func New(t *testing.T) *Platform {
 	p.server = httptest.NewServer(http.HandlerFunc(p.serve))
 	t.Cleanup(p.server.Close)
 	p.URL = p.server.URL
-	t.Setenv("HOME", t.TempDir())
+	Home(t)
 	t.Setenv("STEADYBIT_URL", p.server.URL)
 	t.Setenv("STEADYBIT_TOKEN", "test-token")
 	client, err := platform.New()
@@ -146,6 +146,16 @@ func (p *Platform) serve(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(reply.Body))
 	}
+}
+
+// Home gives the test an empty home directory. Go reads USERPROFILE for it on Windows
+// and HOME elsewhere, so both are set.
+func Home(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	return home
 }
 
 // Stdout captures what fn prints.

@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var header = regexp.MustCompile(`^(#!.*\n)?// SPDX-License-Identifier: MIT\n// SPDX-FileCopyrightText: \d{4} Steadybit GmbH\n`)
+var header = regexp.MustCompile(`^(#!.*\r?\n)?// SPDX-License-Identifier: MIT\r?\n// SPDX-FileCopyrightText: \d{4} Steadybit GmbH\r?\n`)
 
 // Every hand-written source file starts with the SPDX header; generated ones are exempt.
 func TestSourceFilesCarryTheSPDXHeader(t *testing.T) {

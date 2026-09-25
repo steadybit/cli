@@ -16,6 +16,7 @@ import (
 func TestReadsProfilesWrittenByTheTypeScriptCLI(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	require.NoError(t, os.MkdirAll(filepath.Join(home, ".steadybit"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(home, ".steadybit", "profiles.json"), []byte(`[
   {"name": "prod", "apiAccessToken": "p", "baseUrl": "https://platform.steadybit.com"},
@@ -32,7 +33,7 @@ func TestReadsProfilesWrittenByTheTypeScriptCLI(t *testing.T) {
 }
 
 func TestEnvironmentWinsAndAnEmptyTokenCounts(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t)
 	require.NoError(t, AddProfile(Profile{Name: "p", APIAccessToken: "from-profile"}))
 	t.Setenv("STEADYBIT_TOKEN", "")
 	t.Setenv("STEADYBIT_URL", "http://localhost:8080")
@@ -45,7 +46,7 @@ func TestEnvironmentWinsAndAnEmptyTokenCounts(t *testing.T) {
 }
 
 func TestFallsBackToTheFirstProfile(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setHome(t)
 	require.NoError(t, AddProfile(Profile{Name: "a", APIAccessToken: "1"}))
 	require.NoError(t, AddProfile(Profile{Name: "b", APIAccessToken: "2"}))
 
@@ -53,4 +54,11 @@ func TestFallsBackToTheFirstProfile(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "a", active.Name)
+}
+
+// Go reads USERPROFILE for the home directory on Windows and HOME elsewhere.
+func setHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 }
