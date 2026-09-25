@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/action"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/target"
 )
 
@@ -90,6 +91,7 @@ func newAction() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return action.List(ctx, c, l) }),
 	}
 	list.Flags().StringArrayVar(&l.Kinds, "kind", nil, `Only list actions of these kinds: "ATTACK", "CHECK", "LOAD_TEST", "OTHER" or "BASIC".`)
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "kind")
 
 	var g action.GetOptions

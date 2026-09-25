@@ -27,7 +27,7 @@ func TestList(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/hubs", platformtest.Reply{JSON: map[string]any{"hubs": []any{map[string]any{"id": id, "hubName": "Reliability Hub"}}}})
 
-	out, err := platformtest.Stdout(t, func() error { return hub.List(ctx, p.Client) })
+	out, err := platformtest.Stdout(t, func() error { return hub.List(ctx, p.Client, "") })
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "│ "+id+" │ Reliability Hub │")

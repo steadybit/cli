@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/team"
 )
 
@@ -28,6 +29,7 @@ func newTeam() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return team.List(ctx, c, l) }),
 	}
 	list.Flags().StringVar(&l.Search, "search", "", "Only list teams whose name or key, or a member's name or email, matches.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 
 	var g team.GetOptions
 	get := &cobra.Command{
@@ -69,15 +71,18 @@ func newTeam() *cobra.Command {
 func newTeamMember() *cobra.Command {
 	cmd := &cobra.Command{Use: "member", Short: "Manage the members of a team."}
 
-	var key string
+	var key, listType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List the members of a team.",
 		Args:    cobra.NoArgs,
 		Example: examples("steadybit team member list -k ADM"),
-		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return team.ListMembers(ctx, c, key) }),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return team.ListMembers(ctx, c, key, listType)
+		}),
 	}
 	teamKeyFlag(list, &key)
+	list.Flags().StringVarP(&listType, "type", "t", "", resource.ListTypeHelp)
 
 	change := func(use, short string, withRole, confirm bool, example string, run func(context.Context, *platform.Client, team.MemberOptions) error) *cobra.Command {
 		var o team.MemberOptions
@@ -115,17 +120,18 @@ func newTeamMember() *cobra.Command {
 func newTeamEnvironment() *cobra.Command {
 	cmd := &cobra.Command{Use: "environment", Short: "Manage the environments a team may use."}
 
-	var key string
+	var key, envListType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List the environments of a team.",
 		Args:    cobra.NoArgs,
 		Example: examples("steadybit team environment list -k ADM"),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
-			return team.ListEnvironments(ctx, c, key)
+			return team.ListEnvironments(ctx, c, key, envListType)
 		}),
 	}
 	teamKeyFlag(list, &key)
+	list.Flags().StringVarP(&envListType, "type", "t", "", resource.ListTypeHelp)
 
 	change := func(use, short string, validate, confirm bool, example string, run func(context.Context, *platform.Client, team.EnvironmentOptions) error) *cobra.Command {
 		var o team.EnvironmentOptions

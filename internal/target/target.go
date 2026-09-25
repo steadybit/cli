@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/table"
 )
 
@@ -34,8 +35,11 @@ func optional(s string) *string {
 
 // printAs writes values as JSON or YAML when a type is given, and returns false otherwise.
 func printAs(values []any, datatype string) (bool, error) {
-	if datatype == "" {
+	if !resource.Machine(datatype) {
 		return false, nil
+	}
+	if output.JQ != "" {
+		return true, resource.PrintJSONValue([]byte(jsyaml.CompactJSON(values)), datatype)
 	}
 	resolved, err := output.ResolveDatatype(datatype, "")
 	if err != nil {

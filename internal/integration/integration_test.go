@@ -32,7 +32,7 @@ func TestEveryKindListsFromItsOwnEndpoint(t *testing.T) {
 				map[string]any{"id": id, "name": "Notify", "scope": "TEAM", "team": "ADM", k.Column: "where"},
 			}}})
 
-			out, err := platformtest.Stdout(t, func() error { return integration.List(ctx, p.Client, k) })
+			out, err := platformtest.Stdout(t, func() error { return integration.List(ctx, p.Client, k, "") })
 
 			require.NoError(t, err)
 			assert.Contains(t, out, "│ "+id+" │ Notify │ TEAM  │ ADM  │ where")
@@ -44,7 +44,7 @@ func TestListSaysWhenThereIsNone(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/integrations/slack", platformtest.Reply{JSON: map[string]any{"content": []any{}}})
 
-	out, err := platformtest.Stdout(t, func() error { return integration.List(ctx, p.Client, integration.Slack) })
+	out, err := platformtest.Stdout(t, func() error { return integration.List(ctx, p.Client, integration.Slack, "") })
 
 	require.NoError(t, err)
 	assert.Equal(t, "No Slack integrations found.\n", out)

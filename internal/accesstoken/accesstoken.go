@@ -28,6 +28,8 @@ type ListOptions struct {
 	Name, CreatedBy, Type string
 	Teams                 []string
 	Expired               *bool
+	// Output is -t for the other listings; --type already names the token type here.
+	Output string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
@@ -51,12 +53,19 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		ExpiresAt      *string `json:"expiresAt"`
 		LastUsed       *string `json:"lastUsed"`
 	}
-	tokens, err := platform.AllPages[summary](func(page, size int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		params.PageRequest = api.PageRequestAO{Page: &page, Size: &size}
 		return c.GetAccessTokens1(ctx, &params)
 	})
 	if err != nil {
 		return platform.Failed(err, "Failed to get the access tokens")
+	}
+	if resource.Machine(o.Output) {
+		return resource.List(raw, o.Output, nil)
+	}
+	var tokens []summary
+	if err := resource.DecodeEach(raw, &tokens); err != nil {
+		return err
 	}
 	if len(tokens) == 0 {
 		fmt.Println("No access tokens found.")

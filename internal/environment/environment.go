@@ -38,6 +38,7 @@ func notFoundOr(err error, id, format string) error {
 
 type ListOptions struct {
 	Search string
+	Type   string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
@@ -51,8 +52,12 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		params.Search = &o.Search
 	}
 	resp, err := c.GetEnvironments(ctx, params)
-	if _, err := platform.Decode(resp, err, &summaries); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "environments", &summaries)
+	if err != nil {
 		return platform.Failed(err, "Failed to get the environments")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
 	}
 	if len(summaries.Environments) == 0 {
 		fmt.Println("No environments found.")

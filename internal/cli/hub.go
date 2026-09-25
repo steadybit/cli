@@ -9,18 +9,21 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/hub"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 func newHub() *cobra.Command {
 	cmd := &cobra.Command{Use: "hub", Short: "Manage the hubs experiment templates are imported from."}
 
+	var listType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List hubs.",
 		Args:    cobra.NoArgs,
 		Example: examples("steadybit hub list"),
-		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return hub.List(ctx, c) }),
+		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return hub.List(ctx, c, listType) }),
 	}
+	list.Flags().StringVarP(&listType, "type", "t", "", resource.ListTypeHelp)
 
 	var g hub.GetOptions
 	get := &cobra.Command{

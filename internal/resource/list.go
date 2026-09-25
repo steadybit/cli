@@ -6,11 +6,13 @@ package resource
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/internal/platform"
 )
 
 // ListTypeHelp describes the -t flag of listings.
@@ -66,4 +68,26 @@ func DecodeEach[T any](raw []json.RawMessage, into *[]T) error {
 		*into = append(*into, v)
 	}
 	return nil
+}
+
+// DecodeListed reads a listing response once: into typed, for the table, and as the raw
+// items under field ("" for a response that is the array itself), for -t and --jq.
+func DecodeListed(resp *http.Response, err error, field string, typed any) ([]json.RawMessage, error) {
+	body, _, err := platform.Read(resp, err)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(body, typed); err != nil {
+		return nil, err
+	}
+	var raw []json.RawMessage
+	if field == "" {
+		err = json.Unmarshal(body, &raw)
+	} else {
+		var wrapper map[string]json.RawMessage
+		if err = json.Unmarshal(body, &wrapper); err == nil && wrapper[field] != nil {
+			err = json.Unmarshal(wrapper[field], &raw)
+		}
+	}
+	return raw, err
 }

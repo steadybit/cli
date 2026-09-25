@@ -30,16 +30,23 @@ func definitionNotFoundOr(err error, key, format string) error {
 	return platform.Failed(err, format, key)
 }
 
-func ListDefinitions(ctx context.Context, c *platform.Client) error {
+func ListDefinitions(ctx context.Context, c *platform.Client, explicitType string) error {
 	type definition struct {
 		Key, Label, DataType string
 		EnumValues           []string `json:"enumValues"`
 	}
-	definitions, err := platform.AllPages[definition](func(page, size int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		return c.GetPropertyDefinitions(ctx, &api.GetPropertyDefinitionsParams{Page: api.PageRequestAO{Page: &page, Size: &size}})
 	})
 	if err != nil {
 		return platform.Failed(err, "Failed to get the property definitions")
+	}
+	if resource.Machine(explicitType) {
+		return resource.List(raw, explicitType, nil)
+	}
+	var definitions []definition
+	if err := resource.DecodeEach(raw, &definitions); err != nil {
+		return err
 	}
 	if len(definitions) == 0 {
 		fmt.Println("No property definitions found.")
@@ -150,6 +157,8 @@ func associationNotFoundOr(err error, id, format string) error {
 
 type ListAssociationOptions struct {
 	Key, Experiment, Service, Type string
+	// Output is -t for the other listings; --type already names the association type here.
+	Output string
 }
 
 func ListAssociations(ctx context.Context, c *platform.Client, o ListAssociationOptions) error {
@@ -180,12 +189,19 @@ func ListAssociations(ctx context.Context, c *platform.Client, o ListAssociation
 		Required, EditableInExecution *bool
 	}
 	// The page size is the platform's; it takes only the page number.
-	associations, err := platform.AllPages[association](func(page, _ int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, _ int32) (*http.Response, error) {
 		params.Page = &page
 		return c.GetAssociations(ctx, &params)
 	})
 	if err != nil {
 		return platform.Failed(err, "Failed to get the property associations")
+	}
+	if resource.Machine(o.Output) {
+		return resource.List(raw, o.Output, nil)
+	}
+	var associations []association
+	if err := resource.DecodeEach(raw, &associations); err != nil {
+		return err
 	}
 	if len(associations) == 0 {
 		fmt.Println("No property associations found.")

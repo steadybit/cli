@@ -36,7 +36,7 @@ func notFoundOr(err error, id, format string) error {
 	return platform.Failed(err, format, id)
 }
 
-func List(ctx context.Context, c *platform.Client) error {
+func List(ctx context.Context, c *platform.Client, explicitType string) error {
 	var summaries struct {
 		Hubs []struct {
 			ID      string `json:"id"`
@@ -44,8 +44,12 @@ func List(ctx context.Context, c *platform.Client) error {
 		} `json:"hubs"`
 	}
 	resp, err := c.GetHubs(ctx)
-	if _, err := platform.Decode(resp, err, &summaries); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "hubs", &summaries)
+	if err != nil {
 		return platform.Failed(err, "Failed to get the hubs")
+	}
+	if resource.Machine(explicitType) {
+		return resource.List(raw, explicitType, nil)
 	}
 	if len(summaries.Hubs) == 0 {
 		fmt.Println("No hubs found.")

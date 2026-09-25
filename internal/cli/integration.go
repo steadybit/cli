@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/integration"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 const integrationID = "0190d7b2-7d3e-7a4b-8c5d-6e7f8a9b0c1d"
@@ -32,13 +33,17 @@ func newIntegrationKind(k integration.Kind) *cobra.Command {
 	prefix := "steadybit integration " + k.Name
 	cmd := &cobra.Command{Use: k.Name, Short: "Manage " + plural + "."}
 
+	var listType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List " + plural + ".",
 		Args:    cobra.NoArgs,
 		Example: examples(prefix + " list"),
-		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return integration.List(ctx, c, k) }),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return integration.List(ctx, c, k, listType)
+		}),
 	}
+	list.Flags().StringVarP(&listType, "type", "t", "", resource.ListTypeHelp)
 
 	var g integration.GetOptions
 	get := &cobra.Command{

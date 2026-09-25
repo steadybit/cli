@@ -102,7 +102,7 @@ func TestMembers(t *testing.T) {
 	p.Reply("PUT /api/teams/OPS/members", result)
 
 	out, err := platformtest.Stdout(t, func() error {
-		if err := team.ListMembers(ctx, p.Client, "OPS"); err != nil {
+		if err := team.ListMembers(ctx, p.Client, "OPS", ""); err != nil {
 			return err
 		}
 		if err := team.AddMembers(ctx, p.Client, team.MemberOptions{Key: "OPS", Usernames: []string{"u-1"}, Emails: []string{"joe@example.com"}, Role: "owner"}); err != nil {
@@ -139,7 +139,7 @@ func TestEnvironments(t *testing.T) {
 	p.Reply("GET /api/teams/NOPE/environments", platformtest.Reply{Status: http.StatusNotFound})
 
 	out, err := platformtest.Stdout(t, func() error {
-		if err := team.ListEnvironments(ctx, p.Client, "OPS"); err != nil {
+		if err := team.ListEnvironments(ctx, p.Client, "OPS", ""); err != nil {
 			return err
 		}
 		o := team.EnvironmentOptions{Key: "OPS", Environments: []string{"Prod"}, Yes: true}
@@ -159,5 +159,15 @@ func TestEnvironments(t *testing.T) {
 	assert.Equal(t, want, p.Requests("POST /api/teams/OPS/environments/add")[0].JSON(t))
 	assert.Equal(t, want, p.Requests("POST /api/teams/OPS/environments/remove")[0].JSON(t))
 	assert.Equal(t, want, p.Requests("PUT /api/teams/OPS/environments")[0].JSON(t))
-	assert.EqualError(t, team.ListEnvironments(ctx, p.Client, "NOPE"), "Team NOPE not found.")
+	assert.EqualError(t, team.ListEnvironments(ctx, p.Client, "NOPE", ""), "Team NOPE not found.")
+}
+
+func TestListPrintsThePlatformsTeamsAsJSON(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams", platformtest.Reply{Body: `{"teams":[{"key":"ADM","name":"Admins","members":[]}]}`})
+
+	out, err := platformtest.Stdout(t, func() error { return team.List(ctx, p.Client, team.ListOptions{Type: "json"}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "[\n  {\n    \"key\": \"ADM\",\n    \"name\": \"Admins\",\n    \"members\": []\n  }\n]\n", out)
 }

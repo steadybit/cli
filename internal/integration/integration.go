@@ -113,13 +113,17 @@ func (k Kind) notFoundOr(err error, id, format string) error {
 	return platform.Failed(err, format, k.Title, id)
 }
 
-func List(ctx context.Context, c *platform.Client, k Kind) error {
+func List(ctx context.Context, c *platform.Client, k Kind, explicitType string) error {
 	var result struct {
 		Content []map[string]any `json:"content"`
 	}
 	resp, err := k.list(ctx, c)
-	if _, err := platform.Decode(resp, err, &result); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "content", &result)
+	if err != nil {
 		return platform.Failed(err, "Failed to get the %s", k.Plural)
+	}
+	if resource.Machine(explicitType) {
+		return resource.List(raw, explicitType, nil)
 	}
 	if len(result.Content) == 0 {
 		fmt.Printf("No %s found.\n", k.Plural)

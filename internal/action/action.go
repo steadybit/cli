@@ -6,6 +6,7 @@ package action
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,6 +20,7 @@ import (
 type ListOptions struct {
 	// Only actions of these kinds, e.g. ATTACK or CHECK; the endpoint cannot filter.
 	Kinds []string
+	Type  string
 }
 
 type summary struct {
@@ -26,8 +28,10 @@ type summary struct {
 }
 
 // all follows nextPage like platform.AllPages, but this endpoint lists under `actions`.
-func all(ctx context.Context, c *platform.Client) ([]summary, error) {
+// all walks the pages of actions, keeping each as the platform sent it too.
+func all(ctx context.Context, c *platform.Client) ([]summary, []json.RawMessage, error) {
 	var actions []summary
+	var raw []json.RawMessage
 	page, size := int32(0), platform.PageSize
 	for {
 		var body struct {
@@ -35,21 +39,32 @@ func all(ctx context.Context, c *platform.Client) ([]summary, error) {
 			NextPage *int32    `json:"nextPage"`
 		}
 		resp, err := c.FindAllActions(ctx, &api.FindAllActionsParams{Page: &page, Size: &size})
-		if _, err := platform.Decode(resp, err, &body); err != nil {
-			return nil, err
+		items, err := resource.DecodeListed(resp, err, "actions", &body)
+		if err != nil {
+			return nil, nil, err
 		}
 		actions = append(actions, body.Actions...)
+		raw = append(raw, items...)
 		if body.NextPage == nil || *body.NextPage == page {
-			return actions, nil
+			return actions, raw, nil
 		}
 		page = *body.NextPage
 	}
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
-	actions, err := all(ctx, c)
+	actions, raw, err := all(ctx, c)
 	if err != nil {
 		return platform.Failed(err, "Failed to get the actions")
+	}
+	if resource.Machine(o.Type) {
+		var kept []json.RawMessage
+		for i, a := range actions {
+			if len(o.Kinds) == 0 || anyEqualFold(o.Kinds, a.Kind) {
+				kept = append(kept, raw[i])
+			}
+		}
+		return resource.List(kept, o.Type, nil)
 	}
 	t := table.New(
 		table.Column{Name: "id", Title: "Id", Alignment: table.Left},

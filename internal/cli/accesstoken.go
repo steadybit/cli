@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/accesstoken"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 const (
@@ -36,6 +37,7 @@ func newAccessToken() *cobra.Command {
 	list.Flags().StringVar(&l.Name, "name", "", "Only list tokens with this name.")
 	list.Flags().StringVar(&l.CreatedBy, "created-by", "", "Only list tokens created by this user.")
 	list.Flags().StringVar(&l.Type, "type", "", `Only list tokens of this type, "ADMIN", "TEAM" or "WILDCARD".`)
+	list.Flags().StringVar(&l.Output, "output", "", resource.ListTypeHelp)
 	list.Flags().StringArrayVar(&l.Teams, "team", nil, "Only list tokens of these teams, by team key.")
 	list.Flags().BoolVar(&expired, "expired", false, "Only list expired tokens, or with --expired=false those still valid.")
 	variadic(list, "team")

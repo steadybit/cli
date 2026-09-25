@@ -55,3 +55,15 @@ func TestGet(t *testing.T) {
 	assert.Equal(t, "id: stress-cpu\nname: Stress CPU\nparameters:\n  - name: duration\n    type: duration\n\n", out)
 	assert.EqualError(t, action.Get(ctx, p.Client, action.GetOptions{ID: "nope"}), "Action nope not found.")
 }
+
+func TestListAsJSONKeepsTheKindFilter(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/actions", platformtest.Reply{Body: `{"actions":[{"id":"a","kind":"ATTACK"},{"id":"c","kind":"CHECK"}]}`})
+
+	out, err := platformtest.Stdout(t, func() error {
+		return action.List(ctx, p.Client, action.ListOptions{Kinds: []string{"check"}, Type: "json"})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "[\n  {\n    \"id\": \"c\",\n    \"kind\": \"CHECK\"\n  }\n]\n", out)
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/property"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 const associationID = "0190d7b2-9e8f-7c6d-b5a4-3f2e1d0c9b8a"
@@ -27,15 +28,17 @@ func newProperty() *cobra.Command {
 func newPropertyDefinition() *cobra.Command {
 	cmd := &cobra.Command{Use: "definition", Short: "Manage property definitions: a property's key, label and type."}
 
+	var listType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List property definitions.",
 		Args:    cobra.NoArgs,
 		Example: examples("steadybit property definition list"),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
-			return property.ListDefinitions(ctx, c)
+			return property.ListDefinitions(ctx, c, listType)
 		}),
 	}
+	list.Flags().StringVarP(&listType, "type", "t", "", resource.ListTypeHelp)
 
 	var g property.GetDefinitionOptions
 	get := &cobra.Command{
@@ -98,6 +101,7 @@ func newPropertyAssociation() *cobra.Command {
 	list.Flags().StringVar(&l.Experiment, "experiment", "", "Only list associations given to this experiment, by key. Those for all experiments are not listed.")
 	list.Flags().StringVar(&l.Service, "service", "", "Only list associations given to this service, by id. Those for all services are not listed.")
 	list.Flags().StringVar(&l.Type, "type", "", `Only list "EXPERIMENT" or "SERVICE" associations.`)
+	list.Flags().StringVar(&l.Output, "output", "", resource.ListTypeHelp)
 
 	var g property.GetAssociationOptions
 	get := &cobra.Command{

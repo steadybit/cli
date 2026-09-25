@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/environment"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 const environmentID = "0190d7b2-1c5e-7f3a-8e4b-2d6f9a1c3e57"
@@ -25,6 +26,7 @@ func newEnvironment() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return environment.List(ctx, c, l) }),
 	}
 	list.Flags().StringVar(&l.Search, "search", "", "Only list environments whose name, or the name or key of a team using them, matches.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 
 	var g environment.GetOptions
 	get := &cobra.Command{

@@ -35,6 +35,7 @@ func notFoundOr(err error, key, format string) error {
 
 type ListOptions struct {
 	Search string
+	Type   string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
@@ -50,8 +51,12 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		params.Search = &o.Search
 	}
 	resp, err := c.GetTeams(ctx, params)
-	if _, err := platform.Decode(resp, err, &summaries); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "teams", &summaries)
+	if err != nil {
 		return platform.Failed(err, "Failed to get the teams")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
 	}
 	if len(summaries.Teams) == 0 {
 		fmt.Println("No teams found.")
@@ -161,11 +166,15 @@ type members struct {
 	Members []member `json:"members"`
 }
 
-func ListMembers(ctx context.Context, c *platform.Client, key string) error {
+func ListMembers(ctx context.Context, c *platform.Client, key, explicitType string) error {
 	var result members
 	resp, err := c.GetTeamMembers(ctx, key)
-	if _, err := platform.Decode(resp, err, &result); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "members", &result)
+	if err != nil {
 		return notFoundOr(err, key, "Failed to get the members of team %s")
+	}
+	if resource.Machine(explicitType) {
+		return resource.List(raw, explicitType, nil)
 	}
 	printMembers(key, result.Members)
 	return nil
@@ -286,11 +295,15 @@ func (e environments) names() []string {
 	return names
 }
 
-func ListEnvironments(ctx context.Context, c *platform.Client, key string) error {
+func ListEnvironments(ctx context.Context, c *platform.Client, key, explicitType string) error {
 	var result environments
 	resp, err := c.GetTeamEnvironments(ctx, key)
-	if _, err := platform.Decode(resp, err, &result); err != nil {
+	raw, err := resource.DecodeListed(resp, err, "environments", &result)
+	if err != nil {
 		return notFoundOr(err, key, "Failed to get the environments of team %s")
+	}
+	if resource.Machine(explicitType) {
+		return resource.List(raw, explicitType, nil)
 	}
 	if len(result.Environments) == 0 {
 		fmt.Printf("Team %s has no environments.\n", key)

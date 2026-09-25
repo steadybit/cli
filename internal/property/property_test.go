@@ -30,7 +30,7 @@ func TestListDefinitionsWalksEveryPage(t *testing.T) {
 		return platformtest.Reply{JSON: map[string]any{"items": []any{map[string]any{"key": "OWNER", "label": "Owner", "dataType": "STRING"}}}}
 	})
 
-	out, err := platformtest.Stdout(t, func() error { return property.ListDefinitions(ctx, p.Client) })
+	out, err := platformtest.Stdout(t, func() error { return property.ListDefinitions(ctx, p.Client, "") })
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "│ COLOR │ Color │ ENUM   │ a, b, c, d, e and 2 more │")
