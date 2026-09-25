@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/config"
 	"github.com/steadybit/cli/internal/experiment"
 	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/output"
@@ -68,6 +69,7 @@ func newRoot() *cobra.Command {
 		},
 	}
 	root.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose logging")
+	root.PersistentFlags().StringVar(&config.ProfileOverride, "profile", "", "Use this configuration profile instead of the selected one.")
 	root.PersistentFlags().StringVar(&output.JQ, "jq", "", "Filter the JSON a command prints with a jq expression; strings are printed raw.")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
@@ -92,6 +94,7 @@ func newRoot() *cobra.Command {
 			}
 		}
 	}
+	registerCompletions(root)
 	for _, cmd := range append(root.Commands(), root) {
 		setUsage(cmd)
 	}
