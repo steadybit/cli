@@ -38,6 +38,7 @@
 - `team` commands to `list`, `get`, `apply` and `delete` teams, `team member` to list, add,
   remove or replace their members, and `team environment` to do the same with the
   environments they may use.
+- `user invite` invites users by email, optionally into a team.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
