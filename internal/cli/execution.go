@@ -5,6 +5,8 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/execution"
@@ -120,6 +122,26 @@ func newExecution() *cobra.Command {
 	download.MarkFlagsMutuallyExclusive("output", "directory")
 	artifact.AddCommand(list, download)
 
-	cmd.AddCommand(get, cancel, property, artifact)
+	var w execution.WatchOptions
+	watch := &cobra.Command{
+		Use:   "watch",
+		Short: "Follow an experiment run live until it ends: its steps, their targets and timings. Stopping the watch leaves the run alone.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit execution watch -i 1234",
+			"steadybit execution watch -k ADM-1",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			if (w.ID == 0) == (w.Key == "") {
+				return errors.New("Pass either --id or --key.")
+			}
+			return execution.Watch(ctx, c, w)
+		}),
+	}
+	watch.Flags().Int64VarP(&w.ID, "id", "i", 0, "The experiment run id.")
+	watch.Flags().StringVarP(&w.Key, "key", "k", "", "Watch the latest run of this experiment instead.")
+	watch.Flags().DurationVar(&w.Interval, "interval", 2*time.Second, "How often to refresh.")
+
+	cmd.AddCommand(get, cancel, property, artifact, watch)
 	return cmd
 }

@@ -8,6 +8,7 @@ package prompt
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -16,6 +17,9 @@ import (
 )
 
 var reader = bufio.NewReader(os.Stdin)
+
+// UseInput reads answers from r instead of the terminal. Tests script a dialogue with it.
+func UseInput(r io.Reader) { reader = bufio.NewReader(r) }
 
 type Validator func(string) error
 

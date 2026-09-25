@@ -188,7 +188,7 @@ func registerCompletions(root *cobra.Command) {
 		register("team", completeTeams)
 		register("template", completeTemplates)
 		switch group {
-		case "experiment":
+		case "experiment", "execution":
 			register("key", completeExperimentKeys)
 		case "schedule":
 			register("id", completeSchedules)

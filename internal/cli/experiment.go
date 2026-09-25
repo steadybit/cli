@@ -18,7 +18,7 @@ import (
 
 func newExperiment() *cobra.Command {
 	cmd := &cobra.Command{Use: "experiment", Short: "Check and run experiments."}
-	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDump(),
+	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDelete(), newExperimentDump(), newExperimentInit(),
 		newDiff(gitops.Experiment, "experiment", "experiment.yml"))
 	return cmd
 }
@@ -168,5 +168,42 @@ func newExperimentDump() *cobra.Command {
 	cmd.Flags().StringVarP(&o.Type, "type", "t", "yaml", `The output format of the experiment ("json" or "yaml").`)
 	cmd.Flags().StringArrayVar(&o.Teams, "team", nil, "Only dump the given teams, by team key. Defaults to every accessible team.")
 	variadic(cmd, "team")
+	return cmd
+}
+
+func newExperimentInit() *cobra.Command {
+	var o experiment.InitOptions
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Create an experiment from a template, answering its placeholders, and write it to a file.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit experiment init",
+			"steadybit experiment init --template d7e65100-1d20-4980-be87-c351704910b8 --team ADM -f checkout-latency.yml",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return experiment.Init(ctx, c, o)
+		}),
+	}
+	cmd.Flags().StringVar(&o.Template, "template", "", "The template to start from; asked for when not given.")
+	cmd.Flags().StringVar(&o.Team, "team", "", "The key of the team owning the experiment; asked for when not given.")
+	cmd.Flags().StringVar(&o.Environment, "environment", "", "The environment the experiment runs in; asked for when not given.")
+	cmd.Flags().StringVarP(&o.File, "file", "f", "", "The file to write the experiment to; asked for when not given.")
+	return cmd
+}
+
+func newExperimentDelete() *cobra.Command {
+	var key string
+	cmd := &cobra.Command{
+		Use:     "delete",
+		Short:   "Delete an experiment from Steadybit.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit experiment delete -k ADM-1"),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return experiment.Delete(ctx, c, key)
+		}),
+	}
+	cmd.Flags().StringVarP(&key, "key", "k", "", "The experiment key.")
+	_ = cmd.MarkFlagRequired("key")
 	return cmd
 }

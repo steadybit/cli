@@ -92,6 +92,19 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	return nil
 }
 
+// Delete removes an experiment.
+func Delete(ctx context.Context, c *platform.Client, key string) error {
+	_, _, err := platform.Read(c.DeleteExperiment(ctx, key))
+	if platform.IsStatus(err, http.StatusNotFound) {
+		return fmt.Errorf("Experiment %s not found.", key)
+	}
+	if err != nil {
+		return platform.Failed(err, "Failed to delete the experiment. HTTP request failed.")
+	}
+	fmt.Printf("Experiment %s deleted.\n", key)
+	return nil
+}
+
 // ResolveFiles expands directories into their YAML files, recursively on request.
 func ResolveFiles(paths []string, recursive bool) ([]string, error) {
 	var files []string
@@ -470,6 +483,26 @@ type WaitOptions struct {
 	Steps bool
 }
 
+// settle waits a little for a cancelled run to end, and returns it as it last was.
+func settle(ctx context.Context, c *platform.Client, path string, last *RunResult) *RunResult {
+	for range 10 {
+		time.Sleep(PollInterval)
+		body, _, err := platform.Read(c.Get(ctx, path))
+		if err != nil {
+			return last
+		}
+		run, err := parseRun(body)
+		if err != nil {
+			return last
+		}
+		last = run
+		if terminal[run.State] {
+			return run
+		}
+	}
+	return last
+}
+
 // ErrTimedOut is returned when --timeout cancelled the run.
 var ErrTimedOut = errors.New("timed out")
 
@@ -534,6 +567,12 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 		if !terminal[run.State] {
 			if !deadline.IsZero() && time.Now().After(deadline) {
 				cancel(fmt.Sprintf("Experiment run %d did not end within %s", run.ID, o.Timeout))
+				// Reported once the platform has stopped it, so the report shows what was
+				// cut short rather than a run that seems to be still going.
+				run = settle(ctx, c, path, run)
+				if run.Reason == "" {
+					run.Reason = fmt.Sprintf("did not end within %s", o.Timeout)
+				}
 				return run, fmt.Errorf("Experiment %s (#%d) did not end within %s and was canceled: %w", run.Key, run.ID, o.Timeout, ErrTimedOut)
 			}
 			continue

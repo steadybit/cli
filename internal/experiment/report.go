@@ -73,10 +73,10 @@ func parseRun(body []byte) (*RunResult, error) {
 		case name != "":
 		case s.ActionID != "":
 			name = s.ActionID
-		case s.StepType == "wait":
+		case strings.EqualFold(s.StepType, "wait") && s.Parameters["duration"] != nil:
 			name = fmt.Sprintf("wait %v", s.Parameters["duration"])
 		default:
-			name = s.StepType
+			name = strings.ToLower(s.StepType)
 		}
 		run.Steps = append(run.Steps, Step{Name: name, State: s.State, Reason: s.Reason, Started: s.Started, Ended: s.Ended})
 	}
@@ -156,8 +156,13 @@ func junitCaseFor(className, name, state, reason string, d time.Duration) junitC
 		c.Failure = &junitProblem{Message: message, Type: state, Text: reason}
 	case "ERRORED":
 		c.Error = &junitProblem{Message: message, Type: state, Text: reason}
-	case "CANCELED", "SKIPPED", "CREATED", "PREPARED", "":
-		c.Skipped = &struct{}{}
+	case "CANCELED", "SKIPPED", "CREATED", "PREPARED", "", "COMPLETED":
+		if state != "COMPLETED" {
+			c.Skipped = &struct{}{}
+		}
+	default:
+		// Still going when the run was cut short, by a timeout for instance.
+		c.Error = &junitProblem{Message: "did not end: " + message, Type: state, Text: reason}
 	}
 	return c
 }
@@ -195,13 +200,21 @@ func junit(runs []*RunResult) ([]byte, error) {
 		// A run that ended badly without any step to blame, a canceled or timed-out run
 		// for instance, still fails its suite.
 		if run.State != "COMPLETED" && suite.Failures == 0 && suite.Errors == 0 {
-			suite.Cases = append(suite.Cases, junitCaseFor(run.Key, "run", run.State, run.Reason, run.Duration()))
-			suite.Tests++
+			message := strings.ToLower(run.State)
+			if run.Reason != "" {
+				message += ": " + run.Reason
+			}
+			problem := &junitProblem{Message: message, Type: run.State, Text: run.Reason}
+			c := junitCase{ClassName: run.Key, Name: "run", Time: seconds(run.Duration())}
 			if run.State == "FAILED" {
+				c.Failure = problem
 				suite.Failures++
 			} else {
+				c.Error = problem
 				suite.Errors++
 			}
+			suite.Cases = append(suite.Cases, c)
+			suite.Tests++
 		}
 		suites.Tests += suite.Tests
 		suites.Failures += suite.Failures

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/platformtest"
+	"github.com/steadybit/cli/internal/prompt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -481,4 +483,83 @@ func TestJQFiltersWhatGetPrints(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "10s\n", out)
+}
+
+func TestInitAsksForThePlaceholdersAndWritesTheExperiment(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/templates", platformtest.Reply{JSON: map[string]any{"templates": []any{
+		map[string]any{"id": templateID, "templateTitle": "Checkout survives latency"},
+	}}})
+	p.Reply("GET /api/experiments/templates/"+templateID, platformtest.Reply{JSON: map[string]any{
+		"templateTitle": "Checkout survives latency",
+		"placeholders":  []any{map[string]any{"key": "DELAY", "name": "Delay", "description": "How slow the network gets."}},
+	}})
+	p.Reply("POST /api/experiments/templates/"+templateID+"/experiment-create", platformtest.Reply{Status: http.StatusCreated, Headers: map[string]string{"Location": p.URL + "/api/experiments/ADM-7"}})
+	p.Reply("GET /api/experiments/ADM-7", platformtest.Reply{Body: `{"key":"ADM-7","name":"Checkout survives latency","team":"ADM"}`})
+	experiment.Interactive = func() bool { return true }
+	t.Cleanup(func() { experiment.Interactive = func() bool { return false } })
+	file := filepath.Join(t.TempDir(), "checkout.yml")
+	// search, template number, placeholder, team, environment (default), file
+	prompt.UseInput(strings.NewReader("checkout\n1\n500ms\nADM\n\n" + file + "\n"))
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Init(ctx, p.Client, experiment.InitOptions{}) })
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "How slow the network gets.\n? Delay (DELAY): ")
+	assert.Contains(t, out, "Experiment ADM-7 created. Run it with:\n\n    steadybit experiment run -f "+file+"\n")
+	assert.Equal(t, map[string]any{"team": "ADM", "environment": "Global", "placeholders": []any{map[string]any{"key": "DELAY", "value": "500ms"}}},
+		p.Requests("POST /api/experiments/templates/" + templateID + "/experiment-create")[0].JSON(t))
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "key: ADM-7\nname: Checkout survives latency\nteam: ADM\n", string(content))
+}
+
+func TestInitNeedsATerminal(t *testing.T) {
+	experiment.Interactive = func() bool { return false }
+
+	err := experiment.Init(ctx, nil, experiment.InitOptions{})
+
+	assert.ErrorContains(t, err, "needs a terminal. In scripts, use `experiment apply --template`.")
+}
+
+// The report shows the run once the platform has stopped it, not the moment it was cut.
+func TestATimedOutRunIsReportedAsCanceled(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var canceled atomic.Bool
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		state := "RUNNING"
+		if canceled.Load() {
+			state = "CANCELED"
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state,
+			"steps": []any{map[string]any{"stepType": "WAIT", "state": state}}}}
+	})
+	p.Handle("POST /api/experiments/executions/1/cancel", func(platformtest.Request) platformtest.Reply {
+		canceled.Store(true)
+		return platformtest.Reply{Status: http.StatusAccepted}
+	})
+	report := filepath.Join(t.TempDir(), "r.xml")
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, Report: report, WaitOptions: experiment.WaitOptions{Timeout: time.Nanosecond}})
+	})
+
+	assert.ErrorIs(t, err, experiment.ErrTimedOut)
+	content, _ := os.ReadFile(report)
+	assert.Contains(t, string(content), `<testcase classname="TST-1" name="1. wait" time="0.000">`)
+	assert.Contains(t, string(content), `<testcase classname="TST-1" name="run" time="0.000">
+      <error message="canceled: did not end within 1ns" type="CANCELED">did not end within 1ns</error>`)
+	assert.Contains(t, string(content), `errors="1" skipped="1"`)
+}
+
+func TestDelete(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("DELETE /api/experiments/TST-1", platformtest.Reply{})
+	p.Reply("DELETE /api/experiments/TST-9", platformtest.Reply{Status: http.StatusNotFound})
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Delete(ctx, p.Client, "TST-1") })
+
+	require.NoError(t, err)
+	assert.Equal(t, "Experiment TST-1 deleted.\n", out)
+	assert.EqualError(t, experiment.Delete(ctx, p.Client, "TST-9"), "Experiment TST-9 not found.")
 }
