@@ -53,9 +53,9 @@ func newTeam() *cobra.Command {
 	var d team.DeleteOptions
 	del := &cobra.Command{
 		Use:     "delete",
-		Short:   "Delete a team. Nothing may be running in it.",
+		Short:   "Delete a team, with --purge-experiments, which the platform requires. Nothing may be running in it.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit team delete -k OPS", "steadybit team delete -k OPS --purge-experiments --yes"),
+		Example: examples("steadybit team delete -k OPS --purge-experiments", "steadybit team delete -k OPS --purge-experiments --yes"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return team.Delete(ctx, c, d) }),
 	}
 	teamKeyFlag(del, &d.Key)

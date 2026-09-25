@@ -137,7 +137,13 @@ func Delete(ctx context.Context, c *platform.Client, o DeleteOptions) error {
 	if ok, err := resource.Confirmed(o.Yes, question); !ok || err != nil {
 		return err
 	}
-	if _, _, err := platform.Read(c.DeleteTeam(ctx, o.Key, &api.DeleteTeamParams{PurgeIncludingExperiments: o.Experiments})); err != nil {
+	_, _, err := platform.Read(c.DeleteTeam(ctx, o.Key, &api.DeleteTeamParams{PurgeIncludingExperiments: o.Experiments}))
+	// The platform refuses without purging, even a team without experiments, and says
+	// nothing about why.
+	if !o.Experiments && platform.IsStatus(err, http.StatusBadRequest) {
+		return fmt.Errorf("Team %s was not deleted. The platform deletes a team only with --purge-experiments, which deletes its experiments and their runs too.", o.Key)
+	}
+	if err != nil {
 		return notFoundOr(err, o.Key, "Failed to delete team %s")
 	}
 	fmt.Printf("Team %s deleted.\n", o.Key)

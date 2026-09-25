@@ -74,6 +74,7 @@ func TestDeletePurgesOnlyWhenAsked(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("DELETE /api/teams/OPS", platformtest.Reply{Body: stored})
 	p.Reply("DELETE /api/teams/NOPE", platformtest.Reply{Status: http.StatusNotFound})
+	p.Reply("DELETE /api/teams/EMPTY", platformtest.Reply{Status: http.StatusBadRequest})
 
 	out, err := platformtest.Stdout(t, func() error {
 		if err := team.Delete(ctx, p.Client, team.DeleteOptions{Key: "OPS", Yes: true}); err != nil {
@@ -88,6 +89,8 @@ func TestDeletePurgesOnlyWhenAsked(t *testing.T) {
 	assert.Equal(t, []string{"false"}, requests[0].Query["purgeIncludingExperiments"])
 	assert.Equal(t, []string{"true"}, requests[1].Query["purgeIncludingExperiments"])
 	assert.EqualError(t, team.Delete(ctx, p.Client, team.DeleteOptions{Key: "NOPE", Yes: true}), "Team NOPE not found.")
+	assert.EqualError(t, team.Delete(ctx, p.Client, team.DeleteOptions{Key: "EMPTY", Yes: true}),
+		"Team EMPTY was not deleted. The platform deletes a team only with --purge-experiments, which deletes its experiments and their runs too.")
 }
 
 func TestMembers(t *testing.T) {
