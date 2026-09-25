@@ -41,6 +41,9 @@
 - `user invite` invites users by email, optionally into a team.
 - `access-token` commands to `list`, `create`, `recreate` and `delete` API access tokens. A
   new token is printed once; `-t json` prints only its id and value for a script to read.
+- `integration webhook|slack|preflight|preflight-action` commands to `list`, `get`, `apply`
+  and `delete` integrations. The platform masks secrets when reading them, so `apply`
+  refuses a file still holding the mask instead of removing the secret.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
