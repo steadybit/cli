@@ -12,33 +12,8 @@
 - Writing a new experiment's key back into a YAML file no longer rewrites the file: the key
   is added at the top and comments, anchors and formatting are kept.
 - Shell completion: `steadybit completion bash|zsh|fish|powershell`.
-- Errors about a missing required flag are worded differently (`required flag(s) "key" not
-  set`); they still exit with 1.
-
-## v5.0.0
-
-- `experiment apply --template <id>` creates an experiment from an experiment template, or
-  updates the one created before with the same `--external-id`. With `-k` it re-renders an
-  existing experiment with new placeholder values. Placeholders are given with
-  `-p KEY=VALUE`, from a file with `--placeholders`, or both.
-- `experiment run --template <id>` creates and runs an experiment from a template in one
-  step, with `--execution-variable` for values that apply to that run only. `--wait`,
-  `--retries` and `--allowParallel` work as for any other run.
-- `template list` and `template get` find templates and their placeholders;
-  `template get --placeholders` writes a placeholders file to fill in. `template apply`
-  and `template delete` manage templates as files in Git, and `template import` imports
-  templates from a connected hub.
-- `execution` commands for experiment runs: `get`, `cancel`, `property set` and
-  `property add` to annotate a run, and `artifact list` and `artifact download` for the
-  files its actions attached.
-- `schedule` commands to `list`, `get`, `create`, `update`, `enable`, `disable` and `delete`
-  experiment schedules, and `apply` to manage them as files in Git, like experiments.
-- `service` commands to `list`, `get`, `apply` and `delete` services, managing them as files
-  in Git like experiments. `service risk` shows a service's risk, and with `--fail-above`
-  fails a pipeline when it is too high. `service experiment` lists, links, unlinks and
-  provides (from a profile template) a service's experiments, and `service variable` gets,
-  merges or replaces its variables.
-- `service-profile` commands to `list`, `get`, `apply` and `delete` service profiles.
+- `template apply` and `template delete` manage experiment templates as files in Git, and
+  `template import` imports templates from a connected hub.
 - `environment` commands to `list`, `get`, `apply` and `delete` environments, and
   `environment variable` to get, merge or replace their variables.
 - `team` commands to `list`, `get`, `apply` and `delete` teams, `team member` to list, add,
@@ -64,6 +39,31 @@
   imported from.
 - `property definition` and `property association` commands to `list`, `get`, `apply` and
   `delete` the properties experiments and services carry.
+- Errors about a missing required flag are worded differently (`required flag(s) "key" not
+  set`); they still exit with 1.
+
+## v5.0.0
+
+- `experiment apply --template <id>` creates an experiment from an experiment template, or
+  updates the one created before with the same `--external-id`. With `-k` it re-renders an
+  existing experiment with new placeholder values. Placeholders are given with
+  `-p KEY=VALUE`, from a file with `--placeholders`, or both.
+- `experiment run --template <id>` creates and runs an experiment from a template in one
+  step, with `--execution-variable` for values that apply to that run only. `--wait`,
+  `--retries` and `--allowParallel` work as for any other run.
+- `template list` and `template get` find templates and their placeholders;
+  `template get --placeholders` writes a placeholders file to fill in.
+- `execution` commands for experiment runs: `get`, `cancel`, `property set` and
+  `property add` to annotate a run, and `artifact list` and `artifact download` for the
+  files its actions attached.
+- `schedule` commands to `list`, `get`, `create`, `update`, `enable`, `disable` and `delete`
+  experiment schedules, and `apply` to manage them as files in Git, like experiments.
+- `service` commands to `list`, `get`, `apply` and `delete` services, managing them as files
+  in Git like experiments. `service risk` shows a service's risk, and with `--fail-above`
+  fails a pipeline when it is too high. `service experiment` lists, links, unlinks and
+  provides (from a profile template) a service's experiments, and `service variable` gets,
+  merges or replaces its variables.
+- `service-profile` commands to `list`, `get`, `apply` and `delete` service profiles.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
