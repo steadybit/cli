@@ -8,6 +8,7 @@ package resource
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -153,4 +154,41 @@ func Confirmed(yes bool, question string) (bool, error) {
 		fmt.Println("Aborted.")
 	}
 	return ok, err
+}
+
+// Variables merges KEY=VALUE arguments, always strings, over a file's variables, which
+// may be lists or select expressions. Nothing given is only allowed when replacing, where
+// it removes every variable.
+func Variables(pairs []string, file string, replace bool) (*jsyaml.Map, error) {
+	given := jsyaml.NewMap()
+	for _, pair := range pairs {
+		i := strings.Index(pair, "=")
+		if i <= 0 {
+			return nil, fmt.Errorf("'%s' is not in the form KEY=VALUE.", pair)
+		}
+		given.Set(pair[:i], pair[i+1:])
+	}
+	variables := jsyaml.NewMap()
+	if file != "" {
+		doc, _, err := Read(file, "variables")
+		if err != nil {
+			return nil, fmt.Errorf("Variables file '%s' must be a map of variable names to values.", file)
+		}
+		variables = doc.Value()
+	}
+	for _, k := range given.Keys() {
+		v, _ := given.Get(k)
+		variables.Set(k, v)
+	}
+	if variables.Len() == 0 && !replace {
+		return nil, errors.New("No variables given. Pass KEY=VALUE arguments or --file.")
+	}
+	return variables, nil
+}
+
+func VariablesOutcome(replace bool) string {
+	if replace {
+		return "set, all others removed"
+	}
+	return "set"
 }

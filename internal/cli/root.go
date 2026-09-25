@@ -69,7 +69,7 @@ func newRoot() *cobra.Command {
 	root.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose logging")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
-	root.AddCommand(newAdvice(), newConfig(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate())
+	root.AddCommand(newAdvice(), newConfig(), newEnvironment(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate())
 	// Shell completion is new with the Go CLI; it gets examples like every other command.
 	root.InitDefaultCompletionCmd()
 	for _, cmd := range root.Commands() {

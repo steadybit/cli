@@ -33,6 +33,8 @@
   provides (from a profile template) a service's experiments, and `service variable` gets,
   merges or replaces its variables.
 - `service-profile` commands to `list`, `get`, `apply` and `delete` service profiles.
+- `environment` commands to `list`, `get`, `apply` and `delete` environments, and
+  `environment variable` to get, merge or replace their variables.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
