@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/service"
@@ -65,6 +66,7 @@ func newService() *cobra.Command {
 	apply.Flags().BoolVar(&a.DeleteExperiments, "delete-experiments", false, "When the service profile changes, delete provided experiments whose templates the new profile does not contain. Without it, such a change is refused.")
 	_ = apply.MarkFlagRequired("file")
 	variadic(apply, "file")
+	dryRun(apply, gitops.Service, &a.Files, &a.Recursive)
 
 	var deleteID string
 	del := &cobra.Command{
@@ -196,7 +198,7 @@ func newService() *cobra.Command {
 	vset.Flags().BoolVar(&vs.Replace, "replace", false, "Remove every variable not given.")
 	variable.AddCommand(vget, vset)
 
-	cmd.AddCommand(list, get, apply, del, risk, experiments, variable)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Service, "service", "service.yml"), del, risk, experiments, variable)
 	return cmd
 }
 
@@ -244,6 +246,7 @@ func newServiceProfile() *cobra.Command {
 	apply.Flags().BoolVar(&a.DeleteExperiments, "delete-experiments", false, "Delete the provided experiments of services that use templates removed from the profile.")
 	_ = apply.MarkFlagRequired("file")
 	variadic(apply, "file")
+	dryRun(apply, gitops.ServiceProfile, &a.Files, &a.Recursive)
 
 	var deleteID string
 	del := &cobra.Command{
@@ -257,6 +260,6 @@ func newServiceProfile() *cobra.Command {
 	}
 	idFlag(del, &deleteID, "The service profile id.")
 
-	cmd.AddCommand(list, get, apply, del)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.ServiceProfile, "service-profile", "profile.yml"), del)
 	return cmd
 }

@@ -11,13 +11,15 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/experiment"
+	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/platform"
 )
 
 func newExperiment() *cobra.Command {
 	cmd := &cobra.Command{Use: "experiment", Short: "Check and run experiments."}
-	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDump())
+	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDump(),
+		newDiff(gitops.Experiment, "experiment", "experiment.yml"))
 	return cmd
 }
 
@@ -144,6 +146,7 @@ func newExperimentApply() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
 	addTemplateFlags(cmd, &t)
 	variadic(cmd, "file")
+	dryRun(cmd, gitops.Experiment, &o.Files, &o.Recursive)
 	return cmd
 }
 

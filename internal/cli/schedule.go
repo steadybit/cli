@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/schedule"
@@ -84,6 +85,7 @@ func newSchedule() *cobra.Command {
 	apply.Flags().BoolVarP(&a.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
 	_ = apply.MarkFlagRequired("file")
 	variadic(apply, "file")
+	dryRun(apply, gitops.Schedule, &a.Files, &a.Recursive)
 
 	var cr schedule.CreateOptions
 	create := &cobra.Command{
@@ -124,7 +126,7 @@ func newSchedule() *cobra.Command {
 		scheduleIDFlag(c, &id)
 		return c
 	}
-	cmd.AddCommand(list, get, apply, create, update,
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Schedule, "schedule", "schedule.yml"), create, update,
 		idCommand("enable", "Enable an experiment schedule.", func(ctx context.Context, c *platform.Client, id string) error {
 			return schedule.SetEnabled(ctx, c, id, true)
 		}),

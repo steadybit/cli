@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/experiment"
+	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 )
@@ -112,6 +113,9 @@ func Execute() int {
 	}
 	if errors.Is(err, experiment.ErrIncomplete) {
 		return 1 // already reported, with what was missing
+	}
+	if errors.Is(err, gitops.ErrDifferent) {
+		return 2 // the differences were the output
 	}
 	if errors.Is(err, platform.ErrNoAccessToken) {
 		fmt.Fprintln(os.Stderr, platform.MissingTokenHelp())
