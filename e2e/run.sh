@@ -50,6 +50,41 @@ check "--help succeeds" exits_with 0 steadybit --help
 check "a subcommand is spawned and runs" exits_with 0 steadybit experiment --help
 check "an unknown command fails" exits_with 1 steadybit definitely-not-a-command
 
+# Every command group is its own executable, spawned by name. One that is missing
+# from the package only shows when it is actually invoked.
+for group in advice config execution experiment schedule template; do
+  check "the $group subcommand is spawned" exits_with 0 steadybit "$group" --help
+done
+
+# Every leaf command documents at least one example. Walked from the help output rather
+# than listed here, so a new command cannot be added without one.
+# Only lines indented by exactly two spaces name a command; deeper ones continue a
+# wrapped description. An alias is listed as `run|exec`. The depth guard keeps a help
+# text that does not parse as expected from recursing forever.
+commands_without_examples() {
+  [ "$#" -le 4 ] || { echo "$* (nested too deep)"; return; }
+  help=$(steadybit "$@" --help 2>&1) || { echo "$*"; return; }
+  subcommands=$(printf '%s\n' "$help" | sed -n '/^Commands:/,/^$/p' |
+    awk '/^  [^ ]/ { sub(/\|.*/, "", $1); if ($1 != "help") print $1 }')
+  if [ -z "$subcommands" ]; then
+    printf '%s\n' "$help" | grep -q '^Examples:' || echo "$*"
+    return
+  fi
+  for subcommand in $subcommands; do
+    commands_without_examples "$@" "$subcommand"
+  done
+}
+every_command_has_examples() {
+  missing=$(for group in advice config execution experiment schedule template; do
+    commands_without_examples "$group"
+  done)
+  [ -z "$missing" ] || {
+    echo "        without examples: $(echo $missing)"
+    return 1
+  }
+}
+check "every command has an example in its help" every_command_has_examples
+
 # The access token is resolved before anything else, so this is the guard on every
 # platform-touching command.
 check "a missing access token fails" exits_with 1 env STEADYBIT_TOKEN= steadybit experiment get -k ADM-1

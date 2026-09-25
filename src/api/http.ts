@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { setTimeout as sleep } from 'node:timers/promises';
-import { getHeaders, toUrl } from './common.ts';
+import { getHeaders, type QueryParameters, toUrl } from './common.ts';
 import { ApiError } from './error.ts';
 import { errorMessage } from '../errors.ts';
 import { rateLimiter } from './rateLimit.ts';
@@ -19,7 +19,7 @@ export const options = {
 export interface ApiCallArguments {
   path: string;
   method: string;
-  queryParameters?: Record<string, string>;
+  queryParameters?: QueryParameters;
   body?: unknown;
   timeout?: number; // defaults to 30000
 }
@@ -92,7 +92,9 @@ export async function executeApiCall({
     // arrive would leave a stalled body download running forever.
     const signal = AbortSignal.timeout(timeout);
     try {
-      return await doFetch(url, method, headers, body ? JSON.stringify(body) : undefined, signal);
+      // Compared with undefined rather than tested for truth: 0, false, null and "" are
+      // all bodies a caller can mean, such as a run property being set to zero.
+      return await doFetch(url, method, headers, body !== undefined ? JSON.stringify(body) : undefined, signal);
     } catch (e) {
       throw new Error(`Failed to call Steadybit API at ${method} ${url}: ${describeFetchError(e)}`, {
         cause: e,

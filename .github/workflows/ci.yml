@@ -8,6 +8,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+  # Daily, so a breaking change in the platform API is noticed within a day of it
+  # reaching production rather than at the next release of the CLI.
+  schedule:
+    - cron: '0 5 * * *'
 
 jobs:
   verify:
@@ -25,9 +29,45 @@ jobs:
       - run: npm ci
       - run: npm run ci
 
+  # The committed spec is what the CLI was built against; this checks it against the live
+  # platform. Breaking changes that touch a request or response the CLI uses surface as
+  # type errors and fail the job, which also blocks a release. Changes the CLI does not
+  # depend on only produce a warning to refresh the committed spec.
+  api-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'npm'
+      - run: npm install -g npm@12
+      - run: npm ci
+      - run: npm run api:fetch-spec
+      - run: npm run api:generate
+      - name: Type check against the live platform API
+        run: npm run verify:typecheck
+      - name: Report spec drift
+        if: always()
+        run: |
+          if git diff --quiet -- openapi src/api/generated; then
+            echo "The committed platform spec matches the live platform." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The platform API changed. Run \`npm run api:update\` and commit the result."
+            {
+              echo "### The platform API changed"
+              echo
+              echo "Run \`npm run api:update\` and commit the result."
+              echo
+              echo '```'
+              git diff --stat -- openapi src/api/generated
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: verify
+    needs: [verify, api-compatibility]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,6 +91,7 @@ jobs:
       - run: npm publish --provenance --access public
 
   docker-build:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

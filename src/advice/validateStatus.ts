@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 import { fetchAllAdvice } from './api.ts';
-import { COLOR, Table } from 'console-table-printer';
+import { COLOR } from 'console-table-printer';
+import { createTable } from '../table.ts';
 import { abortExecution } from '../errors.ts';
 
 export interface Options {
@@ -34,7 +35,7 @@ export async function validateAdviceStatus(options: Options) {
   }
 
   let errorCount = 0;
-  const p = new Table();
+  const p = createTable();
   for (const advice of allAdvice) {
     const statusMatch = sameStatus(advice.advice.status, options.status);
     if (!statusMatch) {

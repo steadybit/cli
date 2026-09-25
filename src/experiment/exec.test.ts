@@ -10,7 +10,7 @@ describe('experiment', () => {
   describe('exec', () => {
     it('should throw when neither key nor file is given', async () => {
       await expect(executeExperiments({ recursive: false, yes: true })).rejects.toThrow(
-        'Either --key or --file must be specified.'
+        'Either --key, --file or --template must be specified.'
       );
     });
 

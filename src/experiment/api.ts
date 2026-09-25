@@ -16,6 +16,7 @@ import { abortExecution, abortExecutionWithError, getExecutionErrorBody } from '
 import { ApiError } from '../api/error.ts';
 import { executeApiCall } from '../api/http.ts';
 import { confirm } from '../prompt/confirm.ts';
+import type { Schemas } from '../api/schemas.ts';
 
 export async function executeExperiment(
   key: string,
@@ -229,5 +230,104 @@ export async function getExperimentExecution(id: number, abortOnError = true): P
     } else {
       throw e;
     }
+  }
+}
+
+export interface TemplateUsage {
+  resetProperties: boolean;
+}
+
+// The platform answers a create from a template with the experiment's URL in the
+// Location header and no body, the same way a plain upsert does.
+export async function createExperimentFromTemplate(
+  templateId: string,
+  body: Schemas['CreateExperimentFromTemplateAO'],
+  { resetProperties }: TemplateUsage
+): Promise<UpsertResult> {
+  try {
+    const response = await executeApiCall({
+      method: 'POST',
+      path: `/api/experiments/templates/${encodeURIComponent(templateId)}/experiment-create`,
+      queryParameters: { resetProperties: String(resetProperties) },
+      body,
+    });
+    const location = response.headers.get('Location');
+    const key = location?.substring(location.lastIndexOf('/') + 1);
+    return { created: response.status === 201, key };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      throw abortExecution('Experiment template %s not found.', templateId);
+    }
+    throw abortExecutionWithError(e, 'Failed to create the experiment from template %s', templateId);
+  }
+}
+
+export async function updateExperimentFromTemplate(
+  templateId: string,
+  key: string,
+  body: Schemas['UpdateExperimentFromTemplateAO'],
+  { resetProperties }: TemplateUsage
+): Promise<void> {
+  try {
+    await executeApiCall({
+      method: 'POST',
+      path: `/api/experiments/templates/${encodeURIComponent(templateId)}/experiment-update/${encodeURIComponent(key)}`,
+      queryParameters: { resetProperties: String(resetProperties) },
+      body,
+    });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      throw abortExecution('Experiment template %s or experiment %s not found.', templateId, key);
+    }
+    throw abortExecutionWithError(e, 'Failed to update experiment %s from template %s', key, templateId);
+  }
+}
+
+export interface TemplateRun extends TemplateUsage {
+  yes: boolean;
+  allowParallel: boolean;
+  forcePersist: boolean;
+}
+
+// A validation error is rethrown untouched, as for upsertAndExecuteExperiment, so that
+// the caller can retry it; another run in progress may be answered with a parallel run.
+export async function runExperimentFromTemplate(
+  templateId: string,
+  body: Schemas['CreateAndRunExperimentFromTemplateAO'],
+  run: TemplateRun
+): Promise<UpsertAndExecuteResult> {
+  try {
+    const response = await executeApiCall({
+      method: 'POST',
+      path: `/api/experiments/templates/${encodeURIComponent(templateId)}/experiment-execute`,
+      queryParameters: {
+        resetProperties: String(run.resetProperties),
+        allowParallel: String(run.allowParallel),
+        forcePersist: String(run.forcePersist),
+      },
+      body,
+    });
+    const result = (await response.json()) as Schemas['ExecuteExperimentResponseAO'];
+    return { key: result.key, location: result.apiLocation, uiLocation: result.uiLocation };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) {
+      throw e;
+    }
+    if (e instanceof ApiError && e.status === 404) {
+      throw abortExecution('Experiment template %s not found.', templateId);
+    }
+    if (
+      !run.allowParallel &&
+      getExecutionErrorBody<ExecutionError>(e)?.type ===
+        'https://steadybit.com/problems/another-experiment-running-exception' &&
+      (run.yes ||
+        (await confirm('There is already an experiment running. Do you want to start this one in parallel?', {
+          defaultYes: false,
+          defaultWhenNonInteractive: false,
+        })))
+    ) {
+      return runExperimentFromTemplate(templateId, body, { ...run, allowParallel: true });
+    }
+    throw abortExecutionWithError(e, 'Failed to run an experiment from template %s', templateId);
   }
 }

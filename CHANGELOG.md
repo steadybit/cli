@@ -2,6 +2,26 @@
 
 ## v5.0.0
 
+- `experiment apply --template <id>` creates an experiment from an experiment template, or
+  updates the one created before with the same `--external-id`. With `-k` it re-renders an
+  existing experiment with new placeholder values. Placeholders are given with
+  `-p KEY=VALUE`, from a file with `--placeholders`, or both.
+- `experiment run --template <id>` creates and runs an experiment from a template in one
+  step, with `--execution-variable` for values that apply to that run only. `--wait`,
+  `--retries` and `--allowParallel` work as for any other run.
+- `template list` and `template get` find templates and their placeholders;
+  `template get --placeholders` writes a placeholders file to fill in.
+- `execution` commands for experiment runs: `get`, `cancel`, `property set` and
+  `property add` to annotate a run, and `artifact list` and `artifact download` for the
+  files its actions attached.
+- `schedule` commands to `list`, `get`, `create`, `update`, `enable`, `disable` and `delete`
+  experiment schedules, and `apply` to manage them as files in Git, like experiments.
+- Every command now shows examples in its `--help`.
+- Fixed the table printed by `advice validate-status` containing colour escape codes when
+  piped. Tables now follow the same terminal check as the rest of the output.
+- The CLI's API types are generated from the platform's OpenAPI spec. CI checks them
+  against the live platform daily and before every release, so a breaking API change is
+  caught before it reaches a pipeline.
 - **Breaking:** Node.js 22.13.0 or later is now required. Node.js 18 and 20 have reached
   end of life and the CLI's dependencies no longer support them.
 - The CLI is now published as an ES module.

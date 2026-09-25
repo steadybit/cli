@@ -8,8 +8,9 @@ import * as api from './api.ts';
 import { ApiError } from '../api/error.ts';
 import { abortExecution, abortExecutionWithError } from '../errors.ts';
 import type { ExecuteResult } from './types.ts';
+import { toCreateFromTemplate, type TemplateOptions } from './template.ts';
 
-interface Options {
+type Options = {
   key?: string;
   file?: string[];
   yes?: boolean;
@@ -18,7 +19,8 @@ interface Options {
   allowParallel?: boolean;
   retries?: number;
   retryInterval?: number;
-}
+  executionVariable?: Record<string, string>;
+} & Partial<TemplateOptions>;
 
 export async function executeExperiments(options: Options) {
   if (!options.yes) {
@@ -31,8 +33,18 @@ export async function executeExperiments(options: Options) {
     }
   }
 
-  if (!options.file && !options.key) {
-    throw abortExecution('Either --key or --file must be specified.');
+  if (options.template && options.key) {
+    throw abortExecution(
+      '--key cannot be combined with --template. Use `experiment apply --template -k` to update it.'
+    );
+  } else if (options.template) {
+    await executeFromTemplate({
+      ...options,
+      template: options.template,
+      resetProperties: options.resetProperties ?? true,
+    });
+  } else if (!options.file && !options.key) {
+    throw abortExecution('Either --key, --file or --template must be specified.');
   } else if (options.file) {
     const files = await resolveExperimentFiles(options.file, options.recursive);
     if (files.length > 1 && options.key) {
@@ -84,6 +96,27 @@ export async function executeExperiments(options: Options) {
     /* eslint-disable @typescript-eslint/no-unused-expressions */
     options.wait && result.location && (await waitFor(result.location));
   }
+}
+
+async function executeFromTemplate(options: Options & TemplateOptions) {
+  const body = { ...(await toCreateFromTemplate(options)), executionVariables: options.executionVariable };
+  const hasRetries = (options.retries ?? 0) > 0;
+  const result = await executeWithRetry(
+    () =>
+      api.runExperimentFromTemplate(options.template, body, {
+        resetProperties: options.resetProperties,
+        yes: !!options.yes,
+        allowParallel: !!options.allowParallel,
+        forcePersist: !hasRetries,
+      }),
+    options.retries,
+    options.retryInterval
+  );
+  console.log('Executing experiment:', result.key);
+  console.log('Experiment run API:', result.location);
+  console.log('Experiment run UI:', result.uiLocation);
+  /* eslint-disable @typescript-eslint/no-unused-expressions */
+  options.wait && result.location && (await waitFor(result.location));
 }
 
 async function executeWithRetry<T>(fn: () => Promise<T>, retries = 0, retryInterval = 10): Promise<T> {

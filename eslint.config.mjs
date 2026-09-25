@@ -12,7 +12,7 @@ export default tseslint.config(
   // A config object containing only `ignores` acts as a global ignore. Combining it
   // with `files` would scope the ignores to that single object instead.
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', 'src/api/generated/**'],
   },
   {
     files: ['**/*.js', '**/*.mjs', '**/*.ts'],
