@@ -1,0 +1,9 @@
+package: api
+output: platform.gen.go
+generate:
+  client: true
+  models: true
+compatibility:
+  circular-reference-limit: 11
+output-options:
+  skip-prune: false

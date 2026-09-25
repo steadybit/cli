@@ -1,0 +1,9 @@
+{
+  "name": "jsyaml-fixtures",
+  "private": true,
+  "type": "module",
+  "description": "Generates the js-yaml fixtures the Go CLI's YAML output is compared against.",
+  "dependencies": {
+    "js-yaml": "5.4.1"
+  }
+}

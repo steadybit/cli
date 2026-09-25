@@ -1,0 +1,4 @@
+# The fixtures compare exact bytes and the scripts run in Linux containers, so line
+# endings stay LF on every platform.
+* text=auto eol=lf
+*.zip binary

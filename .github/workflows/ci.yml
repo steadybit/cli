@@ -15,80 +15,60 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Paths, terminals and line endings differ between them, and users run all three.
     strategy:
+      # Each platform's failures are worth seeing, not only the first one's.
+      fail-fast: false
       matrix:
-        node: [22, 24, 26]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-go@v7
         with:
-          node-version: ${{ matrix.node }}
-          cache: 'npm'
-      - run: npm install -g npm@12
-      - run: npm ci
-      - run: npm run ci
+          go-version-file: go.mod
+      - name: Formatting
+        if: runner.os != 'Windows'
+        run: test -z "$(gofmt -l api cmd internal)" || { gofmt -l api cmd internal; exit 1; }
+      - name: The generated client matches the committed spec
+        if: runner.os != 'Windows'
+        run: |
+          go generate ./api
+          git diff --exit-code -- api/platform.gen.go
+      - run: go vet ./...
+      - run: go test ./...
 
   # The committed spec is what the CLI was built against; this checks it against the live
-  # platform. Breaking changes that touch a request or response the CLI uses surface as
-  # type errors and fail the job, which also blocks a release. Changes the CLI does not
-  # depend on only produce a warning to refresh the committed spec.
+  # platform. A breaking change to an endpoint the CLI uses fails to compile and fails the
+  # job, which also blocks a release. Changes the CLI does not depend on only warn.
   api-compatibility:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-go@v7
         with:
-          node-version: 24
-          cache: 'npm'
-      - run: npm install -g npm@12
-      - run: npm ci
-      - run: npm run api:fetch-spec
-      - run: npm run api:generate
-      - name: Type check against the live platform API
-        run: npm run verify:typecheck
-      - name: Report spec drift
+          go-version-file: go.mod
+      - run: go run ./internal/tools/spec fetch
+      - run: go generate ./api
+      - name: Build against the live platform API
+        run: go build ./... && go vet ./...
+      - name: Report API changes
         if: always()
         run: |
-          if git diff --quiet -- openapi src/api/generated; then
-            echo "The committed platform spec matches the live platform." >> "$GITHUB_STEP_SUMMARY"
+          # The raw spec is not compared: the platform orders some of its maps differently
+          # from one response to the next. The generated client is deterministic.
+          if git diff --quiet -- api/platform.gen.go; then
+            echo "The live platform API matches the committed client." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::warning::The platform API changed. Run \`npm run api:update\` and commit the result."
+            echo "::warning::The platform API changed. Run \`go run ./internal/tools/spec fetch && go generate ./api\` and commit the result."
             {
               echo "### The platform API changed"
               echo
-              echo "Run \`npm run api:update\` and commit the result."
-              echo
               echo '```'
-              git diff --stat -- openapi src/api/generated
+              git diff --stat -- api/platform.gen.go
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [verify, api-compatibility]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@12
-      - run: npm ci
-      - name: 'snyk monitor'
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --prune-repeated-subdependencies
-          command: monitor
-      - run: npm publish --provenance --access public
 
   docker-build:
     if: github.event_name != 'schedule'
@@ -106,12 +86,15 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
             MAJOR="${VERSION%%.*}"
             echo "tags=steadybit/cli:latest,steadybit/cli:${MAJOR},steadybit/cli:${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
             echo "push=true" >> "$GITHUB_OUTPUT"
           elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             echo "tags=steadybit/cli:main" >> "$GITHUB_OUTPUT"
+            echo "version=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "push=true" >> "$GITHUB_OUTPUT"
           else
             echo "tags=" >> "$GITHUB_OUTPUT"
+            echo "version=pr-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "push=false" >> "$GITHUB_OUTPUT"
           fi
       - id: build
@@ -121,6 +104,7 @@ jobs:
         with:
           context: ./
           load: true
+          build-args: VERSION=${{ steps.tags.outputs.version }}
       - name: Test container
         run: docker run --rm ${{ steps.build.outputs.imageid }} -V
       - name: Run container smoke tests
@@ -141,6 +125,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: VERSION=${{ steps.tags.outputs.version }}
       - name: 'snyk monitor docker image'
         if: startsWith(github.ref, 'refs/tags/v')
         uses: snyk/actions/docker@master
@@ -150,3 +135,45 @@ jobs:
           command: monitor
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [verify, api-compatibility, docker-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@12
+      - name: Binaries, archives and the GitHub release
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: npm packages from the same binaries
+        run: go run ./internal/tools/npmpkg -version "${GITHUB_REF_NAME}" -dist dist -out npm/dist
+      - name: Publish to npm
+        # The platform packages first: `steadybit` depends on them.
+        run: |
+          for dir in npm/dist/cli-*; do
+            (cd "$dir" && npm publish --provenance --access public)
+          done
+          (cd npm/dist/steadybit && npm publish --provenance --access public)
+      - name: 'snyk monitor'
+        uses: snyk/actions/golang@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor

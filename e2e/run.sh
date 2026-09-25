@@ -4,7 +4,7 @@
 
 # Smoke tests for the packaged CLI. Everything here needs a real process: an exit
 # status, a terminal, or the spawn of a subcommand. Anything that can be asserted
-# in-process belongs in the vitest suite instead, so these stay at the level of
+# in-process belongs in the Go test suite instead, so these stay at the level of
 # "did it exit correctly" rather than checking output in detail.
 
 set -u

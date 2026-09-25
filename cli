@@ -1,10 +1,6 @@
 #!/usr/bin/env sh
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-set -eou pipefail
-
-# This small utility can be used to execute the locally build CLI without
-# having to constantly reconstruct the ./dist/cli/steadybit.js path.
-#
-# In production this file is not used.
-
-./dist/cli/steadybit.js "$@"
+# Runs the CLI from the working tree, for development. Releases ship a built binary.
+exec go run ./cmd/steadybit "$@"

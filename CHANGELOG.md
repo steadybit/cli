@@ -1,5 +1,20 @@
 # Changelog
 
+## v6.0.0
+
+- **The CLI is now a single binary written in Go.** It runs without Node.js, and is installed
+  the same ways: `npm install -g steadybit`, which now installs the binary for your platform
+  and works with any Node.js from 18 on, or the `steadybit/cli` container image, now 18 MB
+  instead of 249 MB. It can also be downloaded directly from the GitHub releases. Commands,
+  flags, messages, exit codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables
+  are unchanged, and experiment, schedule and service files are written byte for byte as
+  before.
+- Writing a new experiment's key back into a YAML file no longer rewrites the file: the key
+  is added at the top and comments, anchors and formatting are kept.
+- Shell completion: `steadybit completion bash|zsh|fish|powershell`.
+- Errors about a missing required flag are worded differently (`required flag(s) "key" not
+  set`); they still exit with 1.
+
 ## v5.0.0
 
 - `experiment apply --template <id>` creates an experiment from an experiment template, or
