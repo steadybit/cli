@@ -4,14 +4,26 @@
 import { loadExperiment, resolveExperimentFiles, writeFile } from './files.ts';
 import { updateExperiment, upsertExperiment } from './api.ts';
 import { abortExecution } from '../errors.ts';
+import { applyExperimentFromTemplate, type TemplateOptions } from './template.ts';
 
-export interface Options {
+export type Options = {
   key?: string;
-  file: string[];
+  file?: string[];
   recursive: boolean;
-}
+} & Partial<TemplateOptions>;
 
 export async function applyExperiments(options: Options) {
+  if (options.template) {
+    return applyExperimentFromTemplate({
+      ...options,
+      template: options.template,
+      resetProperties: options.resetProperties ?? true,
+    });
+  }
+  if (!options.file) {
+    throw abortExecution('Either --file or --template must be specified.');
+  }
+
   const files = await resolveExperimentFiles(options.file, options.recursive);
 
   if (options.key && files.length > 1) {
