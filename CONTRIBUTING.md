@@ -104,8 +104,8 @@ platform, and `steadybit`, which installs the right one), and pushes the Docker 
 git commit -am 'chore: prepare release'
 
 # 2. Tag and push
-git tag v5.0.0
-git push origin main v5.0.0
+git tag v6.0.0
+git push origin main v6.0.0
 ```
 
 Use a major version for breaking changes to commands, flags, output or exit codes.
