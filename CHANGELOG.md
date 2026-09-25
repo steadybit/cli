@@ -1,13 +1,14 @@
 # Changelog
 
-## v5.0.0
+## v6.0.0
 
 - **The CLI is now a single binary written in Go.** It runs without Node.js, and is installed
   the same ways: `npm install -g steadybit`, which now installs the binary for your platform
   and works with any Node.js from 18 on, or the `steadybit/cli` container image, now 18 MB
-  instead of 249 MB. It can also be downloaded directly from the GitHub releases. Commands, flags, messages, exit
-  codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables are unchanged, and
-  experiment, schedule and service files are written byte for byte as before.
+  instead of 249 MB. It can also be downloaded directly from the GitHub releases. Commands,
+  flags, messages, exit codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables
+  are unchanged, and experiment, schedule and service files are written byte for byte as
+  before.
 - Writing a new experiment's key back into a YAML file no longer rewrites the file: the key
   is added at the top and comments, anchors and formatting are kept.
 - Shell completion: `steadybit completion bash|zsh|fish|powershell`, which completes
@@ -30,7 +31,12 @@
 - `execution watch` follows a run live; `experiment init` creates an experiment from a
   template by asking for its placeholders.
 - `--profile <name>` uses a configured profile for one command.
-- A GitHub Action, `uses: steadybit/cli@v5`, installs the CLI on a runner.
+- A GitHub Action, `uses: steadybit/cli@v6`, installs the CLI on a runner.
+- Errors about a missing required flag are worded differently (`required flag(s) "key" not
+  set`); they still exit with 1.
+
+## v5.0.0
+
 - `experiment apply --template <id>` creates an experiment from an experiment template, or
   updates the one created before with the same `--external-id`. With `-k` it re-renders an
   existing experiment with new placeholder values. Placeholders are given with
@@ -54,11 +60,14 @@
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
-- The CLI's API client is generated from the platform's OpenAPI spec. CI builds it against
-  the live platform daily and before every release, so a breaking API change is caught
-  before it reaches a pipeline.
-- **Security:** `-v, --verbose` no longer prints the API access token, which CI jobs using
-  it had in their logs.
+- The CLI's API types are generated from the platform's OpenAPI spec. CI checks them
+  against the live platform daily and before every release, so a breaking API change is
+  caught before it reaches a pipeline.
+- **Breaking:** Node.js 22.13.0 or later is now required. Node.js 18 and 20 have reached
+  end of life and the CLI's dependencies no longer support them.
+- The CLI is now published as an ES module.
+- **Security:** `-v, --verbose` no longer prints the API access token. Commander passes the
+  flag on to spawned subcommands, so CI jobs using it had the token in their logs.
 - **Security:** requests are only ever sent to the configured platform. An absolute URL in a
   platform response, such as the `Location` header of a started run, now has its origin
   replaced by the configured one so that the access token cannot be sent elsewhere.
@@ -96,6 +105,8 @@
   `STEADYBIT_RATE_LIMIT_INTERVAL` override the assumed rate limit for deployments
   configured differently. A value that is not a positive whole number is reported and
   ignored rather than silently changing how hard the CLI polls.
+- Replaced `inquirer` with the `@inquirer/*` prompt packages and `colors` with `picocolors`.
+- Replaced `node-fetch` with the Node.js built-in `fetch`.
 - Dependency updates
 
 ## v4.3.2

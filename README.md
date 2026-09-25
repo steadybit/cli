@@ -231,7 +231,7 @@ In GitHub Actions a summary of every run is added to the job summary.
 ### GitHub Actions
 
 ```yaml
-- uses: steadybit/cli@v5
+- uses: steadybit/cli@v6
 - run: steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
   env:
     STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_TOKEN }}
@@ -246,7 +246,7 @@ In GitHub Actions a summary of every run is added to the job summary.
 ```yaml
 chaos:
   image:
-    name: steadybit/cli:5
+    name: steadybit/cli:6
     entrypoint: ['']
   script:
     - steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
