@@ -306,3 +306,15 @@ func TestDumpRefusesAnUnknownTeam(t *testing.T) {
 
 	assert.EqualError(t, err, "No accessible team with key NOPE. Available: A, B")
 }
+
+func TestDelete(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("DELETE /api/experiments/TST-1", platformtest.Reply{})
+	p.Reply("DELETE /api/experiments/TST-9", platformtest.Reply{Status: http.StatusNotFound})
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Delete(ctx, p.Client, "TST-1") })
+
+	require.NoError(t, err)
+	assert.Equal(t, "Experiment TST-1 deleted.\n", out)
+	assert.EqualError(t, experiment.Delete(ctx, p.Client, "TST-9"), "Experiment TST-9 not found.")
+}

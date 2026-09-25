@@ -17,7 +17,7 @@ import (
 
 func newExperiment() *cobra.Command {
 	cmd := &cobra.Command{Use: "experiment", Short: "Check and run experiments."}
-	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDump())
+	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDelete(), newExperimentDump())
 	return cmd
 }
 
@@ -160,5 +160,21 @@ func newExperimentDump() *cobra.Command {
 	cmd.Flags().StringVarP(&o.Type, "type", "t", "yaml", `The output format of the experiment ("json" or "yaml").`)
 	cmd.Flags().StringArrayVar(&o.Teams, "team", nil, "Only dump the given teams, by team key. Defaults to every accessible team.")
 	variadic(cmd, "team")
+	return cmd
+}
+
+func newExperimentDelete() *cobra.Command {
+	var key string
+	cmd := &cobra.Command{
+		Use:     "delete",
+		Short:   "Delete an experiment from Steadybit.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit experiment delete -k ADM-1"),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return experiment.Delete(ctx, c, key)
+		}),
+	}
+	cmd.Flags().StringVarP(&key, "key", "k", "", "The experiment key.")
+	_ = cmd.MarkFlagRequired("key")
 	return cmd
 }
