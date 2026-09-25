@@ -17,6 +17,8 @@ jobs:
   verify:
     # Paths, terminals and line endings differ between them, and users run all three.
     strategy:
+      # Each platform's failures are worth seeing, not only the first one's.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}

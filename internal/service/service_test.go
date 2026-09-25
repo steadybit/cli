@@ -123,9 +123,9 @@ func TestExperimentsOfAService(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, "(not created)")
 	assert.Contains(t, out, "Provided experiment ADM-9 of service "+id+" created from template d7e65100-1d20-4980-be87-c351704910b8.")
-	assert.Equal(t, []string{"PROVIDED"}, p.Requests("GET /api/services/"+id+"/experiments")[0].Query["type"])
-	assert.Equal(t, map[string]any{"experimentKey": "ADM-1", "category": "Redundancy"}, p.Requests("POST /api/services/"+id+"/experiments/custom")[0].JSON(t))
-	assert.Equal(t, []string{"ADM-1"}, p.Requests("DELETE /api/services/"+id+"/experiments/custom")[0].Query["experimentKey"])
+	assert.Equal(t, []string{"PROVIDED"}, p.Requests("GET /api/services/" + id + "/experiments")[0].Query["type"])
+	assert.Equal(t, map[string]any{"experimentKey": "ADM-1", "category": "Redundancy"}, p.Requests("POST /api/services/" + id + "/experiments/custom")[0].JSON(t))
+	assert.Equal(t, []string{"ADM-1"}, p.Requests("DELETE /api/services/" + id + "/experiments/custom")[0].Query["experimentKey"])
 }
 
 func TestVariables(t *testing.T) {
@@ -143,8 +143,8 @@ func TestVariables(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, map[string]any{"hosts": []any{"a", "b"}, "region": "eu", "url": "http://x?a=b"}, p.Requests("PATCH /api/services/"+id+"/variables")[0].JSON(t))
-	assert.Equal(t, map[string]any{}, p.Requests("PUT /api/services/"+id+"/variables")[0].JSON(t))
+	assert.Equal(t, map[string]any{"hosts": []any{"a", "b"}, "region": "eu", "url": "http://x?a=b"}, p.Requests("PATCH /api/services/" + id + "/variables")[0].JSON(t))
+	assert.Equal(t, map[string]any{}, p.Requests("PUT /api/services/" + id + "/variables")[0].JSON(t))
 	assert.EqualError(t, service.SetVariables(ctx, p.Client, []string{"novalue"}, service.VariableSetOptions{ID: id}), "'novalue' is not in the form KEY=VALUE.")
 	assert.EqualError(t, service.SetVariables(ctx, p.Client, nil, service.VariableSetOptions{ID: id}), "No variables given. Pass KEY=VALUE arguments or --file.")
 }

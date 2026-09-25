@@ -114,7 +114,9 @@ func TestDownloadsEveryArtifactIntoADirectoryPerTarget(t *testing.T) {
 	})
 	dir := t.TempDir()
 
-	_, err := platformtest.Stdout(t, func() error { return execution.Download(ctx, p.Client, execution.DownloadOptions{ID: 42, Directory: dir}) })
+	_, err := platformtest.Stdout(t, func() error {
+		return execution.Download(ctx, p.Client, execution.DownloadOptions{ID: 42, Directory: dir})
+	})
 
 	require.NoError(t, err)
 	for _, f := range []string{"te-1/report.zip", "te-1/log.txt", "te-2/report.zip", "te-3/result.json"} {

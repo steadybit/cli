@@ -55,7 +55,9 @@ func TestApplyDefaultsToACustomProfile(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "p.yml")
 	require.NoError(t, os.WriteFile(file, []byte("name: P\ntemplates: []\n"), 0o644))
 
-	_, err := platformtest.Stdout(t, func() error { return serviceprofile.Apply(ctx, p.Client, serviceprofile.ApplyOptions{Files: []string{file}}) })
+	_, err := platformtest.Stdout(t, func() error {
+		return serviceprofile.Apply(ctx, p.Client, serviceprofile.ApplyOptions{Files: []string{file}})
+	})
 
 	require.NoError(t, err)
 	assert.Equal(t, map[string]any{"name": "P", "templates": []any{}, "origin": "CUSTOM"}, p.Requests("POST /api/services/profiles")[0].JSON(t))
