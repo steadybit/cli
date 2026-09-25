@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Steadybit GmbH
+
+# Spike: the Go CLI in the same shape as the published image, so e2e/run.sh runs unchanged.
+FROM golang:1.26-alpine AS builder
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY api ./api
+COPY cmd ./cmd
+COPY internal ./internal
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/steadybit/cli/internal/platform.Version=spike" -o /steadybit ./cmd/steadybit
+
+FROM alpine:3
+COPY --from=builder /steadybit /usr/local/bin/steadybit
+ENTRYPOINT ["steadybit"]

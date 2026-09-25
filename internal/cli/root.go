@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Steadybit GmbH
+
+// Package cli wires the commands. Names, flags, messages and exit codes follow the
+// TypeScript CLI, which pipelines depend on.
+package cli
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/internal/platform"
+)
+
+// Laid out like the TypeScript CLI's help, which pipelines and the e2e suite read.
+const usageTemplate = `Usage: {{if .Runnable}}{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}{{.CommandPath}} [command]{{end}}
+{{if .HasAvailableLocalFlags}}
+Options:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableSubCommands}}
+
+Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}
+`
+
+func examples(lines ...string) string {
+	for i, line := range lines {
+		lines[i] = "  $ " + line
+	}
+	return strings.Join(lines, "\n")
+}
+
+// withClient runs a command that talks to the platform. A missing access token is
+// reported with the setup help before anything is sent.
+func withClient(run func(ctx context.Context, c *platform.Client, args []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		client, err := platform.New()
+		if err != nil {
+			return err
+		}
+		return run(cmd.Context(), client, args)
+	}
+}
+
+func newRoot() *cobra.Command {
+	root := &cobra.Command{
+		Use:           "steadybit",
+		Short:         "Command-line interface to interact with the Steadybit API",
+		Version:       platform.Version,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Example: examples(
+			"steadybit experiment run -f experiment.yml",
+			"steadybit experiment --help",
+		),
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+			platform.Verbose, _ = cmd.Flags().GetBool("verbose")
+		},
+	}
+	root.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose logging")
+	root.Flags().BoolP("version", "V", false, "output the version number")
+	root.SetVersionTemplate("{{.Version}}\n")
+	root.AddCommand(newConfig(), newExperiment())
+	for _, cmd := range append(root.Commands(), root) {
+		setUsage(cmd)
+	}
+	return root
+}
+
+func setUsage(cmd *cobra.Command) {
+	cmd.SetUsageTemplate(usageTemplate)
+	for _, sub := range cmd.Commands() {
+		setUsage(sub)
+	}
+}
+
+func Execute() int {
+	err := newRoot().ExecuteContext(context.Background())
+	if err == nil {
+		return 0
+	}
+	if errors.Is(err, platform.ErrNoAccessToken) {
+		fmt.Fprintln(os.Stderr, platform.MissingTokenHelp())
+	} else {
+		fmt.Fprintln(os.Stderr, output.Red(err.Error()))
+	}
+	return 1
+}
