@@ -95,7 +95,7 @@ npm i -g steadybit-*.tgz
 ## Releasing
 
 Releases are published by CI, not from a workstation: pushing a `v*` tag triggers
-[the release workflow](.github/workflows/release.yml), which publishes to npm via
+[the release job of the CI workflow](.github/workflows/ci.yml), which publishes to npm via
 trusted publishing and pushes the Docker image. Never run `npm publish` locally.
 
 ```sh
