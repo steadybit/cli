@@ -44,6 +44,10 @@
 - `integration webhook|slack|preflight|preflight-action` commands to `list`, `get`, `apply`
   and `delete` integrations. The platform masks secrets when reading them, so `apply`
   refuses a file still holding the mask instead of removing the secret.
+- `report` commands print the platform's reports as JSON or YAML: `users`, `teams`,
+  `environments`, `experiments-executed`, `experiments-created`, `services-distribution`,
+  `services-by-category` and `services-average`. Teams are filtered by key and environments
+  by name.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
