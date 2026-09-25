@@ -2,10 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
 // Regenerates cases.json: values and what the TypeScript CLI rendered for them with
-// js-yaml and JSON.stringify. Run from the repository root after `npm run build`:
-//   node internal/jsyaml/testdata/generate.mjs
+// js-yaml and JSON.stringify, which the Go CLI's output is held to.
+//   cd internal/jsyaml/testdata && npm ci && node generate.mjs
 import fs from 'node:fs';
-const { dump } = await import(new URL('../../../dist/yaml.js', import.meta.url));
+import {
+  CORE_SCHEMA,
+  binaryTag,
+  dump as dumpYaml,
+  mergeTag,
+  omapTag,
+  pairsTag,
+  setTag,
+  timestampTag,
+} from 'js-yaml';
+
+// The schema the TypeScript CLI dumped with: the YAML core schema plus the tags js-yaml 4
+// enabled by default.
+const schema = CORE_SCHEMA.withTags(mergeTag, timestampTag, binaryTag, omapTag, pairsTag, setTag);
+const dump = value => dumpYaml(value, { schema });
 
 const long = 'When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.';
 const strings = [

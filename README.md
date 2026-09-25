@@ -12,16 +12,28 @@ You can retrieve, create or adjust experiment designs as well as running them st
 
 ## Prerequisites
 
-- You need to have a Steadybit account. You can create a free account [via our website](https://www.steadybit.com/get-started/).
-- at least Node.js 22.13 as local runtime
+You need a Steadybit account. You can create a free account [via our website](https://www.steadybit.com/get-started/).
 
 ## Installation
 
-Via npm
+The CLI is a single binary for Linux, macOS and Windows, on amd64 and arm64.
+
+Via npm, which installs the binary for your platform (any Node.js from 18 on):
 
 ```sh
 npm install -g steadybit
 ```
+
+Or download the archive for your platform from the
+[releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
+and put `steadybit` on your `PATH`:
+
+```sh
+curl -sL https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz | tar -xz steadybit
+sudo mv steadybit /usr/local/bin/
+```
+
+Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
 
 ## Authorization
 

@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Steadybit GmbH
+
+# Builds the release binaries, archives and checksums. The npm packages and the container
+# image are made from these binaries by the release workflow, so every channel ships the
+# same build.
+version: 2
+project_name: steadybit
+
+builds:
+  - id: steadybit
+    main: ./cmd/steadybit
+    binary: steadybit
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/steadybit/cli/internal/platform.Version={{ .Version }}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - id: steadybit
+    # Without the version, so that releases/latest/download/<name> is a stable URL.
+    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md, CHANGELOG.md]
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: '{{ incpatch .Version }}-next'
+
+release:
+  # The changelog is written by hand in CHANGELOG.md.
+  mode: keep-existing
+
+changelog:
+  disable: true
