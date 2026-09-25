@@ -46,9 +46,12 @@ func ResolvePlaceholders(o TemplateOptions) ([]api.ExperimentTemplatePlaceholder
 		case []any:
 			for _, entry := range v {
 				m, ok := entry.(*jsyaml.Map)
+				if !ok {
+					return nil, invalid
+				}
 				key, hasKey := m.Get("key")
 				value, hasValue := m.Get("value")
-				if !ok || !hasKey || !hasValue {
+				if !hasKey || !hasValue {
 					return nil, invalid
 				}
 				keyString, ok := key.(string)

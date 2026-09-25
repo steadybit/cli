@@ -127,7 +127,13 @@ func Check(resp *http.Response, body []byte) error {
 	return &APIError{Method: resp.Request.Method, URL: resp.Request.URL.String(), Status: resp.StatusCode, Body: body}
 }
 
-const maxRateLimitWait = 2 * time.Minute
+var (
+	// RetryUnit is the base of every wait between attempts: the backoff after a transport
+	// failure, and a 429 without a reset header. Tests shorten it.
+	RetryUnit = time.Second
+	// MaxRateLimitWait bounds the total time spent waiting out 429s for one request.
+	MaxRateLimitWait = 2 * time.Minute
+)
 
 const defaultTimeout = 30 * time.Second
 
@@ -190,7 +196,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			if !idempotent[req.Method] || attempt >= 4 {
 				return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
 			}
-			time.Sleep(jitter(time.Duration(attempt) * time.Second))
+			time.Sleep(jitter(time.Duration(attempt) * RetryUnit))
 			continue
 		}
 		logResponse(resp)
@@ -198,14 +204,14 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			resp.Body = cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
 			return resp, nil
 		}
-		wait := time.Second
+		wait := RetryUnit
 		for _, h := range []string{"RateLimit-Reset", "Retry-After"} {
 			if seconds, err := strconv.Atoi(resp.Header.Get(h)); err == nil && seconds > 0 {
-				wait = time.Duration(seconds) * time.Second
+				wait = time.Duration(seconds) * RetryUnit
 				break
 			}
 		}
-		if waited+wait > maxRateLimitWait {
+		if waited+wait > MaxRateLimitWait {
 			resp.Body = cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
 			return resp, nil
 		}

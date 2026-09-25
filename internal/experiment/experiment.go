@@ -422,6 +422,9 @@ func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, parallel
 	return decodeStarted(body, resp, "")
 }
 
+// PollInterval is how often --wait asks for the state of a run. Tests shorten it.
+var PollInterval = 5 * time.Second
+
 var terminal = map[string]bool{"FAILED": true, "ERRORED": true, "CANCELED": true, "COMPLETED": true}
 
 // wait polls the run until it ends. A run that did not complete exits non-zero, which is
@@ -432,7 +435,7 @@ func wait(ctx context.Context, c *platform.Client, location string) error {
 		path = location[i:]
 	}
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(PollInterval)
 		body, _, err := platform.Read(c.Get(ctx, path))
 		if err != nil {
 			return platform.Failed(err, "Failed to get experiment run ")
