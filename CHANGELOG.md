@@ -32,6 +32,33 @@
   template by asking for its placeholders.
 - `--profile <name>` uses a configured profile for one command.
 - A GitHub Action, `uses: steadybit/cli@v6`, installs the CLI on a runner.
+- `template apply` and `template delete` manage experiment templates as files in Git, and
+  `template import` imports templates from a connected hub.
+- `environment` commands to `list`, `get`, `apply` and `delete` environments, and
+  `environment variable` to get, merge or replace their variables.
+- `team` commands to `list`, `get`, `apply` and `delete` teams, `team member` to list, add,
+  remove or replace their members, and `team environment` to do the same with the
+  environments they may use.
+- `user invite` invites users by email, optionally into a team.
+- `access-token` commands to `list`, `create`, `recreate` and `delete` API access tokens. A
+  new token is printed once; `-t json` prints only its id and value for a script to read.
+- `integration webhook|slack|preflight|preflight-action` commands to `list`, `get`, `apply`
+  and `delete` integrations. The platform masks secrets when reading them, so `apply`
+  refuses a file still holding the mask instead of removing the secret.
+- `report` commands print the platform's reports as JSON or YAML: `users`, `teams`,
+  `environments`, `experiments-executed`, `experiments-created`, `services-distribution`,
+  `services-by-category` and `services-average`. Teams are filtered by key and environments
+  by name.
+- `audit-log` shows who changed what and when, as a table or with `-t json|yaml`.
+- `killswitch status`, `activate` and `deactivate`. Activating asks for confirmation unless
+  `--yes` is given, as it stops every running experiment of the tenant.
+- `target query` lists the targets of an environment, by type and query, with the
+  attributes asked for as columns; `target attribute keys|values` lists what can be
+  queried. `action list` and `action get` show the actions experiments can use.
+- `hub` commands to `list`, `get`, `apply`, `delete` and `resync` the hubs templates are
+  imported from.
+- `property definition` and `property association` commands to `list`, `get`, `apply` and
+  `delete` the properties experiments and services carry.
 - Errors about a missing required flag are worded differently (`required flag(s) "key" not
   set`); they still exit with 1.
 

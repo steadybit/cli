@@ -409,37 +409,18 @@ type VariableSetOptions struct {
 	Replace bool
 }
 
-// SetVariables merges KEY=VALUE arguments, always strings, over a file's variables,
-// which may be lists or select expressions. With --replace, the result is all there is.
+// SetVariables merges KEY=VALUE arguments over a file's variables. With --replace, the
+// result is all there is.
 func SetVariables(ctx context.Context, c *platform.Client, pairs []string, o VariableSetOptions) error {
-	given := jsyaml.NewMap()
-	for _, pair := range pairs {
-		i := strings.Index(pair, "=")
-		if i <= 0 {
-			return fmt.Errorf("'%s' is not in the form KEY=VALUE.", pair)
-		}
-		given.Set(pair[:i], pair[i+1:])
-	}
-	variables := jsyaml.NewMap()
-	if o.File != "" {
-		doc, _, err := resource.Read(o.File, "variables")
-		if err != nil {
-			return fmt.Errorf("Variables file '%s' must be a map of variable names to values.", o.File)
-		}
-		variables = doc.Value()
-	}
-	for _, k := range given.Keys() {
-		v, _ := given.Get(k)
-		variables.Set(k, v)
-	}
-	if variables.Len() == 0 && !o.Replace {
-		return errors.New("No variables given. Pass KEY=VALUE arguments or --file.")
+	variables, err := resource.Variables(pairs, o.File, o.Replace)
+	if err != nil {
+		return err
 	}
 	id, err := uuid(o.ID)
 	if err != nil {
 		return err
 	}
-	body := bytes.NewReader([]byte(jsyaml.CompactJSON(variables)))
+	body := resource.Body(variables)
 	if o.Replace {
 		_, _, err = platform.Read(c.SetServiceVariablesWithBody(ctx, id, "application/json", body))
 	} else {
@@ -448,10 +429,6 @@ func SetVariables(ctx context.Context, c *platform.Client, pairs []string, o Var
 	if err != nil {
 		return notFoundOr(err, o.ID, "Failed to update the variables of service %s")
 	}
-	outcome := "set"
-	if o.Replace {
-		outcome = "set, all others removed"
-	}
-	fmt.Printf("%d variable(s) of service %s %s.\n", variables.Len(), o.ID, outcome)
+	fmt.Printf("%d variable(s) of service %s %s.\n", variables.Len(), o.ID, resource.VariablesOutcome(o.Replace))
 	return nil
 }

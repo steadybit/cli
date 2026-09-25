@@ -148,6 +148,21 @@ func completePaged(fetch func(ctx context.Context, c *platform.Client, page, siz
 	}
 }
 
+func completeEnvironments(ctx context.Context, c *platform.Client, prefix string) ([]string, cobra.ShellCompDirective) {
+	var list struct {
+		Environments []struct{ ID, Name string } `json:"environments"`
+	}
+	resp, err := c.GetEnvironments(ctx, nil)
+	if _, err := platform.Decode(resp, err, &list); err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+	var values []string
+	for _, e := range list.Environments {
+		values = append(values, e.ID+"\t"+e.Name)
+	}
+	return matching(values, prefix), cobra.ShellCompDirectiveDefault
+}
+
 var completeServices = completePaged(func(ctx context.Context, c *platform.Client, page, size int32) (*http.Response, error) {
 	return c.GetServiceList(ctx, &api.GetServiceListParams{Page: api.PageRequestAO{Page: &page, Size: &size}})
 })
@@ -200,6 +215,10 @@ func registerCompletions(root *cobra.Command) {
 			register("id", completeProfiles)
 		case "template":
 			register("id", completeTemplates)
+		case "team":
+			register("key", completeTeams)
+		case "environment":
+			register("id", completeEnvironments)
 		}
 		for _, sub := range cmd.Commands() {
 			walk(sub)

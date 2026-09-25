@@ -7,13 +7,19 @@
 package resource
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/steadybit/cli/internal/experiment"
 	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/internal/prompt"
 )
 
 // Output writes to the file when one is given and to stdout otherwise, as JSON
@@ -107,7 +113,8 @@ func ApplyFiles(paths []string, recursive bool, what string, upsert func(file st
 		if err != nil {
 			return err
 		}
-		if existingID == nil || existingID == "" {
+		// Resources named by a key, like teams, have no id to write back.
+		if (existingID == nil || existingID == "") && result.ID != "" {
 			doc.Value().SetFirst("id", result.ID)
 			if err := os.WriteFile(file, []byte(format(doc, datatype)), 0o644); err != nil {
 				return err
@@ -122,4 +129,84 @@ func CreatedOrUpdated(created bool) string {
 		return "created"
 	}
 	return "updated"
+}
+
+// Body sends a document or value as the JSON the platform expects.
+func Body(value any) io.Reader { return bytes.NewReader([]byte(jsyaml.CompactJSON(value))) }
+
+// Optional leaves an empty filter out of the request.
+func Optional(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return &values
+}
+
+// UUID parses an id; a malformed one cannot name anything, so callers report it as not found.
+func UUID(id string) (openapi_types.UUID, bool) {
+	var u openapi_types.UUID
+	return u, u.UnmarshalText([]byte(id)) == nil
+}
+
+// Confirmed asks before something that cannot be undone, unless --yes was given.
+// Without a terminal, as in a pipeline, it goes ahead, as `experiment run` does.
+func Confirmed(yes bool, question string) (bool, error) {
+	if yes {
+		return true, nil
+	}
+	ok, err := prompt.Confirm(question, false, true)
+	if err == nil && !ok {
+		fmt.Println("Aborted.")
+	}
+	return ok, err
+}
+
+// Variables merges KEY=VALUE arguments, always strings, over a file's variables, which
+// may be lists or select expressions. Nothing given is only allowed when replacing, where
+// it removes every variable.
+func Variables(pairs []string, file string, replace bool) (*jsyaml.Map, error) {
+	given := jsyaml.NewMap()
+	for _, pair := range pairs {
+		i := strings.Index(pair, "=")
+		if i <= 0 {
+			return nil, fmt.Errorf("'%s' is not in the form KEY=VALUE.", pair)
+		}
+		given.Set(pair[:i], pair[i+1:])
+	}
+	variables := jsyaml.NewMap()
+	if file != "" {
+		doc, _, err := Read(file, "variables")
+		if err != nil {
+			return nil, fmt.Errorf("Variables file '%s' must be a map of variable names to values.", file)
+		}
+		variables = doc.Value()
+	}
+	for _, k := range given.Keys() {
+		v, _ := given.Get(k)
+		variables.Set(k, v)
+	}
+	if variables.Len() == 0 && !replace {
+		return nil, errors.New("No variables given. Pass KEY=VALUE arguments or --file.")
+	}
+	return variables, nil
+}
+
+func VariablesOutcome(replace bool) string {
+	if replace {
+		return "set, all others removed"
+	}
+	return "set"
+}
+
+// Time takes a date, meaning its start in UTC, or a full RFC 3339 time.
+func Time(flag, value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	for _, layout := range []string{time.RFC3339, time.DateOnly} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return &t, nil
+		}
+	}
+	return nil, fmt.Errorf("--%s '%s' is neither a date like 2026-09-01 nor a time like 2026-09-01T12:00:00Z.", flag, value)
 }

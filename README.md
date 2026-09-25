@@ -188,6 +188,47 @@ steadybit service-profile list --origin custom
 steadybit service-profile apply -f profile.yml
 ```
 
+### Environments, teams and more as files in Git
+
+Experiment templates, environments, teams, hubs, integrations and property definitions and
+associations are managed the same way, with `list`, `get`, `apply` and `delete`:
+
+```bash
+steadybit environment get -i <environment-id> -f environment.yml
+steadybit team apply -f ./teams -R
+steadybit integration webhook apply -f webhook.yml
+steadybit template apply -f ./templates -R
+```
+
+Their parts have commands of their own:
+
+```bash
+steadybit environment variable set -i <environment-id> region=eu
+steadybit team member add -k ADM --email jane@example.com --role OWNER
+steadybit team environment add -k ADM --environment Global
+```
+
+### Tenant administration
+
+```bash
+steadybit access-token create --name ci --type TEAM --team ADM --expires-at 2026-12-31
+steadybit user invite --email jane@example.com --team ADM
+steadybit killswitch status
+steadybit audit-log --from 2026-09-01 -t json
+steadybit report experiments-executed --group-by STATE --rollup MONTHLY
+```
+
+Commands that cannot be undone, such as `killswitch activate`, `access-token delete` or
+`team member set`, ask for confirmation on a terminal; `--yes` skips the question.
+
+### Targets and actions
+
+```bash
+steadybit target query -e Global --target-type com.steadybit.extension_container.container --attribute k8s.namespace
+steadybit target attribute values -e Global --target-type com.steadybit.extension_container.container -k k8s.namespace
+steadybit action list --kind ATTACK
+```
+
 ## Everyday use
 
 ```bash
