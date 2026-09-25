@@ -51,6 +51,9 @@
 - `audit-log` shows who changed what and when, as a table or with `-t json|yaml`.
 - `killswitch status`, `activate` and `deactivate`. Activating asks for confirmation unless
   `--yes` is given, as it stops every running experiment of the tenant.
+- `target query` lists the targets of an environment, by type and query, with the
+  attributes asked for as columns; `target attribute keys|values` lists what can be
+  queried. `action list` and `action get` show the actions experiments can use.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
