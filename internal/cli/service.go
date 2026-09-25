@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/service"
 	"github.com/steadybit/cli/internal/serviceprofile"
 )
@@ -30,12 +31,13 @@ func newService() *cobra.Command {
 		Use:     "list",
 		Short:   "List services. Filters of the same kind match any of the given values.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit service list", "steadybit service list --team ADM --environment Global"),
+		Example: examples("steadybit service list", "steadybit service list --team ADM --environment Global", "steadybit service list --jq '.[].id'"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return service.List(ctx, c, l) }),
 	}
 	list.Flags().StringArrayVar(&l.Teams, "team", nil, "Only list services of these teams, by team key.")
 	list.Flags().StringArrayVar(&l.Environments, "environment", nil, "Only list services in these environments.")
 	list.Flags().StringArrayVar(&l.Experiments, "experiment", nil, "Only list services these experiments are linked to.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "team", "environment", "experiment")
 
 	var g service.GetOptions
@@ -110,6 +112,7 @@ func newService() *cobra.Command {
 	idFlag(elist, &el.ID, "The service id.")
 	elist.Flags().StringArrayVar(&el.Categories, "category", nil, "Only list experiments in these categories.")
 	elist.Flags().StringArrayVar(&el.Types, "type", nil, `Only list "provided" or "custom" experiments.`)
+	elist.Flags().StringVar(&el.Type, "output", "", resource.ListTypeHelp)
 	variadic(elist, "category", "type")
 
 	var p service.ProvideOptions
@@ -211,6 +214,7 @@ func newServiceProfile() *cobra.Command {
 	list.Flags().StringVar(&l.Name, "name", "", "Only list profiles whose name contains this.")
 	list.Flags().StringArrayVar(&l.Origins, "origin", nil, `Only list "provided" or "custom" profiles.`)
 	list.Flags().BoolVar(&l.Default, "default", false, "Only list the default profile.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "origin")
 
 	var g serviceprofile.GetOptions

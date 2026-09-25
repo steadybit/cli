@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/cli/internal/experiment"
 	"github.com/steadybit/cli/internal/interrupt"
 	"github.com/steadybit/cli/internal/jsyaml"
+	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/platformtest"
 	"github.com/stretchr/testify/assert"
@@ -468,4 +469,16 @@ func TestKeepRunningOnInterruptLeavesTheRunAlone(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Empty(t, p.Requests("POST /api/experiments/executions/1/cancel"))
+}
+
+func TestJQFiltersWhatGetPrints(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/TST-1", platformtest.Reply{Body: design})
+	output.JQ = ".lanes[0].steps[0].parameters.duration"
+	t.Cleanup(func() { output.JQ = "" })
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Get(ctx, p.Client, experiment.GetOptions{Key: "TST-1"}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "10s\n", out)
 }

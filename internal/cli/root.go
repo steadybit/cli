@@ -67,6 +67,7 @@ func newRoot() *cobra.Command {
 		},
 	}
 	root.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose logging")
+	root.PersistentFlags().StringVar(&output.JQ, "jq", "", "Filter the JSON a command prints with a jq expression; strings are printed raw.")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
 	root.AddCommand(newAdvice(), newConfig(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate())

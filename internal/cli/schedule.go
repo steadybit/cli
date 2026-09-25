@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/schedule"
 )
 
@@ -51,11 +52,12 @@ func newSchedule() *cobra.Command {
 		Use:     "list",
 		Short:   "List experiment schedules.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit schedule list", "steadybit schedule list --team ADM --experiment ADM-1 ADM-2"),
+		Example: examples("steadybit schedule list", "steadybit schedule list --team ADM --experiment ADM-1 ADM-2", "steadybit schedule list --jq '.[] | select(.enabled) | .experimentKey'"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return schedule.List(ctx, c, l) }),
 	}
 	list.Flags().StringArrayVar(&l.Teams, "team", nil, "Only list schedules of these teams, by team key.")
 	list.Flags().StringArrayVar(&l.Experiments, "experiment", nil, "Only list schedules of these experiments, by experiment key.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "team", "experiment")
 
 	var g schedule.GetOptions

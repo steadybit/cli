@@ -25,6 +25,7 @@ import (
 
 	"github.com/steadybit/cli/api"
 	"github.com/steadybit/cli/internal/interrupt"
+	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/prompt"
@@ -64,6 +65,9 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	document, err := Fetch(ctx, c, o.Key)
 	if err != nil {
 		return err
+	}
+	if output.JQ != "" && o.File == "" {
+		return output.ApplyJQ(os.Stdout, jsyaml.CompactJSON(document.Value()), output.JQ)
 	}
 	datatype, err := output.ResolveDatatype(o.Type, o.File)
 	if err != nil {

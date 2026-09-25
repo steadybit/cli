@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/execution"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 )
 
 func runID(cmd *cobra.Command, id *int64) {
@@ -88,16 +89,18 @@ func newExecution() *cobra.Command {
 
 	artifact := &cobra.Command{Use: "artifact", Short: "List and download the artifacts of an experiment run."}
 	var listID int64
+	var listType string
 	list := &cobra.Command{
 		Use:     "list",
 		Short:   "List the artifacts that the actions of an experiment run attached.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit execution artifact list -i 1234"),
+		Example: examples("steadybit execution artifact list -i 1234", "steadybit execution artifact list -i 1234 --jq '.[].artifactId'"),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
-			return execution.ListArtifacts(ctx, c, listID)
+			return execution.ListArtifacts(ctx, c, listID, listType)
 		}),
 	}
 	runID(list, &listID)
+	list.Flags().StringVarP(&listType, "type", "t", "", resource.ListTypeHelp)
 	var d execution.DownloadOptions
 	download := &cobra.Command{
 		Use:   "download",
