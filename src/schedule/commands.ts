@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
 import fs from 'node:fs/promises';
-import { Table } from 'console-table-printer';
+import { createTable } from '../table.ts';
 import { abortExecution } from '../errors.ts';
 import { format, output, readStructuredFile } from '../structuredFiles.ts';
 import { resolveExperimentFiles } from '../experiment/files.ts';
@@ -28,7 +28,7 @@ export async function listSchedules(options: ListOptions) {
     console.log('No experiment schedules found.');
     return;
   }
-  const table = new Table({
+  const table = createTable({
     columns: [
       { name: 'id', title: 'Id', alignment: 'left' },
       { name: 'experiment', title: 'Experiment', alignment: 'left' },

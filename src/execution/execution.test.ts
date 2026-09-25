@@ -53,6 +53,15 @@ describe('execution', () => {
 
       await expect(getExecution({ id: 43 })).rejects.toThrow('Experiment run 43 not found.');
     });
+
+    // The platform leaves the steps out unless asked, and with them every artifact.
+    it('asks the platform to include the steps', async () => {
+      const requests = respondTo('get', '/api/experiments/executions/42', () => ({ json: { id: 42 } }));
+
+      await getExecution({ id: 42 });
+
+      expect(requests[0].url.searchParams.get('fields')).toBe('steps');
+    });
   });
 
   describe('cancel', () => {

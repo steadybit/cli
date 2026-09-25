@@ -15,9 +15,15 @@ function notFoundOr(e: unknown, id: number, msg: string): Error {
   return abortExecutionWithError(e, msg, id);
 }
 
+// Steps, and with them the target executions and their artifacts, are only included
+// when asked for. Without them a run looks the same as one that attached nothing.
 export async function fetchExecution(id: number): Promise<Execution> {
   try {
-    const response = await executeApiCall({ method: 'GET', path: `/api/experiments/executions/${id}` });
+    const response = await executeApiCall({
+      method: 'GET',
+      path: `/api/experiments/executions/${id}`,
+      queryParameters: { fields: 'steps' },
+    });
     return (await response.json()) as Execution;
   } catch (e) {
     throw notFoundOr(e, id, 'Failed to get experiment run %s');

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-import { Table } from 'console-table-printer';
+import { createTable } from '../table.ts';
 import { output } from '../structuredFiles.ts';
 import { fetchTemplate, fetchTemplates, type TemplateFilter } from './api.ts';
 
@@ -11,7 +11,7 @@ export async function listTemplates(options: TemplateFilter) {
     console.log('No experiment templates found.');
     return;
   }
-  const table = new Table({
+  const table = createTable({
     columns: [
       { name: 'id', title: 'Id', alignment: 'left' },
       { name: 'templateTitle', title: 'Title', alignment: 'left' },

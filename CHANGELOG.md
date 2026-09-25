@@ -17,6 +17,8 @@
 - `schedule` commands to `list`, `get`, `create`, `update`, `enable`, `disable` and `delete`
   experiment schedules, and `apply` to manage them as files in Git, like experiments.
 - Every command now shows examples in its `--help`.
+- Fixed the table printed by `advice validate-status` containing colour escape codes when
+  piped. Tables now follow the same terminal check as the rest of the output.
 - The CLI's API types are generated from the platform's OpenAPI spec. CI checks them
   against the live platform daily and before every release, so a breaking API change is
   caught before it reaches a pipeline.

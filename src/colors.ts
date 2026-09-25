@@ -7,6 +7,6 @@ import { createColors } from 'picocolors';
 // when stdout is a pipe. The CLI's output is routinely parsed by GitOps pipelines, so
 // colouring is gated on stdout actually being a terminal instead, which is what the
 // previously used `colors` package did.
-const colorsSupported = !process.env.NO_COLOR && Boolean(process.env.FORCE_COLOR || process.stdout.isTTY);
+export const colorsSupported = !process.env.NO_COLOR && Boolean(process.env.FORCE_COLOR || process.stdout.isTTY);
 
 export default createColors(colorsSupported);

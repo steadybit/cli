@@ -3,7 +3,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { Table } from 'console-table-printer';
+import { createTable } from '../table.ts';
 import type { Schemas } from '../api/schemas.ts';
 import { abortExecution } from '../errors.ts';
 import { downloadArtifact, type Execution, fetchExecution } from './api.ts';
@@ -54,7 +54,7 @@ export async function listArtifacts(options: ListOptions) {
     console.log('Experiment run %s has no artifacts.', options.id);
     return;
   }
-  const table = new Table({
+  const table = createTable({
     columns: [
       { name: 'artifactId', title: 'Artifact', alignment: 'left' },
       { name: 'target', title: 'Target', alignment: 'left' },
