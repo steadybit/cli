@@ -188,6 +188,55 @@ steadybit service-profile list --origin custom
 steadybit service-profile apply -f profile.yml
 ```
 
+## In CI
+
+`experiment run --wait` fails the job when a run fails, and a few options make it fit
+pipelines:
+
+| Option                        | Does                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
+| `--show-steps`                | Prints each step's state as it changes                                  |
+| `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+
+In GitHub Actions a summary of every run is added to the job summary.
+
+### GitHub Actions
+
+```yaml
+- uses: steadybit/cli@v5
+- run: steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
+  env:
+    STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_TOKEN }}
+- uses: mikepenz/action-junit-report@v5
+  if: always()
+  with:
+    report_paths: steadybit.xml
+```
+
+### GitLab CI
+
+```yaml
+chaos:
+  image:
+    name: steadybit/cli:5
+    entrypoint: ['']
+  script:
+    - steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: steadybit.xml
+```
+
+Every listing prints the platform's items with `-t json` or `-t yaml`, and `--jq` filters
+whatever JSON a command prints, without jq installed:
+
+```bash
+steadybit service list --team ADM --jq '.[] | "\(.id) \(.name)"'
+```
+
 ## Container Image
 
 You can also use the cli via our container image:

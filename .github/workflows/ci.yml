@@ -177,3 +177,24 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
+
+  # The action downloads from the release, so it can only be checked once one exists.
+  verify-action:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: setup
+        uses: ./
+        with:
+          version: ${{ github.ref_name }}
+      - shell: bash
+        run: |
+          steadybit --version
+          test "$(steadybit --version)" = "${GITHUB_REF_NAME#v}"
+          test "${{ steps.setup.outputs.version }}" = "${GITHUB_REF_NAME#v}"
