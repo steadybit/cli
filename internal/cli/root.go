@@ -59,6 +59,7 @@ func newRoot() *cobra.Command {
 		SilenceErrors: true,
 		Example: examples(
 			"steadybit experiment run -f experiment.yml",
+			"steadybit schedule list --team ADM",
 			"steadybit experiment --help",
 		),
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
@@ -68,7 +69,26 @@ func newRoot() *cobra.Command {
 	root.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose logging")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
-	root.AddCommand(newConfig(), newExperiment())
+	root.AddCommand(newAdvice(), newConfig(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate())
+	// Shell completion is new with the Go CLI; it gets examples like every other command.
+	root.InitDefaultCompletionCmd()
+	for _, cmd := range root.Commands() {
+		if cmd.Name() != "completion" {
+			continue
+		}
+		cmd.Example = examples("steadybit completion zsh > \"${fpath[1]}/_steadybit\"")
+		shells := map[string]string{
+			"bash":       "source <(steadybit completion bash)",
+			"zsh":        `steadybit completion zsh > "${fpath[1]}/_steadybit"`,
+			"fish":       "steadybit completion fish > ~/.config/fish/completions/steadybit.fish",
+			"powershell": "steadybit completion powershell | Out-String | Invoke-Expression",
+		}
+		for _, shell := range cmd.Commands() {
+			if example, ok := shells[shell.Name()]; ok {
+				shell.Example = examples(example)
+			}
+		}
+	}
 	for _, cmd := range append(root.Commands(), root) {
 		setUsage(cmd)
 	}

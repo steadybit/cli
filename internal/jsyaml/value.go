@@ -135,3 +135,25 @@ func NumberString(f float64) string {
 	}
 	return sign + digits[:1] + "." + digits[1:] + "e" + expSign + strconv.Itoa(abs)
 }
+
+// Clone copies a value deeply, so that one copy can be trimmed for a request while the
+// other is written back to its file intact.
+func Clone(value any) any {
+	switch v := value.(type) {
+	case *Map:
+		c := NewMap()
+		for _, k := range v.keys {
+			c.keys = append(c.keys, k)
+			c.values[k] = Clone(v.values[k])
+		}
+		return c
+	case []any:
+		c := make([]any, len(v))
+		for i, item := range v {
+			c[i] = Clone(item)
+		}
+		return c
+	default:
+		return v
+	}
+}

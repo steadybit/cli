@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/steadybit/cli/api"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
@@ -34,35 +33,18 @@ type Document = *output.Document
 
 const anotherExperimentRunning = "https://steadybit.com/problems/another-experiment-running-exception"
 
-func read(resp *http.Response, err error) ([]byte, *http.Response, error) {
-	if err != nil {
-		return nil, nil, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp, err
-	}
-	return body, resp, platform.Check(resp, body)
-}
-
 func jsonBody(document any) (io.Reader, error) {
 	b, err := json.Marshal(document)
 	return bytes.NewReader(b), err
 }
 
-func isStatus(err error, status int) bool {
-	var apiErr *platform.APIError
-	return errors.As(err, &apiErr) && apiErr.Status == status
-}
-
 func Fetch(ctx context.Context, c *platform.Client, key string) (Document, error) {
-	body, _, err := read(c.GetExperiment(ctx, key))
-	if isStatus(err, http.StatusNotFound) {
+	body, _, err := platform.Read(c.GetExperiment(ctx, key))
+	if platform.IsStatus(err, http.StatusNotFound) {
 		return nil, fmt.Errorf("Experiment %s not found.", key)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get the experiment. HTTP request failed: %w", err)
+		return nil, platform.Failed(err, "Failed to get the experiment. HTTP request failed.")
 	}
 	document, err := output.ParseDocument(body)
 	if err != nil {
@@ -194,12 +176,12 @@ func update(ctx context.Context, c *platform.Client, key string, document Docume
 	if err != nil {
 		return err
 	}
-	_, _, err = read(c.UpdateExperimentWithBody(ctx, key, "application/json", body))
-	if isStatus(err, http.StatusNotFound) {
+	_, _, err = platform.Read(c.UpdateExperimentWithBody(ctx, key, "application/json", body))
+	if platform.IsStatus(err, http.StatusNotFound) {
 		return fmt.Errorf("Experiment %s not found.", key)
 	}
 	if err != nil {
-		return fmt.Errorf("Failed to save the experiment. HTTP request failed: %w", err)
+		return platform.Failed(err, "Failed to save the experiment. HTTP request failed.")
 	}
 	return nil
 }
@@ -238,9 +220,9 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		if err != nil {
 			return err
 		}
-		_, resp, err := read(c.CreateOrUpdateExperimentWithBody(ctx, "application/json", body))
+		_, resp, err := platform.Read(c.CreateOrUpdateExperimentWithBody(ctx, "application/json", body))
 		if err != nil {
-			return fmt.Errorf("Failed to save the experiment. HTTP request failed: %w", err)
+			return platform.Failed(err, "Failed to save the experiment. HTTP request failed.")
 		}
 		key = keyFromLocation(resp)
 		if resp.StatusCode == http.StatusCreated {
@@ -264,11 +246,7 @@ type RunOptions struct {
 	Retries       int
 	RetryInterval int
 
-	Template    string
-	Team        string
-	Environment string
-	ExternalID  string
-	Placeholder map[string]string
+	TemplateOptions
 }
 
 type started struct {
@@ -358,7 +336,7 @@ func withRetries(o RunOptions, run func(parallel bool) (started, error)) (starte
 				continue
 			}
 		}
-		return result, fmt.Errorf("Failed to execute experiment: %w", err)
+		return result, platform.Failed(err, "Failed to execute experiment")
 	}
 }
 
@@ -380,7 +358,7 @@ func decodeStarted(body []byte, resp *http.Response, fallbackKey string) (starte
 }
 
 func runKey(ctx context.Context, c *platform.Client, key string, parallel, persist bool) (started, error) {
-	body, resp, err := read(c.ExecuteExperimentWithBody(ctx, key,
+	body, resp, err := platform.Read(c.ExecuteExperimentWithBody(ctx, key,
 		&api.ExecuteExperimentParams{AllowParallel: &parallel, ForcePersist: &persist}, "application/json", nil))
 	if err != nil {
 		return started{}, err
@@ -407,7 +385,7 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 	if err != nil {
 		return started{}, err
 	}
-	body, resp, err := read(c.SaveAndRunWithBody(ctx,
+	body, resp, err := platform.Read(c.SaveAndRunWithBody(ctx,
 		&api.SaveAndRunParams{AllowParallel: &parallel, ForcePersist: &persist}, "application/json", reqBody))
 	if err != nil {
 		return started{}, err
@@ -420,28 +398,22 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 }
 
 func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, parallel, persist bool) (started, error) {
-	if o.Team == "" {
-		return started{}, errors.New("--team is required to create an experiment from a template.")
+	id, err := templateID(o.Template)
+	if err != nil {
+		return started{}, err
 	}
-	var id openapi_types.UUID
-	if err := id.UnmarshalText([]byte(o.Template)); err != nil {
-		return started{}, fmt.Errorf("'%s' is not a template id: %w", o.Template, err)
+	create, err := createRequest(o.TemplateOptions)
+	if err != nil {
+		return started{}, err
 	}
-	placeholders := make([]api.ExperimentTemplatePlaceholderValueAO, 0, len(o.Placeholder))
-	for key, value := range o.Placeholder {
-		placeholders = append(placeholders, api.ExperimentTemplatePlaceholderValueAO{Key: key, Value: value})
+	request := api.CreateAndRunExperimentFromTemplateAO{
+		Team: create.Team, Environment: create.Environment, ExternalId: create.ExternalId,
+		Placeholders: create.Placeholders, ExperimentVariables: create.ExperimentVariables,
+		ExecutionVariables: variables(o.ExecutionVariable),
 	}
-	request := api.CreateAndRunExperimentFromTemplateAO{Team: o.Team, Placeholders: &placeholders}
-	if o.Environment != "" {
-		request.Environment = &o.Environment
-	}
-	if o.ExternalID != "" {
-		request.ExternalId = &o.ExternalID
-	}
-	reset := true
-	body, resp, err := read(c.SaveAndRunFromTemplate(ctx, id,
-		&api.SaveAndRunFromTemplateParams{ResetProperties: &reset, AllowParallel: &parallel, ForcePersist: &persist}, request))
-	if isStatus(err, http.StatusNotFound) {
+	body, resp, err := platform.Read(c.SaveAndRunFromTemplate(ctx, id,
+		&api.SaveAndRunFromTemplateParams{ResetProperties: &o.ResetProperties, AllowParallel: &parallel, ForcePersist: &persist}, request))
+	if platform.IsStatus(err, http.StatusNotFound) {
 		return started{}, fmt.Errorf("Experiment template %s not found.", o.Template)
 	}
 	if err != nil {
@@ -461,9 +433,9 @@ func wait(ctx context.Context, c *platform.Client, location string) error {
 	}
 	for {
 		time.Sleep(5 * time.Second)
-		body, _, err := read(c.Get(ctx, path))
+		body, _, err := platform.Read(c.Get(ctx, path))
 		if err != nil {
-			return fmt.Errorf("Failed to get experiment run: %w", err)
+			return platform.Failed(err, "Failed to get experiment run ")
 		}
 		var run struct {
 			ID     int64  `json:"id"`

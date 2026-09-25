@@ -25,6 +25,21 @@ type Document struct {
 	value *jsyaml.Map
 }
 
+// ParseValue reads any JSON or YAML value, such as a placeholders file that is a list.
+func ParseValue(content []byte) (any, error) {
+	if json.Valid(content) {
+		return decodeJSON(json.NewDecoder(bytes.NewReader(content)))
+	}
+	var node yaml.Node
+	if err := yaml.Unmarshal(content, &node); err != nil {
+		return nil, err
+	}
+	if node.Kind != yaml.DocumentNode || len(node.Content) != 1 {
+		return nil, nil
+	}
+	return toValue(node.Content[0])
+}
+
 // ParseDocument reads JSON or YAML; JSON is valid YAML, so one parser handles both.
 // Anchors, aliases and merge keys (`<<:`) are resolved, as js-yaml's load did.
 func ParseDocument(content []byte) (*Document, error) {
@@ -273,3 +288,6 @@ func resolve(node *yaml.Node) *yaml.Node {
 	}
 	return node
 }
+
+// IsJSON reports whether content is a JSON document, as JSON.parse would accept it.
+func IsJSON(content []byte) bool { return json.Valid(content) }

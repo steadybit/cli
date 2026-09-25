@@ -128,7 +128,7 @@ func Dump(ctx context.Context, c *platform.Client, o DumpOptions) error {
 // getJSON reads a response into target once the request has been checked.
 func getJSON(resp *http.Response, err error) func(target any) error {
 	return func(target any) error {
-		body, _, err := read(resp, err)
+		body, _, err := platform.Read(resp, err)
 		if err != nil {
 			return err
 		}
@@ -246,7 +246,7 @@ func dumpExperiment(ctx context.Context, c *platform.Client, key, dir string, da
 	ok := make([]bool, len(executions.Executions))
 	forEach(len(ok), executionConcurrency, func(i int) {
 		id := executions.Executions[i].ID
-		body, _, err := read(c.GetExperimentExecution(ctx, id, nil))
+		body, _, err := platform.Read(c.GetExperimentExecution(ctx, id, nil))
 		if err != nil {
 			return
 		}

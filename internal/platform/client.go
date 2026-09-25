@@ -188,7 +188,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			cancel()
 			if !idempotent[req.Method] || attempt >= 4 {
-				return nil, fmt.Errorf("failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
+				return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
 			}
 			time.Sleep(jitter(time.Duration(attempt) * time.Second))
 			continue
