@@ -18,13 +18,7 @@ You need a Steadybit account. You can create a free account [via our website](ht
 
 The CLI is a single binary for Linux, macOS and Windows, on amd64 and arm64.
 
-Via npm, which installs the binary for your platform (any Node.js from 18 on):
-
-```sh
-npm install -g steadybit
-```
-
-Or download the archive for your platform from the
+Download the archive for your platform from the
 [releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
 and put `steadybit` on your `PATH`:
 
@@ -32,6 +26,19 @@ and put `steadybit` on your `PATH`:
 curl -sL https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz | tar -xz steadybit
 sudo mv steadybit /usr/local/bin/
 ```
+
+With Go installed:
+
+```sh
+go install github.com/steadybit/cli/cmd/steadybit@latest
+```
+
+The CLI is also available as the [container image](#container-image) `steadybit/cli`, and
+in GitHub Actions through [`steadybit/cli`](#github-actions).
+
+Up to version 5, the CLI was installed with `npm install -g steadybit`. That package is no
+longer updated; uninstall it with `npm uninstall -g steadybit` and install the binary instead.
+Profiles in `~/.steadybit` keep working.
 
 Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
 
