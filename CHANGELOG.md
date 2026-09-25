@@ -35,6 +35,9 @@
 - `service-profile` commands to `list`, `get`, `apply` and `delete` service profiles.
 - `environment` commands to `list`, `get`, `apply` and `delete` environments, and
   `environment variable` to get, merge or replace their variables.
+- `team` commands to `list`, `get`, `apply` and `delete` teams, `team member` to list, add,
+  remove or replace their members, and `team environment` to do the same with the
+  environments they may use.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
