@@ -19,7 +19,9 @@
   step, with `--execution-variable` for values that apply to that run only. `--wait`,
   `--retries` and `--allowParallel` work as for any other run.
 - `template list` and `template get` find templates and their placeholders;
-  `template get --placeholders` writes a placeholders file to fill in.
+  `template get --placeholders` writes a placeholders file to fill in. `template apply`
+  and `template delete` manage templates as files in Git, and `template import` imports
+  templates from a connected hub.
 - `execution` commands for experiment runs: `get`, `cancel`, `property set` and
   `property add` to annotate a run, and `artifact list` and `artifact download` for the
   files its actions attached.

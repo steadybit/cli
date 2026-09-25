@@ -11,10 +11,29 @@ import (
 	"github.com/steadybit/cli/internal/template"
 )
 
-const typeHelp = `The output format ("json" or "yaml"). (default: "json" if the file ends in ".json", "yaml" otherwise.)`
+const (
+	typeHelp   = `The output format ("json" or "yaml"). (default: "json" if the file ends in ".json", "yaml" otherwise.)`
+	yesHelp    = "Skip the confirmation prompt. Not necessary when no TTY is attached."
+	templateID = "d7e65100-1d20-4980-be87-c351704910b8"
+	hubID      = "0194a7d4-0d1f-7b21-9c64-5b6e3c1f2a10"
+)
+
+// fileFlags adds the flags every `apply` takes.
+func fileFlags(cmd *cobra.Command, files *[]string, recursive *bool, what string) {
+	cmd.Flags().StringArrayVarP(files, "file", "f", nil, "The path to the "+what+" file or a directory containing multiple files.")
+	cmd.Flags().BoolVarP(recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
+	_ = cmd.MarkFlagRequired("file")
+	variadic(cmd, "file")
+}
+
+// outputFlags adds the flags every `get` takes.
+func outputFlags(cmd *cobra.Command, file, datatype *string, what string) {
+	cmd.Flags().StringVarP(file, "file", "f", "", "The path to write the "+what+" to.")
+	cmd.Flags().StringVarP(datatype, "type", "t", "", typeHelp)
+}
 
 func newTemplate() *cobra.Command {
-	cmd := &cobra.Command{Use: "template", Short: "Find experiment templates to create experiments from."}
+	cmd := &cobra.Command{Use: "template", Short: "Manage the experiment templates to create experiments from."}
 
 	var l template.ListOptions
 	list := &cobra.Command{
@@ -39,8 +58,8 @@ func newTemplate() *cobra.Command {
 		Short: "Get an experiment template. Output is written to file or stdout.",
 		Args:  cobra.NoArgs,
 		Example: examples(
-			"steadybit template get -i d7e65100-1d20-4980-be87-c351704910b8",
-			"steadybit template get -i d7e65100-1d20-4980-be87-c351704910b8 --placeholders -f values.yml",
+			"steadybit template get -i "+templateID+" -f template.yml",
+			"steadybit template get -i "+templateID+" --placeholders -f values.yml",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Get(ctx, c, g) }),
 	}
@@ -50,6 +69,42 @@ func newTemplate() *cobra.Command {
 	get.Flags().BoolVar(&g.Placeholders, "placeholders", false, "Only output the template placeholders, as a file to fill in and pass to --placeholders.")
 	_ = get.MarkFlagRequired("id")
 
-	cmd.AddCommand(list, get)
+	var a template.ApplyOptions
+	apply := &cobra.Command{
+		Use:     "apply",
+		Short:   "Create or update experiment templates from files. A file without an id creates a template, and the new id is written back to it.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit template apply -f template.yml", "steadybit template apply -f ./templates -R"),
+		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Apply(ctx, c, a) }),
+	}
+	fileFlags(apply, &a.Files, &a.Recursive, "template")
+
+	var d template.DeleteOptions
+	del := &cobra.Command{
+		Use:     "delete",
+		Short:   "Delete an experiment template. Service profiles lose it, and the experiments they provided from it are deleted.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit template delete -i " + templateID),
+		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Delete(ctx, c, d) }),
+	}
+	idFlag(del, &d.ID, "The experiment template id.")
+	del.Flags().BoolVar(&d.Yes, "yes", false, yesHelp)
+
+	var im template.ImportOptions
+	imp := &cobra.Command{
+		Use:     "import",
+		Short:   "Import experiment templates from a connected hub.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit template import --hub " + hubID + " --template " + templateID + " --overwrite"),
+		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Import(ctx, c, im) }),
+	}
+	imp.Flags().StringVar(&im.Hub, "hub", "", "The id of the hub, see `steadybit hub list`.")
+	imp.Flags().StringArrayVar(&im.Templates, "template", nil, "The ids of the hub's templates to import.")
+	imp.Flags().BoolVar(&im.Overwrite, "overwrite", false, "Replace templates that exist already. Without it, the import fails if any does.")
+	_ = imp.MarkFlagRequired("hub")
+	_ = imp.MarkFlagRequired("template")
+	variadic(imp, "template")
+
+	cmd.AddCommand(list, get, apply, del, imp)
 	return cmd
 }

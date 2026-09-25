@@ -7,13 +7,17 @@
 package resource
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/steadybit/cli/internal/experiment"
 	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/internal/prompt"
 )
 
 // Output writes to the file when one is given and to stdout otherwise, as JSON
@@ -103,7 +107,8 @@ func ApplyFiles(paths []string, recursive bool, what string, upsert func(file st
 		if err != nil {
 			return err
 		}
-		if existingID == nil || existingID == "" {
+		// Resources named by a key, like teams, have no id to write back.
+		if (existingID == nil || existingID == "") && result.ID != "" {
 			doc.Value().SetFirst("id", result.ID)
 			if err := os.WriteFile(file, []byte(format(doc, datatype)), 0o644); err != nil {
 				return err
@@ -118,4 +123,34 @@ func CreatedOrUpdated(created bool) string {
 		return "created"
 	}
 	return "updated"
+}
+
+// Body sends a document or value as the JSON the platform expects.
+func Body(value any) io.Reader { return bytes.NewReader([]byte(jsyaml.CompactJSON(value))) }
+
+// Optional leaves an empty filter out of the request.
+func Optional(values []string) *[]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return &values
+}
+
+// UUID parses an id; a malformed one cannot name anything, so callers report it as not found.
+func UUID(id string) (openapi_types.UUID, bool) {
+	var u openapi_types.UUID
+	return u, u.UnmarshalText([]byte(id)) == nil
+}
+
+// Confirmed asks before something that cannot be undone, unless --yes was given.
+// Without a terminal, as in a pipeline, it goes ahead, as `experiment run` does.
+func Confirmed(yes bool, question string) (bool, error) {
+	if yes {
+		return true, nil
+	}
+	ok, err := prompt.Confirm(question, false, true)
+	if err == nil && !ok {
+		fmt.Println("Aborted.")
+	}
+	return ok, err
 }

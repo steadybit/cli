@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-// Package template implements `template list` and `template get`.
+// Package template implements the `template` commands.
 package template
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -17,6 +18,18 @@ import (
 	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/table"
 )
+
+// Who created and edited a template cannot be sent back. The version is dropped as
+// `service get` drops it, so that an edit in the UI does not turn the next apply into a
+// conflict.
+var readOnly = []string{"created", "createdBy", "edited", "editedBy", "version"}
+
+func notFoundOr(err error, id, format string) error {
+	if platform.IsStatus(err, http.StatusNotFound) {
+		return fmt.Errorf("Experiment template %s not found.", id)
+	}
+	return platform.Failed(err, format, id)
+}
 
 type ListOptions struct {
 	Tags, TargetTypes, Actions, Search []string
@@ -94,11 +107,86 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 		}
 		doc = output.NewDocument(values)
 	}
-	if err := resource.Output(doc, o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
 		fmt.Printf("Experiment template %s written to %s.\n", o.ID, o.File)
 	}
+	return nil
+}
+
+type ApplyOptions struct {
+	Files     []string
+	Recursive bool
+}
+
+func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
+	return resource.ApplyFiles(o.Files, o.Recursive, "template", func(file string, doc *output.Document) (resource.Applied, error) {
+		title, _ := doc.Get("templateTitle")
+		if title == "" {
+			return resource.Applied{}, fmt.Errorf("Template file '%s' does not name a templateTitle.", file)
+		}
+		var saved struct{ ID, TemplateTitle string }
+		resp, err := c.UpsertExperimentTemplateWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err = platform.Decode(resp, err, &saved)
+		if err != nil {
+			return resource.Applied{}, platform.Failed(err, "Failed to save experiment template %s", title)
+		}
+		created := resp.StatusCode == http.StatusCreated
+		fmt.Printf("Experiment template %s (%s) %s.\n", saved.TemplateTitle, saved.ID, resource.CreatedOrUpdated(created))
+		return resource.Applied{ID: saved.ID, Created: created}, nil
+	})
+}
+
+type DeleteOptions struct {
+	ID  string
+	Yes bool
+}
+
+func Delete(ctx context.Context, c *platform.Client, o DeleteOptions) error {
+	id, ok := resource.UUID(o.ID)
+	if !ok {
+		return fmt.Errorf("Experiment template %s not found.", o.ID)
+	}
+	// Deleting a template also deletes the experiments service profiles provided from it.
+	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Delete experiment template %s, and the service experiments provided from it?", o.ID)); !ok || err != nil {
+		return err
+	}
+	if _, _, err := platform.Read(c.DeleteExperimentTemplate(ctx, id)); err != nil {
+		return notFoundOr(err, o.ID, "Failed to delete experiment template %s")
+	}
+	fmt.Printf("Experiment template %s deleted.\n", o.ID)
+	return nil
+}
+
+type ImportOptions struct {
+	Hub       string
+	Templates []string
+	Overwrite bool
+}
+
+func Import(ctx context.Context, c *platform.Client, o ImportOptions) error {
+	hub, ok := resource.UUID(o.Hub)
+	if !ok {
+		return fmt.Errorf("Hub %s not found.", o.Hub)
+	}
+	ids := make([]openapi_types.UUID, len(o.Templates))
+	for i, t := range o.Templates {
+		if ids[i], ok = resource.UUID(t); !ok {
+			return fmt.Errorf("Experiment template %s not found.", t)
+		}
+	}
+	request := api.ExperimentTemplatesImportAO{HubId: hub, TemplateIds: &ids}
+	_, _, err := platform.Read(c.ImportFromHub(ctx, &api.ImportFromHubParams{Overwrite: &o.Overwrite}, request))
+	switch {
+	case platform.IsStatus(err, http.StatusConflict):
+		return errors.New("Some of the templates exist already. Pass --overwrite to replace them.")
+	case platform.IsStatus(err, http.StatusNotFound):
+		return fmt.Errorf("Hub %s not found.", o.Hub)
+	case err != nil:
+		return platform.Failed(err, "Failed to import experiment templates from hub %s", o.Hub)
+	}
+	fmt.Printf("%d experiment template(s) imported from hub %s.\n", len(o.Templates), o.Hub)
 	return nil
 }
