@@ -90,7 +90,57 @@ steadybit experiment dump -d ./dump --team ADM WEBHOOK
 Validate advice status
 
 ```bash
-steadybit validate-status -e "Global" -q "k8s.cluster-name=dev-demo and k8s.namespace=steadybit-demo"
+steadybit advice validate-status -e "Global" -q "k8s.cluster-name=dev-demo and k8s.namespace=steadybit-demo"
+```
+
+Every command shows examples with `--help`, e.g. `steadybit schedule create --help`.
+
+### Experiments from templates
+
+Find a template and the placeholders it asks for:
+
+```bash
+steadybit template list --search kubernetes
+steadybit template get -i <template-id> --placeholders -f values.yml
+```
+
+Create an experiment from it, or update the one created before with the same external id:
+
+```bash
+steadybit experiment apply --template <template-id> --team ADM --environment Global \
+  --external-id shop-latency --placeholders values.yml -p CLUSTER=prod
+```
+
+Create and run it in one step:
+
+```bash
+steadybit experiment run --template <template-id> --team ADM --placeholders values.yml
+```
+
+### Experiment runs
+
+```bash
+steadybit execution get -i 1234 -t json
+steadybit execution cancel -i 1234
+steadybit execution property set -i 1234 -k approvedBy --value "Jane Doe"
+steadybit execution artifact list -i 1234
+steadybit execution artifact download -i 1234 -d ./artifacts
+```
+
+### Experiment schedules
+
+```bash
+steadybit schedule create -k ADM-1 --cron "0 0 9 ? * MON-FRI" --timezone Europe/Berlin
+steadybit schedule list --team ADM
+steadybit schedule disable -i <schedule-id>
+```
+
+Schedules can be kept in Git like experiments. `apply` writes the id of a new schedule back
+into its file, so that applying it again updates it:
+
+```bash
+steadybit schedule get -i <schedule-id> -f schedule.yml
+steadybit schedule apply -f ./schedules -R
 ```
 
 ## Container Image

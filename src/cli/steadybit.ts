@@ -7,6 +7,7 @@ import colors from '../colors.ts';
 import { satisfies } from 'semver';
 import { enableRequestLogging } from '../api/http.ts';
 import { packageJson } from '../packageJson.ts';
+import { withExamples } from './help.ts';
 
 const requiredNodejsVersion = packageJson.engines.node;
 const actualNodejsVersion = process.version;
@@ -27,7 +28,7 @@ using the Node Version Manager (NVM):
   process.exit(1);
 }
 
-new Command()
+const program = new Command()
   .version(packageJson.version)
   .addOption(new Option('-v, --verbose', 'Enable verbose logging').default(false))
   .hook('preSubcommand', thisCommand => {
@@ -37,5 +38,15 @@ new Command()
   })
   .command('advice', 'Show/verify advice status.')
   .command('config', 'Show/modify the CLI configuration and authentication profiles.')
+  .command('execution', 'Inspect, cancel and annotate experiment runs, and download their artifacts.')
   .command('experiment', 'Check and run experiments.')
-  .parseAsync(process.argv);
+  .command('schedule', 'Schedule experiments.')
+  .command('template', 'Find experiment templates to create experiments from.');
+
+withExamples(program, [
+  'steadybit experiment run -f experiment.yml',
+  'steadybit schedule list --team ADM',
+  'steadybit experiment --help',
+]);
+
+program.parseAsync(process.argv);
