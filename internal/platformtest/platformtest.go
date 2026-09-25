@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/steadybit/cli/internal/platform"
 )
@@ -57,6 +58,8 @@ type Platform struct {
 // New starts a fake platform and points the CLI configuration at it.
 func New(t *testing.T) *Platform {
 	t.Helper()
+	// The fake platform meters nothing, and a suite would soon exhaust the real allowance.
+	platform.SetLimiter(platform.NewRateLimiter(platform.Bucket{Burst: 1 << 30, RefillTokens: 1 << 30, RefillInterval: time.Second}, nil))
 	p := &Platform{t: t, routes: map[string]func(Request) Reply{}}
 	p.server = httptest.NewServer(http.HandlerFunc(p.serve))
 	t.Cleanup(p.server.Close)
@@ -115,12 +118,16 @@ func (p *Platform) serve(w http.ResponseWriter, r *http.Request) {
 	request := Request{Method: r.Method, Path: r.URL.EscapedPath(), Query: r.URL.Query(), Header: r.Header, Body: body}
 	p.mu.Lock()
 	p.requests = append(p.requests, request)
+	// The most specific route answers: `/schedules/v2` over `/schedules/*`. Map order is
+	// random, so taking the first match made tests pass or fail by chance.
 	var handler func(Request) Reply
+	best := -1
 	for route, h := range p.routes {
 		method, path, _ := strings.Cut(route, " ")
 		if method == r.Method && matches(path, request.Path) {
-			handler = h
-			break
+			if exact := strings.Count(path, "/") - strings.Count(path, "*"); exact > best {
+				handler, best = h, exact
+			}
 		}
 	}
 	p.mu.Unlock()

@@ -25,3 +25,10 @@ func TestTakesColumnsFromTheRowsWhenNoneAreDeclared(t *testing.T) {
 
 	assert.Equal(t, "┌────────┬────────┐\n│ target │ advice │\n├────────┼────────┤\n│      a │      b │\n└────────┴────────┘", tbl.Render())
 }
+
+func TestColouredCellsKeepTheColumnsAligned(t *testing.T) {
+	tbl := New(Column{Name: "s", Title: "State", Alignment: Left})
+	tbl.AddRow(Default, Cell("s", "\x1b[32mcompleted\x1b[0m"))
+
+	assert.Equal(t, "┌───────────┐\n│ State     │\n├───────────┤\n│ \x1b[32mcompleted\x1b[0m │\n└───────────┘", tbl.Render())
+}

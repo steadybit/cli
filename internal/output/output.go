@@ -19,6 +19,10 @@ import (
 var colorsEnabled = os.Getenv("NO_COLOR") == "" &&
 	(os.Getenv("FORCE_COLOR") != "" || term.IsTerminal(int(os.Stdout.Fd())))
 
+// ColorsEnabled reports whether output is coloured: only on a terminal, unless
+// NO_COLOR or FORCE_COLOR say otherwise.
+func ColorsEnabled() bool { return colorsEnabled }
+
 func style(code, s string) string {
 	if !colorsEnabled {
 		return s

@@ -8,14 +8,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/steadybit/cli/internal/experiment"
+	"github.com/steadybit/cli/internal/interrupt"
 	"github.com/steadybit/cli/internal/jsyaml"
+	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/platformtest"
+	"github.com/steadybit/cli/internal/prompt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -305,6 +309,247 @@ func TestDumpRefusesAnUnknownTeam(t *testing.T) {
 	err := experiment.Dump(ctx, p.Client, experiment.DumpOptions{Directory: t.TempDir(), Teams: []string{"a", "nope"}})
 
 	assert.EqualError(t, err, "No accessible team with key NOPE. Available: A, B")
+}
+
+func finished(state, reason string) platformtest.Reply {
+	return platformtest.Reply{JSON: map[string]any{
+		"id": 1, "key": "TST-1", "name": "Verify TTR", "state": state, "reason": reason,
+		"started": "2026-09-25T10:00:00Z", "ended": "2026-09-25T10:00:42Z",
+		"steps": []any{
+			map[string]any{"stepType": "wait", "state": "COMPLETED", "parameters": map[string]any{"duration": "10s"}, "started": "2026-09-25T10:00:00Z", "ended": "2026-09-25T10:00:10Z"},
+			map[string]any{"stepType": "action", "actionId": "com.steadybit.extension_http.check", "state": state, "reason": reason, "started": "2026-09-25T10:00:10Z", "ended": "2026-09-25T10:00:42Z"},
+		},
+	}}
+}
+
+func TestRunWritesAJUnitReport(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", finished("FAILED", "HTTP check failed"))
+	report := filepath.Join(t.TempDir(), "report.xml")
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, Report: report})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-1 (#1) failed, reason: HTTP check failed")
+	content, _ := os.ReadFile(report)
+	assert.Equal(t, `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="steadybit" tests="2" failures="1" errors="0" time="42.000">
+  <testsuite name="TST-1 Verify TTR" tests="2" failures="1" errors="0" skipped="0" time="42.000" timestamp="2026-09-25T10:00:00Z">
+    <properties>
+      <property name="executionId" value="1"></property>
+      <property name="uiLocation" value="https://ui/TST-1"></property>
+    </properties>
+    <testcase classname="TST-1" name="1. wait 10s" time="10.000"></testcase>
+    <testcase classname="TST-1" name="2. com.steadybit.extension_http.check" time="32.000">
+      <failure message="failed: HTTP check failed" type="FAILED">HTTP check failed</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+`, string(content))
+	// Only a report asks the platform for the steps.
+	assert.Equal(t, []string{"steps"}, p.Requests("GET /api/experiments/executions/1")[0].Query["fields"])
+}
+
+func TestRunWritesAJSONReportAndAGitHubSummary(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", finished("COMPLETED", ""))
+	dir := t.TempDir()
+	summary := filepath.Join(dir, "summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", summary)
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, Report: filepath.Join(dir, "r.json")})
+	})
+
+	require.NoError(t, err)
+	report, _ := os.ReadFile(filepath.Join(dir, "r.json"))
+	assert.Contains(t, string(report), `"state": "COMPLETED"`)
+	content, _ := os.ReadFile(summary)
+	assert.Equal(t, "### ✅ Steadybit experiment TST-1 · Verify TTR\n\nRun [#1](https://ui/TST-1) completed after 42s\n\n| # | Step | State | Duration |\n|---|---|---|---|\n| 1 | wait 10s | completed | 10s |\n| 2 | com.steadybit.extension_http.check | completed | 32s |\n\n", string(content))
+}
+
+func TestWaitingWithoutAReportDoesNotAskForSteps(t *testing.T) {
+	p := platformtest.New(t)
+	t.Setenv("GITHUB_STEP_SUMMARY", "")
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", finished("COMPLETED", ""))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true})
+	})
+
+	require.NoError(t, err)
+	assert.Nil(t, p.Requests("GET /api/experiments/executions/1")[0].Query["fields"])
+}
+
+func TestATimeoutCancelsTheRun(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "RUNNING"}})
+	p.Reply("POST /api/experiments/executions/1/cancel", platformtest.Reply{Status: http.StatusAccepted})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, WaitOptions: experiment.WaitOptions{Timeout: time.Nanosecond}})
+	})
+
+	assert.ErrorIs(t, err, experiment.ErrTimedOut)
+	assert.ErrorContains(t, err, "Experiment TST-1 (#1) did not end within 1ns and was canceled")
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+}
+
+func TestShowStepsPrintsEachChange(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", finished("COMPLETED", ""))
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, WaitOptions: experiment.WaitOptions{ShowSteps: true}})
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Current run state: completed\n  step 1/2 wait 10s: completed\n  step 2/2 com.steadybit.extension_http.check: completed\n")
+}
+
+func TestAReportNeedsWaiting(t *testing.T) {
+	err := experiment.Run(ctx, nil, experiment.RunOptions{Key: "TST-1", Yes: true, Report: "r.xml"})
+
+	assert.EqualError(t, err, "--report needs to wait for the runs to end; remove --no-wait.")
+}
+
+// An aborted pipeline must not leave the attack it started running on its own.
+func TestAnInterruptCancelsTheRunItWaitsFor(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	polled := make(chan struct{}, 100)
+	var canceled atomic.Bool
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		polled <- struct{}{}
+		if canceled.Load() {
+			return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "CANCELED"}}
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "RUNNING"}}
+	})
+	p.Handle("POST /api/experiments/executions/1/cancel", func(platformtest.Request) platformtest.Reply {
+		canceled.Store(true)
+		return platformtest.Reply{Status: http.StatusAccepted}
+	})
+	go func() {
+		<-polled
+		<-polled // the run id is known once the second poll has been answered
+		interrupt.RunHandlers(os.Interrupt)
+	}()
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-1 (#1) canceled")
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+}
+
+func TestKeepRunningOnInterruptLeavesTheRunAlone(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var polls atomic.Int32
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		if polls.Add(1) == 2 {
+			interrupt.RunHandlers(os.Interrupt)
+		}
+		state := "RUNNING"
+		if polls.Load() >= 3 {
+			state = "COMPLETED"
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state}}
+	})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, WaitOptions: experiment.WaitOptions{KeepRunningOnInterrupt: true}})
+	})
+
+	require.NoError(t, err)
+	assert.Empty(t, p.Requests("POST /api/experiments/executions/1/cancel"))
+}
+
+func TestJQFiltersWhatGetPrints(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/TST-1", platformtest.Reply{Body: design})
+	output.JQ = ".lanes[0].steps[0].parameters.duration"
+	t.Cleanup(func() { output.JQ = "" })
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Get(ctx, p.Client, experiment.GetOptions{Key: "TST-1"}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "10s\n", out)
+}
+
+func TestInitAsksForThePlaceholdersAndWritesTheExperiment(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/templates", platformtest.Reply{JSON: map[string]any{"templates": []any{
+		map[string]any{"id": templateID, "templateTitle": "Checkout survives latency"},
+	}}})
+	p.Reply("GET /api/experiments/templates/"+templateID, platformtest.Reply{JSON: map[string]any{
+		"templateTitle": "Checkout survives latency",
+		"placeholders":  []any{map[string]any{"key": "DELAY", "name": "Delay", "description": "How slow the network gets."}},
+	}})
+	p.Reply("POST /api/experiments/templates/"+templateID+"/experiment-create", platformtest.Reply{Status: http.StatusCreated, Headers: map[string]string{"Location": p.URL + "/api/experiments/ADM-7"}})
+	p.Reply("GET /api/experiments/ADM-7", platformtest.Reply{Body: `{"key":"ADM-7","name":"Checkout survives latency","team":"ADM"}`})
+	experiment.Interactive = func() bool { return true }
+	t.Cleanup(func() { experiment.Interactive = func() bool { return false } })
+	file := filepath.Join(t.TempDir(), "checkout.yml")
+	// search, template number, placeholder, team, environment (default), file
+	prompt.UseInput(strings.NewReader("checkout\n1\n500ms\nADM\n\n" + file + "\n"))
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Init(ctx, p.Client, experiment.InitOptions{}) })
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "How slow the network gets.\n? Delay (DELAY): ")
+	assert.Contains(t, out, "Experiment ADM-7 created. Run it with:\n\n    steadybit experiment run -f "+file+"\n")
+	assert.Equal(t, map[string]any{"team": "ADM", "environment": "Global", "placeholders": []any{map[string]any{"key": "DELAY", "value": "500ms"}}},
+		p.Requests("POST /api/experiments/templates/" + templateID + "/experiment-create")[0].JSON(t))
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "key: ADM-7\nname: Checkout survives latency\nteam: ADM\n", string(content))
+}
+
+func TestInitNeedsATerminal(t *testing.T) {
+	experiment.Interactive = func() bool { return false }
+
+	err := experiment.Init(ctx, nil, experiment.InitOptions{})
+
+	assert.ErrorContains(t, err, "needs a terminal. In scripts, use `experiment apply --template`.")
+}
+
+// The report shows the run once the platform has stopped it, not the moment it was cut.
+func TestATimedOutRunIsReportedAsCanceled(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var canceled atomic.Bool
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		state := "RUNNING"
+		if canceled.Load() {
+			state = "CANCELED"
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state,
+			"steps": []any{map[string]any{"stepType": "WAIT", "state": state}}}}
+	})
+	p.Handle("POST /api/experiments/executions/1/cancel", func(platformtest.Request) platformtest.Reply {
+		canceled.Store(true)
+		return platformtest.Reply{Status: http.StatusAccepted}
+	})
+	report := filepath.Join(t.TempDir(), "r.xml")
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, Report: report, WaitOptions: experiment.WaitOptions{Timeout: time.Nanosecond}})
+	})
+
+	assert.ErrorIs(t, err, experiment.ErrTimedOut)
+	content, _ := os.ReadFile(report)
+	assert.Contains(t, string(content), `<testcase classname="TST-1" name="1. wait" time="0.000">`)
+	assert.Contains(t, string(content), `<testcase classname="TST-1" name="run" time="0.000">
+      <error message="canceled: did not end within 1ns" type="CANCELED">did not end within 1ns</error>`)
+	assert.Contains(t, string(content), `errors="1" skipped="1"`)
 }
 
 func TestDelete(t *testing.T) {

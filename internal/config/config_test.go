@@ -62,3 +62,21 @@ func setHome(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 }
+
+func TestProfileOverridePicksANamedProfile(t *testing.T) {
+	setHome(t)
+	require.NoError(t, AddProfile(Profile{Name: "prod", APIAccessToken: "p"}))
+	require.NoError(t, AddProfile(Profile{Name: "dev", APIAccessToken: "d", BaseURL: "https://dev"}))
+	os.Unsetenv("STEADYBIT_TOKEN")
+	os.Unsetenv("STEADYBIT_URL")
+	ProfileOverride = "dev"
+	t.Cleanup(func() { ProfileOverride = "" })
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, Configuration{APIAccessToken: "d", BaseURL: "https://dev"}, cfg)
+	ProfileOverride = "stage"
+	_, err = Load()
+	assert.EqualError(t, err, "No profile named stage. Available: prod, dev")
+}

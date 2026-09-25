@@ -7,6 +7,7 @@ package table
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mattn/go-runewidth"
@@ -82,8 +83,15 @@ func (c Column) title() string {
 	return c.Name
 }
 
-func pad(s string, width int, a Alignment) string {
-	gap := strings.Repeat(" ", width-runewidth.StringWidth(s))
+// ansi matches colour codes, which take no room on screen.
+var ansi = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// width is how many columns s takes on screen: wide characters count twice, colour
+// codes not at all.
+func width(s string) int { return runewidth.StringWidth(ansi.ReplaceAllString(s, "")) }
+
+func pad(s string, w int, a Alignment) string {
+	gap := strings.Repeat(" ", w-width(s))
 	if a == Left {
 		return s + gap
 	}
@@ -103,9 +111,9 @@ func colored(s string, c Color) string {
 func (t *Table) Render() string {
 	widths := make([]int, len(t.columns))
 	for i, c := range t.columns {
-		widths[i] = runewidth.StringWidth(c.title())
+		widths[i] = width(c.title())
 		for _, r := range t.rows {
-			widths[i] = max(widths[i], runewidth.StringWidth(r.cells[c.Name]))
+			widths[i] = max(widths[i], width(r.cells[c.Name]))
 		}
 	}
 	line := func(left, middle, right string) string {

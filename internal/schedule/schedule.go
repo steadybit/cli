@@ -7,6 +7,7 @@ package schedule
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -42,6 +43,7 @@ func optional(values []string) *[]string {
 
 type ListOptions struct {
 	Teams, Experiments []string
+	Type               string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
@@ -55,8 +57,15 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		AllowParallel *bool   `json:"allowParallel"`
 	}
 	resp, err := c.GetAllSchedulesV2(ctx, &api.GetAllSchedulesV2Params{Team: optional(o.Teams), Experiment: optional(o.Experiments)})
-	if _, err := platform.Decode(resp, err, &schedules); err != nil {
+	var raw []json.RawMessage
+	if _, err := platform.Decode(resp, err, &raw); err != nil {
 		return platform.Failed(err, "Failed to get the experiment schedules")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
+	}
+	if err := resource.DecodeEach(raw, &schedules); err != nil {
+		return err
 	}
 	if len(schedules) == 0 {
 		fmt.Println("No experiment schedules found.")

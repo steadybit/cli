@@ -143,7 +143,10 @@ func reportProperty(err error, operation string, o PropertyOptions) error {
 }
 
 type Artifact struct {
-	Step, Target, TargetExecutionID, ArtifactID string
+	Step              string `json:"step"`
+	Target            string `json:"target"`
+	TargetExecutionID string `json:"targetExecutionId"`
+	ArtifactID        string `json:"artifactId"`
 }
 
 func str(m *jsyaml.Map, key string) string {
@@ -198,12 +201,21 @@ func Collect(run *jsyaml.Map) []Artifact {
 	return artifacts
 }
 
-func ListArtifacts(ctx context.Context, c *platform.Client, id int64) error {
+func ListArtifacts(ctx context.Context, c *platform.Client, id int64, explicitType string) error {
 	doc, err := Fetch(ctx, c, id)
 	if err != nil {
 		return err
 	}
 	artifacts := Collect(doc.Value())
+	if resource.Machine(explicitType) {
+		raw := []byte("[]")
+		if len(artifacts) > 0 {
+			if raw, err = json.Marshal(artifacts); err != nil {
+				return err
+			}
+		}
+		return resource.PrintJSONValue(raw, explicitType)
+	}
 	if len(artifacts) == 0 {
 		fmt.Printf("Experiment run %d has no artifacts.\n", id)
 		return nil

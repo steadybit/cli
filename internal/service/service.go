@@ -54,13 +54,14 @@ func optional(values []string) *[]string {
 
 type ListOptions struct {
 	Teams, Environments, Experiments []string
+	Type                             string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 	type summary struct {
 		ID, Name, Team, Environment string
 	}
-	services, err := platform.AllPages[summary](func(page, size int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		return c.GetServiceList(ctx, &api.GetServiceListParams{
 			TeamKey: optional(o.Teams), EnvironmentName: optional(o.Environments), ExperimentKey: optional(o.Experiments),
 			Page: api.PageRequestAO{Page: &page, Size: &size},
@@ -68,6 +69,13 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 	})
 	if err != nil {
 		return platform.Failed(err, "Failed to get the services")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
+	}
+	var services []summary
+	if err := resource.DecodeEach(raw, &services); err != nil {
+		return err
 	}
 	if len(services) == 0 {
 		fmt.Println("No services found.")
@@ -196,7 +204,7 @@ func Risk(ctx context.Context, c *platform.Client, o RiskOptions) error {
 		riskText = jsyaml.NumberString(n)
 	}
 
-	if o.Type != "" {
+	if resource.Machine(o.Type) {
 		if err := resource.Output(doc, "", o.Type); err != nil {
 			return err
 		}
@@ -253,6 +261,7 @@ func number(m *jsyaml.Map, key string) any {
 type ExperimentListOptions struct {
 	ID                string
 	Categories, Types []string
+	Type              string
 }
 
 func ListExperiments(ctx context.Context, c *platform.Client, o ExperimentListOptions) error {
@@ -274,11 +283,18 @@ func ListExperiments(ctx context.Context, c *platform.Client, o ExperimentListOp
 		Category        string  `json:"category"`
 		AssociationType string  `json:"associationType"`
 	}
-	experiments, err := platform.AllPages[entry](func(page, size int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		return c.GetServiceExperiments(ctx, id, &api.GetServiceExperimentsParams{Category: optional(o.Categories), Type: types, Page: api.PageRequestAO{Page: &page, Size: &size}})
 	})
 	if err != nil {
 		return notFoundOr(err, o.ID, "Failed to get the experiments of service %s")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
+	}
+	var experiments []entry
+	if err := resource.DecodeEach(raw, &experiments); err != nil {
+		return err
 	}
 	if len(experiments) == 0 {
 		if len(o.Categories) > 0 || len(o.Types) > 0 {

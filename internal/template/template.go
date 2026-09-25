@@ -6,6 +6,7 @@ package template
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -33,6 +34,7 @@ func notFoundOr(err error, id, format string) error {
 
 type ListOptions struct {
 	Tags, TargetTypes, Actions, Search []string
+	Type                               string
 }
 
 func optional(values []string) *[]string {
@@ -43,17 +45,26 @@ func optional(values []string) *[]string {
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
-	var summaries struct {
-		Templates []struct {
-			ID            string `json:"id"`
-			TemplateTitle string `json:"templateTitle"`
-		} `json:"templates"`
+	var raw struct {
+		Templates []json.RawMessage `json:"templates"`
 	}
 	resp, err := c.GetExperimentTemplates(ctx, &api.GetExperimentTemplatesParams{
 		Tag: optional(o.Tags), TargetType: optional(o.TargetTypes), Action: optional(o.Actions), FreeTextPhrases: optional(o.Search),
 	})
-	if _, err := platform.Decode(resp, err, &summaries); err != nil {
+	if _, err := platform.Decode(resp, err, &raw); err != nil {
 		return platform.Failed(err, "Failed to get the experiment templates")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw.Templates, o.Type, nil)
+	}
+	var summaries struct {
+		Templates []struct {
+			ID            string `json:"id"`
+			TemplateTitle string `json:"templateTitle"`
+		}
+	}
+	if err := resource.DecodeEach(raw.Templates, &summaries.Templates); err != nil {
+		return err
 	}
 	if len(summaries.Templates) == 0 {
 		fmt.Println("No experiment templates found.")

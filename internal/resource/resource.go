@@ -25,6 +25,10 @@ import (
 // Output writes to the file when one is given and to stdout otherwise, as JSON
 // indented by two, or YAML.
 func Output(doc *output.Document, file, explicitType string) error {
+	// --jq filters what would be printed; a file is written as asked.
+	if output.JQ != "" && file == "" {
+		return output.ApplyJQ(os.Stdout, jsyaml.CompactJSON(doc.Value()), output.JQ)
+	}
 	datatype, err := output.ResolveDatatype(explicitType, file)
 	if err != nil {
 		return err

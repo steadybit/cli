@@ -121,6 +121,13 @@ var (
 	sharedLimiterOnce sync.Once
 )
 
+// SetLimiter replaces the shared limiter. Tests use it so that a suite's requests are
+// not paced to the platform's allowance.
+func SetLimiter(l *RateLimiter) {
+	sharedLimiterOnce.Do(func() {})
+	sharedLimiter = l
+}
+
 // Limiter is built on first use, so that a command that sends nothing never reads, or
 // complains about, the environment.
 func Limiter() *RateLimiter {

@@ -11,7 +11,27 @@
   before.
 - Writing a new experiment's key back into a YAML file no longer rewrites the file: the key
   is added at the top and comments, anchors and formatting are kept.
-- Shell completion: `steadybit completion bash|zsh|fish|powershell`.
+- Shell completion: `steadybit completion bash|zsh|fish|powershell`, which completes
+  experiment keys, team keys and the ids of templates, schedules, services and profiles
+  from the platform.
+- **Interrupting `experiment run --wait` now cancels the run it started**, before exiting
+  with 130 (Ctrl-C) or 143 (SIGTERM, as CI runners send when a job is cancelled), so an
+  aborted pipeline no longer leaves an attack running. `--keep-running-on-interrupt` keeps
+  the previous behaviour.
+- `experiment run --wait` gains `--timeout` (cancel and fail a run that takes too long),
+  `--report` (a JUnit report with a test case per step, or JSON) and `--show-steps`. In
+  GitHub Actions a summary of every run is added to the job summary.
+- `diff` for experiments, schedules, services and service profiles shows how files differ
+  from the platform, and exits with 2 when they do; `apply --dry-run` reports what an
+  apply would change.
+- `export --team X -d dir`, `apply -d dir` and `diff -d dir` keep a team's experiments,
+  schedules, services and custom service profiles in Git as one project.
+- Every listing prints the platform's items with `-t json` or `-t yaml`, and `--jq` filters
+  the JSON any command prints, without jq installed.
+- `execution watch` follows a run live; `experiment init` creates an experiment from a
+  template by asking for its placeholders.
+- `--profile <name>` uses a configured profile for one command.
+- A GitHub Action, `uses: steadybit/cli@v6`, installs the CLI on a runner.
 - `template apply` and `template delete` manage experiment templates as files in Git, and
   `template import` imports templates from a connected hub.
 - `environment` commands to `list`, `get`, `apply` and `delete` environments, and
