@@ -5,11 +5,15 @@
 import { Command } from 'commander';
 
 import { show } from '../config/show.ts';
+import { withExamples } from './help.ts';
 
 const program = new Command();
 
 program.command('profile', 'Configure authentication profiles.');
 
-program.command('show').description('Show the active CLI configuration. Warning: Prints secrets!').action(show);
+withExamples(
+  program.command('show').description('Show the active CLI configuration. Warning: Prints secrets!').action(show),
+  ['steadybit config show']
+);
 
 program.parseAsync(process.argv);

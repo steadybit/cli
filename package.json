@@ -23,8 +23,9 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "verify": "npm run verify:typecheck && npm run verify:unit-test && npm run verify:lint && npm run prettier-check",
+    "verify": "npm run verify:typecheck && npm run verify:api-types && npm run verify:unit-test && npm run verify:lint && npm run prettier-check",
     "verify:typecheck": "tsc --noEmit",
+    "verify:api-types": "node scripts/api-spec.mjs check",
     "verify:unit-test": "vitest run",
     "verify:lint": "eslint .",
     "prettier-check": "prettier . --check",
@@ -33,7 +34,10 @@
     "build:ts": "tsc -p tsconfig.build.json",
     "build:permissions": "chmod 755 dist/cli/*.js",
     "ci": "npm run verify && npm run build",
-    "prepublishOnly": "npm run verify && npm run build"
+    "prepublishOnly": "npm run verify && npm run build",
+    "api:fetch-spec": "node scripts/api-spec.mjs fetch",
+    "api:generate": "node scripts/api-spec.mjs generate",
+    "api:update": "npm run api:fetch-spec && npm run api:generate && npm run verify:typecheck"
   },
   "engines": {
     "node": ">=22.13.0"
@@ -60,9 +64,15 @@
     "eslint": "^10.8.0",
     "globals": "^17.8.0",
     "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }

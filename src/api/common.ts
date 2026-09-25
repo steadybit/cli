@@ -5,13 +5,31 @@ import { getConfiguration } from '../config/index.ts';
 import { abortExecution } from '../errors.ts';
 import { packageJson } from '../packageJson.ts';
 
-export async function toUrl(path: string, queryParameters?: Record<string, string>): Promise<string> {
+export type QueryParameters = Record<string, string | string[] | undefined>;
+
+export async function toUrl(path: string, queryParameters?: QueryParameters): Promise<string> {
   const config = await getConfiguration();
   let url = isAbsoluteUrl(path) ? onConfiguredOrigin(path, config.baseUrl) : `${config.baseUrl}${path}`;
-  if (queryParameters) {
-    url = `${url}${url.includes('?') ? '&' : '?'}${new URLSearchParams(queryParameters).toString()}`;
+  const query = toSearchParams(queryParameters).toString();
+  if (query) {
+    url = `${url}${url.includes('?') ? '&' : '?'}${query}`;
   }
   return url;
+}
+
+// The platform takes a list filter such as `?team=A&team=B` as the parameter repeated,
+// which a plain record cannot express. An omitted optional flag arrives as undefined and
+// is left out rather than sent as the string "undefined".
+function toSearchParams(queryParameters: QueryParameters = {}): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(queryParameters)) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (item !== undefined) {
+        params.append(key, item);
+      }
+    }
+  }
+  return params;
 }
 
 function isAbsoluteUrl(path: string): boolean {

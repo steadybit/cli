@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2022 Steadybit GmbH
 
 import { setTimeout as sleep } from 'node:timers/promises';
-import { getHeaders, toUrl } from './common.ts';
+import { getHeaders, type QueryParameters, toUrl } from './common.ts';
 import { ApiError } from './error.ts';
 import { errorMessage } from '../errors.ts';
 import { rateLimiter } from './rateLimit.ts';
@@ -19,7 +19,7 @@ export const options = {
 export interface ApiCallArguments {
   path: string;
   method: string;
-  queryParameters?: Record<string, string>;
+  queryParameters?: QueryParameters;
   body?: unknown;
   timeout?: number; // defaults to 30000
 }

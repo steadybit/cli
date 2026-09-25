@@ -52,6 +52,21 @@ the image by id rather than by name. Both avoid the same mistake: a name is reso
 against a registry when it cannot be found locally, so the suite can end up exercising
 the last release while reporting success.
 
+## Platform API Types
+
+Request and response types come from the platform's OpenAPI spec, committed as
+`openapi/platform-api.json` and generated into `src/api/generated/`. Import them through
+`Schemas` from `src/api/schemas.ts` rather than writing the shapes by hand.
+
+```sh
+npm run api:update   # fetch the live spec, regenerate the types, type-check
+```
+
+Commit the spec and the generated file together; `npm run verify` fails when they
+disagree. CI also type-checks against the live spec daily and before each release, so a
+breaking change in the platform surfaces as a type error here. When the API is
+versioned, use the latest version only.
+
 ### Local CLI Execution
 
 ```sh
