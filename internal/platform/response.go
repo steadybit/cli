@@ -122,3 +122,9 @@ func AllPages[T any](fetch func(page, size int32) (*http.Response, error)) ([]T,
 		page = *body.NextPage
 	}
 }
+
+// AllPagesRaw is AllPages keeping each item as the platform sent it, for commands that
+// print the items themselves with -t json or --jq.
+func AllPagesRaw(fetch func(page, size int32) (*http.Response, error)) ([]json.RawMessage, error) {
+	return AllPages[json.RawMessage](fetch)
+}

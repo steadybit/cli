@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/steadybit/cli/internal/execution"
 	"github.com/steadybit/cli/internal/output"
@@ -151,4 +152,28 @@ func TestNeverLetsAnIdStepOutOfADirectory(t *testing.T) {
 	}
 	assert.Equal(t, "evil", execution.PathSegment("../../evil"))
 	assert.Equal(t, "report.zip", execution.PathSegment("report.zip"))
+}
+
+func TestWatchPrintsChangesUntilTheRunEnds(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/ADM-1/executions", platformtest.Reply{JSON: map[string]any{"executions": []any{map[string]any{"id": 41}, map[string]any{"id": 42}}}})
+	var polls int
+	p.Handle("GET /api/experiments/executions/42", func(platformtest.Request) platformtest.Reply {
+		polls++
+		state, step := "RUNNING", "RUNNING"
+		if polls > 1 {
+			state, step = "FAILED", "FAILED"
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 42, "key": "ADM-1", "state": state, "reason": "check failed", "steps": []any{
+			map[string]any{"stepType": "action", "actionId": "http-check", "state": step, "targetExecutions": []any{map[string]any{"state": step}}},
+		}}}
+	})
+
+	out, err := platformtest.Stdout(t, func() error {
+		return execution.Watch(ctx, p.Client, execution.WatchOptions{Key: "ADM-1", Interval: time.Millisecond})
+	})
+
+	assert.EqualError(t, err, "Experiment ADM-1 (#42) failed, reason: check failed")
+	assert.Equal(t, "Experiment ADM-1 run #42: running\n  step 1/1 http-check: running (targets 0/1)\nExperiment ADM-1 run #42: failed\n  step 1/1 http-check: failed (targets 1/1)\n", out)
+	assert.Empty(t, p.Requests("POST /api/experiments/executions/42/cancel"), "watching never cancels")
 }

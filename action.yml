@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Steadybit GmbH
+
+name: Set up the Steadybit CLI
+description: Installs the steadybit CLI on the runner, so later steps can run experiments.
+author: Steadybit GmbH
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  version:
+    description: The version to install, like 5.0.0, or latest.
+    default: latest
+
+outputs:
+  version:
+    description: The installed version.
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "${RUNNER_OS}" in
+          Linux) os=linux ;;
+          macOS) os=darwin ;;
+          Windows) os=windows ;;
+          *) echo "::error::Unsupported runner OS ${RUNNER_OS}"; exit 1 ;;
+        esac
+        case "${RUNNER_ARCH}" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::Unsupported runner architecture ${RUNNER_ARCH}"; exit 1 ;;
+        esac
+        ext=tar.gz
+        [ "$os" = windows ] && ext=zip
+        archive="steadybit_${os}_${arch}.${ext}"
+        if [ "$VERSION" = latest ]; then
+          base="https://github.com/steadybit/cli/releases/latest/download"
+        else
+          base="https://github.com/steadybit/cli/releases/download/v${VERSION#v}"
+        fi
+        dir="${RUNNER_TOOL_CACHE:-$RUNNER_TEMP}/steadybit-cli/${VERSION}/${arch}"
+        mkdir -p "$dir"
+        cd "$dir"
+        curl -fsSL --retry 3 -o "$archive" "$base/$archive"
+        curl -fsSL --retry 3 -o checksums.txt "$base/checksums.txt"
+        # Only the archive's own line; checksums.txt lists every platform.
+        grep " ${archive}\$" checksums.txt > "${archive}.sha256"
+        if command -v sha256sum >/dev/null; then sha256sum -c "${archive}.sha256"; else shasum -a 256 -c "${archive}.sha256"; fi
+        if [ "$ext" = zip ]; then unzip -oq "$archive" steadybit.exe; else tar -xzf "$archive" steadybit; fi
+        echo "$dir" >> "$GITHUB_PATH"
+        echo "version=$("$dir/steadybit" --version)" >> "$GITHUB_OUTPUT"

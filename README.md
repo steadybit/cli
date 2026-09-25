@@ -188,6 +188,81 @@ steadybit service-profile list --origin custom
 steadybit service-profile apply -f profile.yml
 ```
 
+## Everyday use
+
+```bash
+steadybit experiment init                     # create an experiment from a template, answering its placeholders
+steadybit execution watch -k ADM-1            # follow the latest run of an experiment live
+steadybit experiment get -k ADM-1 --profile prod   # use another configured profile for one command
+```
+
+Shell completion (`steadybit completion --help`) completes experiment keys, team keys and
+the ids of templates, schedules, services and service profiles from the platform.
+
+## GitOps
+
+Keep a team's experiments, schedules, services and custom service profiles in Git:
+
+```bash
+steadybit export --team ADM -d ./chaos    # write them as files
+steadybit diff -d ./chaos                 # what differs from the platform; exits with 2 if anything does
+steadybit apply -d ./chaos --dry-run      # what an apply would create or update
+steadybit apply -d ./chaos                # profiles, services, experiments, then schedules
+```
+
+Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
+`steadybit experiment diff -f ./experiments -R`. Fields the platform fills in with defaults
+are not reported as differences.
+
+## In CI
+
+`experiment run --wait` fails the job when a run fails, and a few options make it fit
+pipelines:
+
+| Option                        | Does                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
+| `--show-steps`                | Prints each step's state as it changes                                  |
+| `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+
+In GitHub Actions a summary of every run is added to the job summary.
+
+### GitHub Actions
+
+```yaml
+- uses: steadybit/cli@v6
+- run: steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
+  env:
+    STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_TOKEN }}
+- uses: mikepenz/action-junit-report@v5
+  if: always()
+  with:
+    report_paths: steadybit.xml
+```
+
+### GitLab CI
+
+```yaml
+chaos:
+  image:
+    name: steadybit/cli:6
+    entrypoint: ['']
+  script:
+    - steadybit experiment run -f ./experiments -R --yes --report steadybit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: steadybit.xml
+```
+
+Every listing prints the platform's items with `-t json` or `-t yaml`, and `--jq` filters
+whatever JSON a command prints, without jq installed:
+
+```bash
+steadybit service list --team ADM --jq '.[] | "\(.id) \(.name)"'
+```
+
 ## Container Image
 
 You can also use the cli via our container image:

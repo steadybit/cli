@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/steadybit/cli/api"
+	"github.com/steadybit/cli/internal/interrupt"
+	"github.com/steadybit/cli/internal/jsyaml"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 	"github.com/steadybit/cli/internal/prompt"
@@ -63,6 +65,9 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	document, err := Fetch(ctx, c, o.Key)
 	if err != nil {
 		return err
+	}
+	if output.JQ != "" && o.File == "" {
+		return output.ApplyJQ(os.Stdout, jsyaml.CompactJSON(document.Value()), output.JQ)
 	}
 	datatype, err := output.ResolveDatatype(o.Type, o.File)
 	if err != nil {
@@ -258,6 +263,9 @@ type RunOptions struct {
 	AllowParallel bool
 	Retries       int
 	RetryInterval int
+	WaitOptions
+	// Report is a file to write a JUnit (or, for .json, JSON) report of the runs to.
+	Report string
 
 	TemplateOptions
 }
@@ -301,21 +309,42 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		return errors.New("Either --key, --file or --template must be specified.")
 	}
 
+	if o.Report != "" && !o.Wait {
+		return errors.New("--report needs to wait for the runs to end; remove --no-wait.")
+	}
+	o.WaitOptions.Steps = o.Report != "" || os.Getenv("GITHUB_STEP_SUMMARY") != ""
+
+	var finished []*RunResult
+	// The report and summary cover the runs up to and including the first one that
+	// failed, which ends the command.
+	report := func() error {
+		if o.Report != "" {
+			if err := WriteReport(o.Report, finished); err != nil {
+				return fmt.Errorf("Failed to write the report to %s: %w", o.Report, err)
+			}
+		}
+		return WriteGitHubSummary(finished)
+	}
 	for _, run := range runs {
 		result, err := withRetries(o, run)
 		if err != nil {
-			return err
+			return errors.Join(err, report())
 		}
 		fmt.Println("Executing experiment:", result.Key)
 		fmt.Println("Experiment run API:", result.APILocation)
 		fmt.Println("Experiment run UI:", result.UILocation)
 		if o.Wait && result.APILocation != "" {
-			if err := wait(ctx, c, result.APILocation); err != nil {
-				return err
+			done, err := wait(ctx, c, result.APILocation, o.WaitOptions)
+			if done != nil {
+				done.UILocation = result.UILocation
+				finished = append(finished, done)
+			}
+			if err != nil {
+				return errors.Join(err, report())
 			}
 		}
 	}
-	return nil
+	return report()
 }
 
 // withRetries retries validation errors, which clear up once targets appear, and offers
@@ -440,30 +469,112 @@ var PollInterval = 5 * time.Second
 
 var terminal = map[string]bool{"FAILED": true, "ERRORED": true, "CANCELED": true, "COMPLETED": true}
 
-// wait polls the run until it ends. A run that did not complete exits non-zero, which is
-// what lets a pipeline fail on it.
-func wait(ctx context.Context, c *platform.Client, location string) error {
+// WaitOptions shape what `run --wait` does besides waiting.
+type WaitOptions struct {
+	// Timeout cancels the run once it has taken this long; zero waits indefinitely.
+	Timeout time.Duration
+	// KeepRunningOnInterrupt leaves the run going when the CLI is interrupted, as the
+	// TypeScript CLI did. By default it is cancelled: an aborted pipeline should not
+	// leave an attack running on its own.
+	KeepRunningOnInterrupt bool
+	// ShowSteps prints each step's state as it changes.
+	ShowSteps bool
+	// Steps asks the platform for the steps of the run, which reports need.
+	Steps bool
+}
+
+// settle waits a little for a cancelled run to end, and returns it as it last was.
+func settle(ctx context.Context, c *platform.Client, path string, last *RunResult) *RunResult {
+	for range 10 {
+		time.Sleep(PollInterval)
+		body, _, err := platform.Read(c.Get(ctx, path))
+		if err != nil {
+			return last
+		}
+		run, err := parseRun(body)
+		if err != nil {
+			return last
+		}
+		last = run
+		if terminal[run.State] {
+			return run
+		}
+	}
+	return last
+}
+
+// ErrTimedOut is returned when --timeout cancelled the run.
+var ErrTimedOut = errors.New("timed out")
+
+// wait polls the run until it ends. A run that did not complete is an error, which is
+// what lets a pipeline fail on it. The finished run is returned for reports.
+func wait(ctx context.Context, c *platform.Client, location string, o WaitOptions) (*RunResult, error) {
 	path := location
 	if i := strings.Index(location, "/api/"); i >= 0 {
 		path = location[i:]
 	}
+	if o.Steps || o.ShowSteps {
+		separator := "?"
+		if strings.Contains(path, "?") {
+			separator = "&"
+		}
+		path += separator + "fields=steps"
+	}
+
+	var runID int64
+	cancel := func(why string) {
+		if runID == 0 {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "%s, canceling experiment run %d.\n", why, runID)
+		cancelCtx, done := context.WithTimeout(context.Background(), 30*time.Second)
+		defer done()
+		if _, _, err := platform.Read(c.CancelExperimentExecution(cancelCtx, runID)); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to cancel experiment run %d: %s\n", runID, err)
+		}
+	}
+	if !o.KeepRunningOnInterrupt {
+		pop := interrupt.Push(func(os.Signal) { cancel("Interrupted") })
+		defer pop()
+	}
+
+	var deadline time.Time
+	if o.Timeout > 0 {
+		deadline = time.Now().Add(o.Timeout)
+	}
+	shown := map[string]string{}
 	for {
 		time.Sleep(PollInterval)
 		body, _, err := platform.Read(c.Get(ctx, path))
 		if err != nil {
-			return platform.Failed(err, "Failed to get experiment run ")
+			return nil, platform.Failed(err, "Failed to get experiment run ")
 		}
-		var run struct {
-			ID     int64  `json:"id"`
-			Key    string `json:"key"`
-			State  string `json:"state"`
-			Reason string `json:"reason"`
+		run, err := parseRun(body)
+		if err != nil {
+			return nil, err
 		}
-		if err := json.Unmarshal(body, &run); err != nil {
-			return err
-		}
+		runID = run.ID
 		fmt.Println("Current run state:", strings.ToLower(run.State))
+		if o.ShowSteps {
+			for i, step := range run.Steps {
+				id := fmt.Sprint(i)
+				if shown[id] != step.State {
+					shown[id] = step.State
+					fmt.Printf("  step %d/%d %s: %s\n", i+1, len(run.Steps), step.Name, strings.ToLower(step.State))
+				}
+			}
+		}
 		if !terminal[run.State] {
+			if !deadline.IsZero() && time.Now().After(deadline) {
+				cancel(fmt.Sprintf("Experiment run %d did not end within %s", run.ID, o.Timeout))
+				// Reported once the platform has stopped it, so the report shows what was
+				// cut short rather than a run that seems to be still going.
+				run = settle(ctx, c, path, run)
+				if run.Reason == "" {
+					run.Reason = fmt.Sprintf("did not end within %s", o.Timeout)
+				}
+				return run, fmt.Errorf("Experiment %s (#%d) did not end within %s and was canceled: %w", run.Key, run.ID, o.Timeout, ErrTimedOut)
+			}
 			continue
 		}
 		if run.State != "COMPLETED" {
@@ -471,8 +582,8 @@ func wait(ctx context.Context, c *platform.Client, location string) error {
 			if run.Reason != "" {
 				reason = ", reason: " + run.Reason
 			}
-			return fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
+			return run, fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
 		}
-		return nil
+		return run, nil
 	}
 }

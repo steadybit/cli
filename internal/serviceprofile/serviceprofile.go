@@ -44,6 +44,7 @@ type ListOptions struct {
 	Name    string
 	Origins []string
 	Default bool
+	Type    string
 }
 
 func List(ctx context.Context, c *platform.Client, o ListOptions) error {
@@ -70,13 +71,20 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 	if o.Default {
 		params.DefaultProfile = &o.Default
 	}
-	profiles, err := platform.AllPages[profile](func(page, size int32) (*http.Response, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		p := params
 		p.Page = api.PageRequestAO{Page: &page, Size: &size}
 		return c.GetProfiles(ctx, &p)
 	})
 	if err != nil {
 		return platform.Failed(err, "Failed to get the service profiles")
+	}
+	if resource.Machine(o.Type) {
+		return resource.List(raw, o.Type, nil)
+	}
+	var profiles []profile
+	if err := resource.DecodeEach(raw, &profiles); err != nil {
+		return err
 	}
 	if len(profiles) == 0 {
 		fmt.Println("No service profiles found.")

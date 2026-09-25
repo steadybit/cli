@@ -7,7 +7,9 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/gitops"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/schedule"
 )
 
@@ -51,11 +53,12 @@ func newSchedule() *cobra.Command {
 		Use:     "list",
 		Short:   "List experiment schedules.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit schedule list", "steadybit schedule list --team ADM --experiment ADM-1 ADM-2"),
+		Example: examples("steadybit schedule list", "steadybit schedule list --team ADM --experiment ADM-1 ADM-2", "steadybit schedule list --jq '.[] | select(.enabled) | .experimentKey'"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return schedule.List(ctx, c, l) }),
 	}
 	list.Flags().StringArrayVar(&l.Teams, "team", nil, "Only list schedules of these teams, by team key.")
 	list.Flags().StringArrayVar(&l.Experiments, "experiment", nil, "Only list schedules of these experiments, by experiment key.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "team", "experiment")
 
 	var g schedule.GetOptions
@@ -82,6 +85,7 @@ func newSchedule() *cobra.Command {
 	apply.Flags().BoolVarP(&a.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
 	_ = apply.MarkFlagRequired("file")
 	variadic(apply, "file")
+	dryRun(apply, gitops.Schedule, &a.Files, &a.Recursive)
 
 	var cr schedule.CreateOptions
 	create := &cobra.Command{
@@ -122,7 +126,7 @@ func newSchedule() *cobra.Command {
 		scheduleIDFlag(c, &id)
 		return c
 	}
-	cmd.AddCommand(list, get, apply, create, update,
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Schedule, "schedule", "schedule.yml"), create, update,
 		idCommand("enable", "Enable an experiment schedule.", func(ctx context.Context, c *platform.Client, id string) error {
 			return schedule.SetEnabled(ctx, c, id, true)
 		}),

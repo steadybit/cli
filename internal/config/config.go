@@ -121,11 +121,31 @@ func activeProfileName() (string, error) {
 	return strings.TrimSpace(string(content)), nil
 }
 
-// ActiveProfile is the selected profile, or the first one when none is selected.
+// ProfileOverride is the --profile flag: the profile to use instead of the active one,
+// for this command only.
+var ProfileOverride string
+
+// ActiveProfile is the profile --profile names, else the selected one, else the first.
 func ActiveProfile() (*Profile, error) {
 	profiles, err := Profiles()
-	if err != nil || len(profiles) == 0 {
+	if err != nil {
 		return nil, err
+	}
+	if ProfileOverride != "" {
+		names := make([]string, 0, len(profiles))
+		for i := range profiles {
+			if profiles[i].Name == ProfileOverride {
+				return &profiles[i], nil
+			}
+			names = append(names, profiles[i].Name)
+		}
+		if len(names) == 0 {
+			return nil, fmt.Errorf("No profile named %s: none are configured. Add one with `steadybit config profile add`.", ProfileOverride)
+		}
+		return nil, fmt.Errorf("No profile named %s. Available: %s", ProfileOverride, strings.Join(names, ", "))
+	}
+	if len(profiles) == 0 {
+		return nil, nil
 	}
 	name, err := activeProfileName()
 	if err != nil {

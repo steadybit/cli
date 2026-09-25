@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/internal/resource"
 	"github.com/steadybit/cli/internal/template"
 )
 
@@ -31,6 +32,7 @@ func newTemplate() *cobra.Command {
 	list.Flags().StringArrayVar(&l.TargetTypes, "target-type", nil, "Only list templates targeting one of these target types.")
 	list.Flags().StringArrayVar(&l.Actions, "action", nil, "Only list templates using one of these actions.")
 	list.Flags().StringArrayVar(&l.Search, "search", nil, "Only list templates whose title or description match.")
+	list.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
 	variadic(list, "tag", "target-type", "action", "search")
 
 	var g template.GetOptions
