@@ -39,6 +39,8 @@
   remove or replace their members, and `team environment` to do the same with the
   environments they may use.
 - `user invite` invites users by email, optionally into a team.
+- `access-token` commands to `list`, `create`, `recreate` and `delete` API access tokens. A
+  new token is printed once; `-t json` prints only its id and value for a script to read.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
