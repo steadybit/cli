@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/config"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/prompt"
+	"github.com/steadybit/cli/v6/internal/config"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/prompt"
 )
 
 func newConfig() *cobra.Command {

@@ -1,4 +1,4 @@
-module github.com/steadybit/cli
+module github.com/steadybit/cli/v6
 
 go 1.26.2
 

@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/hub"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/internal/hub"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
 )
 
 func newHub() *cobra.Command {

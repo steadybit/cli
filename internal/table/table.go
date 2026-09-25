@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/v6/internal/output"
 )
 
 type Alignment int

@@ -14,13 +14,13 @@ import (
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/table"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/table"
 )
 
 // Who created and edited a service cannot be sent back. The version is dropped as

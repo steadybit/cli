@@ -7,11 +7,11 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/gitops"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/service"
-	"github.com/steadybit/cli/internal/serviceprofile"
+	"github.com/steadybit/cli/v6/internal/gitops"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/service"
+	"github.com/steadybit/cli/v6/internal/serviceprofile"
 )
 
 const (

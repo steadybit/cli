@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/steadybit/cli/internal/platformtest"
-	"github.com/steadybit/cli/internal/target"
+	"github.com/steadybit/cli/v6/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/target"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

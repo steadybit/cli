@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/table"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/table"
 )
 
 type Options struct {

@@ -7,8 +7,8 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/advice"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/advice"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 func newAdvice() *cobra.Command {

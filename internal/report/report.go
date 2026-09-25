@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
 )
 
 // Filter says which filters a report takes beyond the time range.

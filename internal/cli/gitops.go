@@ -8,8 +8,8 @@ import (
 	"errors"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/gitops"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/gitops"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 // newDiff is the `diff` command of a kind of file: `experiment diff`, `schedule diff`...
