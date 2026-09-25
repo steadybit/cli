@@ -63,7 +63,7 @@ func TestCreatePrintsTheTokenOnce(t *testing.T) {
 	assert.Equal(t, map[string]any{"name": "ci", "type": "ADMIN"}, p.Requests("POST /api/access-tokens/v2")[1].JSON(t))
 
 	assert.EqualError(t, accesstoken.Create(ctx, p.Client, accesstoken.CreateOptions{Name: "ci", Type: "ADMIN", ExpiresAt: "tomorrow"}),
-		"--expires-at 'tomorrow' is neither a date like 2026-12-31 nor a time like 2026-12-31T23:59:59Z.")
+		"--expires-at 'tomorrow' is neither a date like 2026-09-01 nor a time like 2026-09-01T12:00:00Z.")
 }
 
 func TestRecreateAndDelete(t *testing.T) {

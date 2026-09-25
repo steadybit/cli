@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/steadybit/cli/api"
 	"github.com/steadybit/cli/internal/jsyaml"
@@ -23,19 +22,6 @@ func notFoundOr(err error, id, format string) error {
 		return fmt.Errorf("Access token %s not found.", id)
 	}
 	return platform.Failed(err, format, id)
-}
-
-// ExpiresAt takes a date, meaning its start in UTC, or a full RFC 3339 time.
-func ExpiresAt(value string) (*time.Time, error) {
-	if value == "" {
-		return nil, nil
-	}
-	for _, layout := range []string{time.RFC3339, time.DateOnly} {
-		if t, err := time.Parse(layout, value); err == nil {
-			return &t, nil
-		}
-	}
-	return nil, fmt.Errorf("--expires-at '%s' is neither a date like 2026-12-31 nor a time like 2026-12-31T23:59:59Z.", value)
 }
 
 type ListOptions struct {
@@ -127,7 +113,7 @@ func Create(ctx context.Context, c *platform.Client, o CreateOptions) error {
 	if !kind.Valid() {
 		return fmt.Errorf("--type must be ADMIN, TEAM or WILDCARD, not '%s'.", o.Type)
 	}
-	expiresAt, err := ExpiresAt(o.ExpiresAt)
+	expiresAt, err := resource.Time("expires-at", o.ExpiresAt)
 	if err != nil {
 		return err
 	}
@@ -146,7 +132,7 @@ type RecreateOptions struct {
 }
 
 func Recreate(ctx context.Context, c *platform.Client, o RecreateOptions) error {
-	expiresAt, err := ExpiresAt(o.ExpiresAt)
+	expiresAt, err := resource.Time("expires-at", o.ExpiresAt)
 	if err != nil {
 		return err
 	}

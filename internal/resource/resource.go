@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/steadybit/cli/internal/experiment"
@@ -191,4 +192,17 @@ func VariablesOutcome(replace bool) string {
 		return "set, all others removed"
 	}
 	return "set"
+}
+
+// Time takes a date, meaning its start in UTC, or a full RFC 3339 time.
+func Time(flag, value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	for _, layout := range []string{time.RFC3339, time.DateOnly} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return &t, nil
+		}
+	}
+	return nil, fmt.Errorf("--%s '%s' is neither a date like 2026-09-01 nor a time like 2026-09-01T12:00:00Z.", flag, value)
 }

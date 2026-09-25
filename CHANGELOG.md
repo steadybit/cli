@@ -48,6 +48,7 @@
   `environments`, `experiments-executed`, `experiments-created`, `services-distribution`,
   `services-by-category` and `services-average`. Teams are filtered by key and environments
   by name.
+- `audit-log` shows who changed what and when, as a table or with `-t json|yaml`.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
