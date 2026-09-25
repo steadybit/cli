@@ -56,6 +56,8 @@
   queried. `action list` and `action get` show the actions experiments can use.
 - `hub` commands to `list`, `get`, `apply`, `delete` and `resync` the hubs templates are
   imported from.
+- `property definition` and `property association` commands to `list`, `get`, `apply` and
+  `delete` the properties experiments and services carry.
 - Every command now shows examples in its `--help`.
 - Fixed the table printed by `advice validate-status` containing colour escape codes when
   piped. Tables now follow the same terminal check as the rest of the output.
