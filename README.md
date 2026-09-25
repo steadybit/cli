@@ -188,6 +188,21 @@ steadybit service-profile list --origin custom
 steadybit service-profile apply -f profile.yml
 ```
 
+## GitOps
+
+Keep a team's experiments, schedules, services and custom service profiles in Git:
+
+```bash
+steadybit export --team ADM -d ./chaos    # write them as files
+steadybit diff -d ./chaos                 # what differs from the platform; exits with 2 if anything does
+steadybit apply -d ./chaos --dry-run      # what an apply would create or update
+steadybit apply -d ./chaos                # profiles, services, experiments, then schedules
+```
+
+Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
+`steadybit experiment diff -f ./experiments -R`. Fields the platform fills in with defaults
+are not reported as differences.
+
 ## In CI
 
 `experiment run --wait` fails the job when a run fails, and a few options make it fit

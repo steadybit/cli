@@ -52,3 +52,53 @@ func dryRun(cmd *cobra.Command, k gitops.Kind, files *[]string, recursive *bool)
 		})(cmd, args)
 	}
 }
+
+func newExport() *cobra.Command {
+	var o gitops.ExportOptions
+	cmd := &cobra.Command{
+		Use:   "export",
+		Short: "Write a team's experiments, schedules, services and the custom service profiles they use to a directory, to keep in Git.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit export --team ADM -d ./chaos",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return gitops.Export(ctx, c, o) }),
+	}
+	cmd.Flags().StringVar(&o.Team, "team", "", "The key of the team to export.")
+	cmd.Flags().StringVarP(&o.Directory, "directory", "d", ".", "The directory to write the project to.")
+	_ = cmd.MarkFlagRequired("team")
+	return cmd
+}
+
+func newApplyProject() *cobra.Command {
+	var o gitops.ApplyOptions
+	cmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Apply a project written by `export`: service profiles, then services, experiments and schedules.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit apply -d ./chaos --dry-run",
+			"steadybit apply -d ./chaos",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return gitops.ApplyProject(ctx, c, o) }),
+	}
+	cmd.Flags().StringVarP(&o.Directory, "directory", "d", ".", "The project directory.")
+	cmd.Flags().BoolVar(&o.DryRun, "dry-run", false, "Report what applying the project would create or update, without changing anything.")
+	cmd.Flags().BoolVar(&o.DeleteExperiments, "delete-experiments", false, "Delete provided experiments that changed service profiles no longer provide.")
+	return cmd
+}
+
+func newDiffProject() *cobra.Command {
+	var dir string
+	cmd := &cobra.Command{
+		Use:     "diff",
+		Short:   "Show how a project written by `export` differs from the platform. Exits with 2 when it does.",
+		Args:    cobra.NoArgs,
+		Example: examples("steadybit diff -d ./chaos"),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return gitops.DiffProject(ctx, c, dir)
+		}),
+	}
+	cmd.Flags().StringVarP(&dir, "directory", "d", ".", "The project directory.")
+	return cmd
+}

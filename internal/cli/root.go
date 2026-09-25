@@ -71,7 +71,8 @@ func newRoot() *cobra.Command {
 	root.PersistentFlags().StringVar(&output.JQ, "jq", "", "Filter the JSON a command prints with a jq expression; strings are printed raw.")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
-	root.AddCommand(newAdvice(), newConfig(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate())
+	root.AddCommand(newAdvice(), newConfig(), newExecution(), newExperiment(), newSchedule(), newService(), newServiceProfile(), newTemplate(),
+		newExport(), newApplyProject(), newDiffProject())
 	// Shell completion is new with the Go CLI; it gets examples like every other command.
 	root.InitDefaultCompletionCmd()
 	for _, cmd := range root.Commands() {
