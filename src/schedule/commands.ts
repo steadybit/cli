@@ -62,12 +62,13 @@ export async function getSchedule(options: GetOptions) {
   }
 }
 
-// What the platform reports about the last edit is not part of what can be sent, so it
-// is left out of files, keeping `get` followed by `apply` a round trip.
+// What the platform reports about the last edit and the next run is not part of what
+// can be sent, so it is left out of files, keeping `get` followed by `apply` a round trip.
 function toFileContent(schedule: Schedule): UpsertSchedule {
   const content: Partial<Schedule> = { ...schedule };
   delete content.editedBy;
   delete content.lastUpdated;
+  delete content.nextExecution;
   return content as UpsertSchedule;
 }
 

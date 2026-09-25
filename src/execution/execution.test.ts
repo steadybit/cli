@@ -107,6 +107,26 @@ describe('execution', () => {
       expect(requests[0].body).toBe(7);
     });
 
+    it.each([
+      ['0', 0],
+      ['false', false],
+      ['null', null],
+    ])('sends a falsy JSON value %s rather than dropping it', async (value, expected) => {
+      const requests = respondTo('post', '/api/experiments/executions/42/properties/score/set', () => ({}));
+
+      await setProperty({ id: 42, key: 'score', value: [value], json: true });
+
+      expect(requests[0].body).toBe(expected);
+    });
+
+    it('sends an empty string', async () => {
+      const requests = respondTo('post', '/api/experiments/executions/42/properties/note/set', () => ({}));
+
+      await setProperty({ id: 42, key: 'note', value: [''] });
+
+      expect(requests[0].body).toBe('');
+    });
+
     it('rejects a value that is not JSON with --json', async () => {
       await expect(setProperty({ id: 42, key: 'score', value: ['seven'], json: true })).rejects.toThrow(
         "'seven' is not valid JSON"

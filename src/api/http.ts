@@ -92,7 +92,9 @@ export async function executeApiCall({
     // arrive would leave a stalled body download running forever.
     const signal = AbortSignal.timeout(timeout);
     try {
-      return await doFetch(url, method, headers, body ? JSON.stringify(body) : undefined, signal);
+      // Compared with undefined rather than tested for truth: 0, false, null and "" are
+      // all bodies a caller can mean, such as a run property being set to zero.
+      return await doFetch(url, method, headers, body !== undefined ? JSON.stringify(body) : undefined, signal);
     } catch (e) {
       throw new Error(`Failed to call Steadybit API at ${method} ${url}: ${describeFetchError(e)}`, {
         cause: e,

@@ -27,6 +27,7 @@ const SCHEDULE = {
   allowParallel: false,
   editedBy: { username: 'jane' },
   lastUpdated: '2026-09-01T10:00:00Z',
+  nextExecution: '2026-09-02T07:00:00Z',
 };
 
 describe('schedule', () => {
@@ -65,6 +66,7 @@ describe('schedule', () => {
       const expected: Partial<typeof SCHEDULE> = { ...SCHEDULE };
       delete expected.editedBy;
       delete expected.lastUpdated;
+      delete expected.nextExecution;
       expect(load(await fs.readFile(file, 'utf8'))).toEqual(expected);
     });
 
@@ -100,6 +102,7 @@ describe('schedule', () => {
       await applySchedules({ file: [file], recursive: false });
 
       expect(requests[0].body).not.toHaveProperty('editedBy');
+      expect(requests[0].body).not.toHaveProperty('nextExecution');
       expect(requests[0].body).toHaveProperty('id', ID);
       expect(await fs.readFile(file, 'utf8')).toBe(before);
     });
