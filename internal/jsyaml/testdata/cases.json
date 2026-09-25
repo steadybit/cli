@@ -1,0 +1,1048 @@
+[
+  {
+    "value": {
+      "s": ""
+    },
+    "yaml": "s: ''\n",
+    "json": "{\n  \"s\": \"\"\n}",
+    "compact": "{\"s\":\"\"}"
+  },
+  {
+    "value": {
+      "s": " "
+    },
+    "yaml": "s: \" \"\n",
+    "json": "{\n  \"s\": \" \"\n}",
+    "compact": "{\"s\":\" \"}"
+  },
+  {
+    "value": {
+      "s": "  lead"
+    },
+    "yaml": "s: '  lead'\n",
+    "json": "{\n  \"s\": \"  lead\"\n}",
+    "compact": "{\"s\":\"  lead\"}"
+  },
+  {
+    "value": {
+      "s": "trail "
+    },
+    "yaml": "s: 'trail '\n",
+    "json": "{\n  \"s\": \"trail \"\n}",
+    "compact": "{\"s\":\"trail \"}"
+  },
+  {
+    "value": {
+      "s": "plain"
+    },
+    "yaml": "s: plain\n",
+    "json": "{\n  \"s\": \"plain\"\n}",
+    "compact": "{\"s\":\"plain\"}"
+  },
+  {
+    "value": {
+      "s": "with: colon"
+    },
+    "yaml": "s: 'with: colon'\n",
+    "json": "{\n  \"s\": \"with: colon\"\n}",
+    "compact": "{\"s\":\"with: colon\"}"
+  },
+  {
+    "value": {
+      "s": "a:b"
+    },
+    "yaml": "s: a:b\n",
+    "json": "{\n  \"s\": \"a:b\"\n}",
+    "compact": "{\"s\":\"a:b\"}"
+  },
+  {
+    "value": {
+      "s": "key #not comment"
+    },
+    "yaml": "s: 'key #not comment'\n",
+    "json": "{\n  \"s\": \"key #not comment\"\n}",
+    "compact": "{\"s\":\"key #not comment\"}"
+  },
+  {
+    "value": {
+      "s": "a #comment"
+    },
+    "yaml": "s: 'a #comment'\n",
+    "json": "{\n  \"s\": \"a #comment\"\n}",
+    "compact": "{\"s\":\"a #comment\"}"
+  },
+  {
+    "value": {
+      "s": "#start"
+    },
+    "yaml": "s: '#start'\n",
+    "json": "{\n  \"s\": \"#start\"\n}",
+    "compact": "{\"s\":\"#start\"}"
+  },
+  {
+    "value": {
+      "s": "*"
+    },
+    "yaml": "s: '*'\n",
+    "json": "{\n  \"s\": \"*\"\n}",
+    "compact": "{\"s\":\"*\"}"
+  },
+  {
+    "value": {
+      "s": "&anchor"
+    },
+    "yaml": "s: '&anchor'\n",
+    "json": "{\n  \"s\": \"&anchor\"\n}",
+    "compact": "{\"s\":\"&anchor\"}"
+  },
+  {
+    "value": {
+      "s": "!tag"
+    },
+    "yaml": "s: '!tag'\n",
+    "json": "{\n  \"s\": \"!tag\"\n}",
+    "compact": "{\"s\":\"!tag\"}"
+  },
+  {
+    "value": {
+      "s": "|pipe"
+    },
+    "yaml": "s: '|pipe'\n",
+    "json": "{\n  \"s\": \"|pipe\"\n}",
+    "compact": "{\"s\":\"|pipe\"}"
+  },
+  {
+    "value": {
+      "s": ">gt"
+    },
+    "yaml": "s: '>gt'\n",
+    "json": "{\n  \"s\": \">gt\"\n}",
+    "compact": "{\"s\":\">gt\"}"
+  },
+  {
+    "value": {
+      "s": "'q'"
+    },
+    "yaml": "s: '''q'''\n",
+    "json": "{\n  \"s\": \"'q'\"\n}",
+    "compact": "{\"s\":\"'q'\"}"
+  },
+  {
+    "value": {
+      "s": "\"dq\""
+    },
+    "yaml": "s: '\"dq\"'\n",
+    "json": "{\n  \"s\": \"\\\"dq\\\"\"\n}",
+    "compact": "{\"s\":\"\\\"dq\\\"\"}"
+  },
+  {
+    "value": {
+      "s": "%pct"
+    },
+    "yaml": "s: '%pct'\n",
+    "json": "{\n  \"s\": \"%pct\"\n}",
+    "compact": "{\"s\":\"%pct\"}"
+  },
+  {
+    "value": {
+      "s": "@at"
+    },
+    "yaml": "s: '@at'\n",
+    "json": "{\n  \"s\": \"@at\"\n}",
+    "compact": "{\"s\":\"@at\"}"
+  },
+  {
+    "value": {
+      "s": "`tick`"
+    },
+    "yaml": "s: '`tick`'\n",
+    "json": "{\n  \"s\": \"`tick`\"\n}",
+    "compact": "{\"s\":\"`tick`\"}"
+  },
+  {
+    "value": {
+      "s": "-"
+    },
+    "yaml": "s: '-'\n",
+    "json": "{\n  \"s\": \"-\"\n}",
+    "compact": "{\"s\":\"-\"}"
+  },
+  {
+    "value": {
+      "s": "- dash"
+    },
+    "yaml": "s: '- dash'\n",
+    "json": "{\n  \"s\": \"- dash\"\n}",
+    "compact": "{\"s\":\"- dash\"}"
+  },
+  {
+    "value": {
+      "s": "-x"
+    },
+    "yaml": "s: -x\n",
+    "json": "{\n  \"s\": \"-x\"\n}",
+    "compact": "{\"s\":\"-x\"}"
+  },
+  {
+    "value": {
+      "s": "?"
+    },
+    "yaml": "s: '?'\n",
+    "json": "{\n  \"s\": \"?\"\n}",
+    "compact": "{\"s\":\"?\"}"
+  },
+  {
+    "value": {
+      "s": "? q"
+    },
+    "yaml": "s: '? q'\n",
+    "json": "{\n  \"s\": \"? q\"\n}",
+    "compact": "{\"s\":\"? q\"}"
+  },
+  {
+    "value": {
+      "s": ":x"
+    },
+    "yaml": "s: :x\n",
+    "json": "{\n  \"s\": \":x\"\n}",
+    "compact": "{\"s\":\":x\"}"
+  },
+  {
+    "value": {
+      "s": "[br"
+    },
+    "yaml": "s: '[br'\n",
+    "json": "{\n  \"s\": \"[br\"\n}",
+    "compact": "{\"s\":\"[br\"}"
+  },
+  {
+    "value": {
+      "s": "]"
+    },
+    "yaml": "s: ']'\n",
+    "json": "{\n  \"s\": \"]\"\n}",
+    "compact": "{\"s\":\"]\"}"
+  },
+  {
+    "value": {
+      "s": "{x"
+    },
+    "yaml": "s: '{x'\n",
+    "json": "{\n  \"s\": \"{x\"\n}",
+    "compact": "{\"s\":\"{x\"}"
+  },
+  {
+    "value": {
+      "s": "}"
+    },
+    "yaml": "s: '}'\n",
+    "json": "{\n  \"s\": \"}\"\n}",
+    "compact": "{\"s\":\"}\"}"
+  },
+  {
+    "value": {
+      "s": ",comma"
+    },
+    "yaml": "s: ',comma'\n",
+    "json": "{\n  \"s\": \",comma\"\n}",
+    "compact": "{\"s\":\",comma\"}"
+  },
+  {
+    "value": {
+      "s": "a,b"
+    },
+    "yaml": "s: a,b\n",
+    "json": "{\n  \"s\": \"a,b\"\n}",
+    "compact": "{\"s\":\"a,b\"}"
+  },
+  {
+    "value": {
+      "s": "a[b]"
+    },
+    "yaml": "s: a[b]\n",
+    "json": "{\n  \"s\": \"a[b]\"\n}",
+    "compact": "{\"s\":\"a[b]\"}"
+  },
+  {
+    "value": {
+      "s": "x{y}"
+    },
+    "yaml": "s: x{y}\n",
+    "json": "{\n  \"s\": \"x{y}\"\n}",
+    "compact": "{\"s\":\"x{y}\"}"
+  },
+  {
+    "value": {
+      "s": "true"
+    },
+    "yaml": "s: 'true'\n",
+    "json": "{\n  \"s\": \"true\"\n}",
+    "compact": "{\"s\":\"true\"}"
+  },
+  {
+    "value": {
+      "s": "True"
+    },
+    "yaml": "s: 'True'\n",
+    "json": "{\n  \"s\": \"True\"\n}",
+    "compact": "{\"s\":\"True\"}"
+  },
+  {
+    "value": {
+      "s": "TRUE"
+    },
+    "yaml": "s: 'TRUE'\n",
+    "json": "{\n  \"s\": \"TRUE\"\n}",
+    "compact": "{\"s\":\"TRUE\"}"
+  },
+  {
+    "value": {
+      "s": "false"
+    },
+    "yaml": "s: 'false'\n",
+    "json": "{\n  \"s\": \"false\"\n}",
+    "compact": "{\"s\":\"false\"}"
+  },
+  {
+    "value": {
+      "s": "yes"
+    },
+    "yaml": "s: yes\n",
+    "json": "{\n  \"s\": \"yes\"\n}",
+    "compact": "{\"s\":\"yes\"}"
+  },
+  {
+    "value": {
+      "s": "no"
+    },
+    "yaml": "s: no\n",
+    "json": "{\n  \"s\": \"no\"\n}",
+    "compact": "{\"s\":\"no\"}"
+  },
+  {
+    "value": {
+      "s": "on"
+    },
+    "yaml": "s: on\n",
+    "json": "{\n  \"s\": \"on\"\n}",
+    "compact": "{\"s\":\"on\"}"
+  },
+  {
+    "value": {
+      "s": "off"
+    },
+    "yaml": "s: off\n",
+    "json": "{\n  \"s\": \"off\"\n}",
+    "compact": "{\"s\":\"off\"}"
+  },
+  {
+    "value": {
+      "s": "null"
+    },
+    "yaml": "s: 'null'\n",
+    "json": "{\n  \"s\": \"null\"\n}",
+    "compact": "{\"s\":\"null\"}"
+  },
+  {
+    "value": {
+      "s": "Null"
+    },
+    "yaml": "s: 'Null'\n",
+    "json": "{\n  \"s\": \"Null\"\n}",
+    "compact": "{\"s\":\"Null\"}"
+  },
+  {
+    "value": {
+      "s": "~"
+    },
+    "yaml": "s: '~'\n",
+    "json": "{\n  \"s\": \"~\"\n}",
+    "compact": "{\"s\":\"~\"}"
+  },
+  {
+    "value": {
+      "s": "y"
+    },
+    "yaml": "s: y\n",
+    "json": "{\n  \"s\": \"y\"\n}",
+    "compact": "{\"s\":\"y\"}"
+  },
+  {
+    "value": {
+      "s": "n"
+    },
+    "yaml": "s: n\n",
+    "json": "{\n  \"s\": \"n\"\n}",
+    "compact": "{\"s\":\"n\"}"
+  },
+  {
+    "value": {
+      "s": "0"
+    },
+    "yaml": "s: '0'\n",
+    "json": "{\n  \"s\": \"0\"\n}",
+    "compact": "{\"s\":\"0\"}"
+  },
+  {
+    "value": {
+      "s": "42"
+    },
+    "yaml": "s: '42'\n",
+    "json": "{\n  \"s\": \"42\"\n}",
+    "compact": "{\"s\":\"42\"}"
+  },
+  {
+    "value": {
+      "s": "-7"
+    },
+    "yaml": "s: '-7'\n",
+    "json": "{\n  \"s\": \"-7\"\n}",
+    "compact": "{\"s\":\"-7\"}"
+  },
+  {
+    "value": {
+      "s": "+3"
+    },
+    "yaml": "s: '+3'\n",
+    "json": "{\n  \"s\": \"+3\"\n}",
+    "compact": "{\"s\":\"+3\"}"
+  },
+  {
+    "value": {
+      "s": "007"
+    },
+    "yaml": "s: '007'\n",
+    "json": "{\n  \"s\": \"007\"\n}",
+    "compact": "{\"s\":\"007\"}"
+  },
+  {
+    "value": {
+      "s": "0x1F"
+    },
+    "yaml": "s: '0x1F'\n",
+    "json": "{\n  \"s\": \"0x1F\"\n}",
+    "compact": "{\"s\":\"0x1F\"}"
+  },
+  {
+    "value": {
+      "s": "0o17"
+    },
+    "yaml": "s: '0o17'\n",
+    "json": "{\n  \"s\": \"0o17\"\n}",
+    "compact": "{\"s\":\"0o17\"}"
+  },
+  {
+    "value": {
+      "s": "0b101"
+    },
+    "yaml": "s: 0b101\n",
+    "json": "{\n  \"s\": \"0b101\"\n}",
+    "compact": "{\"s\":\"0b101\"}"
+  },
+  {
+    "value": {
+      "s": "1_000"
+    },
+    "yaml": "s: 1_000\n",
+    "json": "{\n  \"s\": \"1_000\"\n}",
+    "compact": "{\"s\":\"1_000\"}"
+  },
+  {
+    "value": {
+      "s": "1.5"
+    },
+    "yaml": "s: '1.5'\n",
+    "json": "{\n  \"s\": \"1.5\"\n}",
+    "compact": "{\"s\":\"1.5\"}"
+  },
+  {
+    "value": {
+      "s": ".5"
+    },
+    "yaml": "s: '.5'\n",
+    "json": "{\n  \"s\": \".5\"\n}",
+    "compact": "{\"s\":\".5\"}"
+  },
+  {
+    "value": {
+      "s": "1."
+    },
+    "yaml": "s: '1.'\n",
+    "json": "{\n  \"s\": \"1.\"\n}",
+    "compact": "{\"s\":\"1.\"}"
+  },
+  {
+    "value": {
+      "s": "1e3"
+    },
+    "yaml": "s: '1e3'\n",
+    "json": "{\n  \"s\": \"1e3\"\n}",
+    "compact": "{\"s\":\"1e3\"}"
+  },
+  {
+    "value": {
+      "s": "1E-3"
+    },
+    "yaml": "s: '1E-3'\n",
+    "json": "{\n  \"s\": \"1E-3\"\n}",
+    "compact": "{\"s\":\"1E-3\"}"
+  },
+  {
+    "value": {
+      "s": ".inf"
+    },
+    "yaml": "s: '.inf'\n",
+    "json": "{\n  \"s\": \".inf\"\n}",
+    "compact": "{\"s\":\".inf\"}"
+  },
+  {
+    "value": {
+      "s": "-.Inf"
+    },
+    "yaml": "s: '-.Inf'\n",
+    "json": "{\n  \"s\": \"-.Inf\"\n}",
+    "compact": "{\"s\":\"-.Inf\"}"
+  },
+  {
+    "value": {
+      "s": ".nan"
+    },
+    "yaml": "s: '.nan'\n",
+    "json": "{\n  \"s\": \".nan\"\n}",
+    "compact": "{\"s\":\".nan\"}"
+  },
+  {
+    "value": {
+      "s": "1e999"
+    },
+    "yaml": "s: 1e999\n",
+    "json": "{\n  \"s\": \"1e999\"\n}",
+    "compact": "{\"s\":\"1e999\"}"
+  },
+  {
+    "value": {
+      "s": "2026-02-25"
+    },
+    "yaml": "s: '2026-02-25'\n",
+    "json": "{\n  \"s\": \"2026-02-25\"\n}",
+    "compact": "{\"s\":\"2026-02-25\"}"
+  },
+  {
+    "value": {
+      "s": "2026-02-30"
+    },
+    "yaml": "s: 2026-02-30\n",
+    "json": "{\n  \"s\": \"2026-02-30\"\n}",
+    "compact": "{\"s\":\"2026-02-30\"}"
+  },
+  {
+    "value": {
+      "s": "2026-02-25T06:35:52.676257Z"
+    },
+    "yaml": "s: '2026-02-25T06:35:52.676257Z'\n",
+    "json": "{\n  \"s\": \"2026-02-25T06:35:52.676257Z\"\n}",
+    "compact": "{\"s\":\"2026-02-25T06:35:52.676257Z\"}"
+  },
+  {
+    "value": {
+      "s": "2026-02-25 06:35:52"
+    },
+    "yaml": "s: '2026-02-25 06:35:52'\n",
+    "json": "{\n  \"s\": \"2026-02-25 06:35:52\"\n}",
+    "compact": "{\"s\":\"2026-02-25 06:35:52\"}"
+  },
+  {
+    "value": {
+      "s": "2026-2-5T1:02:03Z"
+    },
+    "yaml": "s: '2026-2-5T1:02:03Z'\n",
+    "json": "{\n  \"s\": \"2026-2-5T1:02:03Z\"\n}",
+    "compact": "{\"s\":\"2026-2-5T1:02:03Z\"}"
+  },
+  {
+    "value": {
+      "s": "12:30"
+    },
+    "yaml": "s: 12:30\n",
+    "json": "{\n  \"s\": \"12:30\"\n}",
+    "compact": "{\"s\":\"12:30\"}"
+  },
+  {
+    "value": {
+      "s": "1:20:30"
+    },
+    "yaml": "s: 1:20:30\n",
+    "json": "{\n  \"s\": \"1:20:30\"\n}",
+    "compact": "{\"s\":\"1:20:30\"}"
+  },
+  {
+    "value": {
+      "s": "<<"
+    },
+    "yaml": "s: '<<'\n",
+    "json": "{\n  \"s\": \"<<\"\n}",
+    "compact": "{\"s\":\"<<\"}"
+  },
+  {
+    "value": {
+      "s": "="
+    },
+    "yaml": "s: '='\n",
+    "json": "{\n  \"s\": \"=\"\n}",
+    "compact": "{\"s\":\"=\"}"
+  },
+  {
+    "value": {
+      "s": "---"
+    },
+    "yaml": "s: ---\n",
+    "json": "{\n  \"s\": \"---\"\n}",
+    "compact": "{\"s\":\"---\"}"
+  },
+  {
+    "value": {
+      "s": "--- x"
+    },
+    "yaml": "s: --- x\n",
+    "json": "{\n  \"s\": \"--- x\"\n}",
+    "compact": "{\"s\":\"--- x\"}"
+  },
+  {
+    "value": {
+      "s": "..."
+    },
+    "yaml": "s: ...\n",
+    "json": "{\n  \"s\": \"...\"\n}",
+    "compact": "{\"s\":\"...\"}"
+  },
+  {
+    "value": {
+      "s": "a---"
+    },
+    "yaml": "s: a---\n",
+    "json": "{\n  \"s\": \"a---\"\n}",
+    "compact": "{\"s\":\"a---\"}"
+  },
+  {
+    "value": {
+      "s": "tab\there"
+    },
+    "yaml": "s: \"tab\\there\"\n",
+    "json": "{\n  \"s\": \"tab\\there\"\n}",
+    "compact": "{\"s\":\"tab\\there\"}"
+  },
+  {
+    "value": {
+      "s": "ctrl\u0001"
+    },
+    "yaml": "s: \"ctrl\\x01\"\n",
+    "json": "{\n  \"s\": \"ctrl\\u0001\"\n}",
+    "compact": "{\"s\":\"ctrl\\u0001\"}"
+  },
+  {
+    "value": {
+      "s": "del"
+    },
+    "yaml": "s: \"del\\x7F\"\n",
+    "json": "{\n  \"s\": \"del\"\n}",
+    "compact": "{\"s\":\"del\"}"
+  },
+  {
+    "value": {
+      "s": "nbsp x"
+    },
+    "yaml": "s: \"nbsp\\_x\"\n",
+    "json": "{\n  \"s\": \"nbsp x\"\n}",
+    "compact": "{\"s\":\"nbsp x\"}"
+  },
+  {
+    "value": {
+      "s": "bom﻿"
+    },
+    "yaml": "s: \"bom\\uFEFF\"\n",
+    "json": "{\n  \"s\": \"bom﻿\"\n}",
+    "compact": "{\"s\":\"bom﻿\"}"
+  },
+  {
+    "value": {
+      "s": "line sep"
+    },
+    "yaml": "s: \"line\\Lsep\"\n",
+    "json": "{\n  \"s\": \"line sep\"\n}",
+    "compact": "{\"s\":\"line sep\"}"
+  },
+  {
+    "value": {
+      "s": "multi\nline"
+    },
+    "yaml": "s: |-\n  multi\n  line\n",
+    "json": "{\n  \"s\": \"multi\\nline\"\n}",
+    "compact": "{\"s\":\"multi\\nline\"}"
+  },
+  {
+    "value": {
+      "s": "multi\nline\n"
+    },
+    "yaml": "s: |\n  multi\n  line\n",
+    "json": "{\n  \"s\": \"multi\\nline\\n\"\n}",
+    "compact": "{\"s\":\"multi\\nline\\n\"}"
+  },
+  {
+    "value": {
+      "s": "trailing\n\n"
+    },
+    "yaml": "s: |+\n  trailing\n\n...\n",
+    "json": "{\n  \"s\": \"trailing\\n\\n\"\n}",
+    "compact": "{\"s\":\"trailing\\n\\n\"}"
+  },
+  {
+    "value": {
+      "s": "\n"
+    },
+    "yaml": "s: \"\\n\"\n",
+    "json": "{\n  \"s\": \"\\n\"\n}",
+    "compact": "{\"s\":\"\\n\"}"
+  },
+  {
+    "value": {
+      "s": "\nlead"
+    },
+    "yaml": "s: |-\n\n  lead\n",
+    "json": "{\n  \"s\": \"\\nlead\"\n}",
+    "compact": "{\"s\":\"\\nlead\"}"
+  },
+  {
+    "value": {
+      "s": " \nx"
+    },
+    "yaml": "s: |2-\n   \n  x\n",
+    "json": "{\n  \"s\": \" \\nx\"\n}",
+    "compact": "{\"s\":\" \\nx\"}"
+  },
+  {
+    "value": {
+      "s": "x\n "
+    },
+    "yaml": "s: |-\n  x\n   \n",
+    "json": "{\n  \"s\": \"x\\n \"\n}",
+    "compact": "{\"s\":\"x\\n \"}"
+  },
+  {
+    "value": {
+      "s": "a\n\n\nb"
+    },
+    "yaml": "s: |-\n  a\n\n\n  b\n",
+    "json": "{\n  \"s\": \"a\\n\\n\\nb\"\n}",
+    "compact": "{\"s\":\"a\\n\\n\\nb\"}"
+  },
+  {
+    "value": {
+      "s": "  indented\nnext"
+    },
+    "yaml": "s: |2-\n    indented\n  next\n",
+    "json": "{\n  \"s\": \"  indented\\nnext\"\n}",
+    "compact": "{\"s\":\"  indented\\nnext\"}"
+  },
+  {
+    "value": {
+      "s": "When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready."
+    },
+    "yaml": "s: >-\n  When a single container from steadybit-demo/toys-bestseller fails then within\n  2m all pods are ready.\n",
+    "json": "{\n  \"s\": \"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"\n}",
+    "compact": "{\"s\":\"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"}"
+  },
+  {
+    "value": {
+      "s": "When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\nWhen a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready."
+    },
+    "yaml": "s: >-\n  When a single container from steadybit-demo/toys-bestseller fails then within\n  2m all pods are ready.\n\n  When a single container from steadybit-demo/toys-bestseller fails then within\n  2m all pods are ready.\n",
+    "json": "{\n  \"s\": \"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\\nWhen a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"\n}",
+    "compact": "{\"s\":\"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\\nWhen a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"}"
+  },
+  {
+    "value": {
+      "s": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "yaml": "s: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+    "json": "{\n  \"s\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}",
+    "compact": "{\"s\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+  },
+  {
+    "value": {
+      "s": "nospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospaceshere tail"
+    },
+    "yaml": "s: >-\n  nospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospaceshere\n  tail\n",
+    "json": "{\n  \"s\": \"nospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospaceshere tail\"\n}",
+    "compact": "{\"s\":\"nospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospacesherenospaceshere tail\"}"
+  },
+  {
+    "value": {
+      "s": "a  b word word word word word word word word word word word word word word word word word word word word "
+    },
+    "yaml": "s: >-\n  a  b word word word word word word word word word word word word word word\n  word word word word word word \n",
+    "json": "{\n  \"s\": \"a  b word word word word word word word word word word word word word word word word word word word word \"\n}",
+    "compact": "{\"s\":\"a  b word word word word word word word word word word word word word word word word word word word word \"}"
+  },
+  {
+    "value": {
+      "s": "emoji 😀 word word word word word word word word word word word word word word word word word word "
+    },
+    "yaml": "s: >-\n  emoji 😀 word word word word word word word word word word word word word word\n  word word word word \n",
+    "json": "{\n  \"s\": \"emoji 😀 word word word word word word word word word word word word word word word word word word \"\n}",
+    "compact": "{\"s\":\"emoji 😀 word word word word word word word word word word word word word word word word word word \"}"
+  },
+  {
+    "value": {
+      "s": "ünïcödé text wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd "
+    },
+    "yaml": "s: >-\n  ünïcödé text wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd\n  wörd wörd wörd \n",
+    "json": "{\n  \"s\": \"ünïcödé text wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd \"\n}",
+    "compact": "{\"s\":\"ünïcödé text wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd wörd \"}"
+  },
+  {
+    "value": {
+      "s": "quote's"
+    },
+    "yaml": "s: quote's\n",
+    "json": "{\n  \"s\": \"quote's\"\n}",
+    "compact": "{\"s\":\"quote's\"}"
+  },
+  {
+    "value": {
+      "s": "back\\slash"
+    },
+    "yaml": "s: back\\slash\n",
+    "json": "{\n  \"s\": \"back\\\\slash\"\n}",
+    "compact": "{\"s\":\"back\\\\slash\"}"
+  },
+  {
+    "value": {
+      "s": "http://x?a=b&c=<d>"
+    },
+    "yaml": "s: http://x?a=b&c=<d>\n",
+    "json": "{\n  \"s\": \"http://x?a=b&c=<d>\"\n}",
+    "compact": "{\"s\":\"http://x?a=b&c=<d>\"}"
+  },
+  {
+    "value": {
+      "s": "k8s.namespace=\"steadybit-demo\" AND k8s.deployment=\"hot-deals\" AND host.hostname=\"very-long-host-name-value\""
+    },
+    "yaml": "s: >-\n  k8s.namespace=\"steadybit-demo\" AND k8s.deployment=\"hot-deals\" AND\n  host.hostname=\"very-long-host-name-value\"\n",
+    "json": "{\n  \"s\": \"k8s.namespace=\\\"steadybit-demo\\\" AND k8s.deployment=\\\"hot-deals\\\" AND host.hostname=\\\"very-long-host-name-value\\\"\"\n}",
+    "compact": "{\"s\":\"k8s.namespace=\\\"steadybit-demo\\\" AND k8s.deployment=\\\"hot-deals\\\" AND host.hostname=\\\"very-long-host-name-value\\\"\"}"
+  },
+  {
+    "value": {
+      "n": 0
+    },
+    "yaml": "n: 0\n",
+    "json": "{\n  \"n\": 0\n}",
+    "compact": "{\"n\":0}"
+  },
+  {
+    "value": {
+      "n": 1
+    },
+    "yaml": "n: 1\n",
+    "json": "{\n  \"n\": 1\n}",
+    "compact": "{\"n\":1}"
+  },
+  {
+    "value": {
+      "n": -1
+    },
+    "yaml": "n: -1\n",
+    "json": "{\n  \"n\": -1\n}",
+    "compact": "{\"n\":-1}"
+  },
+  {
+    "value": {
+      "n": 1.5
+    },
+    "yaml": "n: 1.5\n",
+    "json": "{\n  \"n\": 1.5\n}",
+    "compact": "{\"n\":1.5}"
+  },
+  {
+    "value": {
+      "n": 0.1
+    },
+    "yaml": "n: 0.1\n",
+    "json": "{\n  \"n\": 0.1\n}",
+    "compact": "{\"n\":0.1}"
+  },
+  {
+    "value": {
+      "n": 1e+21
+    },
+    "yaml": "n: 1.e+21\n",
+    "json": "{\n  \"n\": 1e+21\n}",
+    "compact": "{\"n\":1e+21}"
+  },
+  {
+    "value": {
+      "n": 1e-7
+    },
+    "yaml": "n: 1.e-7\n",
+    "json": "{\n  \"n\": 1e-7\n}",
+    "compact": "{\"n\":1e-7}"
+  },
+  {
+    "value": {
+      "n": 123456789012345680000
+    },
+    "yaml": "n: 123456789012345680000\n",
+    "json": "{\n  \"n\": 123456789012345680000\n}",
+    "compact": "{\"n\":123456789012345680000}"
+  },
+  {
+    "value": {
+      "n": 5e-324
+    },
+    "yaml": "n: 5.e-324\n",
+    "json": "{\n  \"n\": 5e-324\n}",
+    "compact": "{\"n\":5e-324}"
+  },
+  {
+    "value": {
+      "n": 9007199254740992
+    },
+    "yaml": "n: 9007199254740992\n",
+    "json": "{\n  \"n\": 9007199254740992\n}",
+    "compact": "{\"n\":9007199254740992}"
+  },
+  {
+    "value": {
+      "n": 1
+    },
+    "yaml": "n: 1\n",
+    "json": "{\n  \"n\": 1\n}",
+    "compact": "{\"n\":1}"
+  },
+  {
+    "value": {
+      "n": 100
+    },
+    "yaml": "n: 100\n",
+    "json": "{\n  \"n\": 100\n}",
+    "compact": "{\"n\":100}"
+  },
+  {
+    "value": {
+      "n": 3.14159
+    },
+    "yaml": "n: 3.14159\n",
+    "json": "{\n  \"n\": 3.14159\n}",
+    "compact": "{\"n\":3.14159}"
+  },
+  {
+    "value": {
+      "b": true,
+      "f": false,
+      "z": null
+    },
+    "yaml": "b: true\nf: false\nz: null\n",
+    "json": "{\n  \"b\": true,\n  \"f\": false,\n  \"z\": null\n}",
+    "compact": "{\"b\":true,\"f\":false,\"z\":null}"
+  },
+  {
+    "value": {
+      "empty": {},
+      "list": [],
+      "nested": {
+        "deep": {
+          "deeper": [
+            1,
+            "two",
+            {
+              "three": 3
+            }
+          ]
+        }
+      }
+    },
+    "yaml": "empty: {}\nlist: []\nnested:\n  deep:\n    deeper:\n      - 1\n      - two\n      - three: 3\n",
+    "json": "{\n  \"empty\": {},\n  \"list\": [],\n  \"nested\": {\n    \"deep\": {\n      \"deeper\": [\n        1,\n        \"two\",\n        {\n          \"three\": 3\n        }\n      ]\n    }\n  }\n}",
+    "compact": "{\"empty\":{},\"list\":[],\"nested\":{\"deep\":{\"deeper\":[1,\"two\",{\"three\":3}]}}}"
+  },
+  {
+    "value": {
+      "list": [
+        [
+          1,
+          2
+        ],
+        [],
+        [
+          {}
+        ],
+        {
+          "a": []
+        }
+      ]
+    },
+    "yaml": "list:\n  - - 1\n    - 2\n  - []\n  - - {}\n  - a: []\n",
+    "json": "{\n  \"list\": [\n    [\n      1,\n      2\n    ],\n    [],\n    [\n      {}\n    ],\n    {\n      \"a\": []\n    }\n  ]\n}",
+    "compact": "{\"list\":[[1,2],[],[{}],{\"a\":[]}]}"
+  },
+  {
+    "value": {
+      "2": "two",
+      "10": "ten",
+      "b": "b",
+      "01": "zero-one",
+      "a": "a",
+      "-1": "minus"
+    },
+    "yaml": "'2': two\n'10': ten\nb: b\n'01': zero-one\na: a\n'-1': minus\n",
+    "json": "{\n  \"2\": \"two\",\n  \"10\": \"ten\",\n  \"b\": \"b\",\n  \"01\": \"zero-one\",\n  \"a\": \"a\",\n  \"-1\": \"minus\"\n}",
+    "compact": "{\"2\":\"two\",\"10\":\"ten\",\"b\":\"b\",\"01\":\"zero-one\",\"a\":\"a\",\"-1\":\"minus\"}"
+  },
+  {
+    "value": {
+      "123": 3,
+      "key with: colon": 1,
+      "true": 2,
+      "": 4,
+      "multi\nkey": 5,
+      "# hash": 6
+    },
+    "yaml": "'123': 3\n'key with: colon': 1\n'true': 2\n'': 4\n? \"multi\\nkey\"\n: 5\n'# hash': 6\n",
+    "json": "{\n  \"123\": 3,\n  \"key with: colon\": 1,\n  \"true\": 2,\n  \"\": 4,\n  \"multi\\nkey\": 5,\n  \"# hash\": 6\n}",
+    "compact": "{\"123\":3,\"key with: colon\":1,\"true\":2,\"\":4,\"multi\\nkey\":5,\"# hash\":6}"
+  },
+  {
+    "value": {
+      "lanes": [
+        {
+          "steps": [
+            {
+              "type": "action",
+              "parameters": {
+                "duration": "30s",
+                "note": "When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready."
+              },
+              "radius": {
+                "predicate": {
+                  "operator": "AND",
+                  "predicates": [
+                    {
+                      "key": "k8s.namespace",
+                      "operator": "EQUALS",
+                      "values": [
+                        "steadybit-demo"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "yaml": "lanes:\n  - steps:\n      - type: action\n        parameters:\n          duration: 30s\n          note: >-\n            When a single container from steadybit-demo/toys-bestseller fails\n            then within 2m all pods are ready.\n        radius:\n          predicate:\n            operator: AND\n            predicates:\n              - key: k8s.namespace\n                operator: EQUALS\n                values:\n                  - steadybit-demo\n",
+    "json": "{\n  \"lanes\": [\n    {\n      \"steps\": [\n        {\n          \"type\": \"action\",\n          \"parameters\": {\n            \"duration\": \"30s\",\n            \"note\": \"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"\n          },\n          \"radius\": {\n            \"predicate\": {\n              \"operator\": \"AND\",\n              \"predicates\": [\n                {\n                  \"key\": \"k8s.namespace\",\n                  \"operator\": \"EQUALS\",\n                  \"values\": [\n                    \"steadybit-demo\"\n                  ]\n                }\n              ]\n            }\n          }\n        }\n      ]\n    }\n  ]\n}",
+    "compact": "{\"lanes\":[{\"steps\":[{\"type\":\"action\",\"parameters\":{\"duration\":\"30s\",\"note\":\"When a single container from steadybit-demo/toys-bestseller fails then within 2m all pods are ready.\"},\"radius\":{\"predicate\":{\"operator\":\"AND\",\"predicates\":[{\"key\":\"k8s.namespace\",\"operator\":\"EQUALS\",\"values\":[\"steadybit-demo\"]}]}}}]}]}"
+  }
+]

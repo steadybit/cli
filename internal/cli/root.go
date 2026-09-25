@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/internal/experiment"
 	"github.com/steadybit/cli/internal/output"
 	"github.com/steadybit/cli/internal/platform"
 )
@@ -82,9 +83,14 @@ func setUsage(cmd *cobra.Command) {
 }
 
 func Execute() int {
-	err := newRoot().ExecuteContext(context.Background())
+	root := newRoot()
+	root.SetArgs(expandVariadic(root, os.Args[1:]))
+	err := root.ExecuteContext(context.Background())
 	if err == nil {
 		return 0
+	}
+	if errors.Is(err, experiment.ErrIncomplete) {
+		return 1 // already reported, with what was missing
 	}
 	if errors.Is(err, platform.ErrNoAccessToken) {
 		fmt.Fprintln(os.Stderr, platform.MissingTokenHelp())

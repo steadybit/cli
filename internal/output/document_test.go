@@ -19,41 +19,43 @@ func render(t *testing.T, input string, datatype Datatype) string {
 	return string(out)
 }
 
-func TestKeepsThePlatformsFieldOrder(t *testing.T) {
-	assert.Equal(t, "name: x\nteam: ADM\nactive: true\n", render(t, `{"name":"x","team":"ADM","active":true}`, YAML))
+// JSON.parse keeps the sign of -0, and js-yaml wrote it as a float.
+func TestKeepsNegativeZero(t *testing.T) {
+	assert.Equal(t, "n: -0.0\n", render(t, `{"n":-0}`, YAML))
+	assert.Equal(t, "{\n  \"n\": 0\n}\n", render(t, `{"n":-0}`, JSON))
 }
 
-func TestQuotesLikeJsYaml(t *testing.T) {
-	out := render(t, `{"a":"*","b":"2026-02-25T06:35:52Z","c":"true","d":"plain","e":"line1\nline2"}`, YAML)
-	assert.Equal(t, "a: '*'\nb: '2026-02-25T06:35:52Z'\nc: 'true'\nd: plain\ne: |-\n  line1\n  line2\n", out)
+// JSON.parse orders integer-like keys first; the fixture cannot show it, since the
+// generator's own JSON.stringify already reordered them.
+func TestOrdersKeysAsJavaScriptObjectsDo(t *testing.T) {
+	assert.Equal(t, "'2': two\n'10': ten\nb: b\n'01': zero-one\n", render(t, `{"b":"b","10":"ten","01":"zero-one","2":"two"}`, YAML))
 }
 
-func TestWritesWholeFloatsAsJavaScriptDid(t *testing.T) {
-	assert.Equal(t, "a: 1\nb: 1.5\n", render(t, `{"a":1.0,"b":1.5}`, YAML))
-	assert.Equal(t, "{\n  \"a\": 1,\n  \"b\": 1.5\n}\n", render(t, `{"a":1.0,"b":1.5}`, JSON))
+// A YAML parser rejects DEL, which JSON allows unescaped.
+func TestReadsJSONThatYAMLWouldReject(t *testing.T) {
+	assert.Equal(t, "s: \"a\\x7Fb\"\n", render(t, "{\"s\":\"a\x7fb\"}", YAML))
 }
 
-func TestIndentsSequencesUnderTheirKey(t *testing.T) {
-	assert.Equal(t, "tags:\n  - a\n  - b\n", render(t, `{"tags":["a","b"]}`, YAML))
-}
-
-func TestResolvesMergeKeysWhenSending(t *testing.T) {
+func TestResolvesMergeKeysInYAMLFiles(t *testing.T) {
 	doc, err := ParseDocument([]byte("base: &b\n  x: 1\n  y: 2\nderived:\n  <<: *b\n  y: 3\n"))
 	require.NoError(t, err)
 	out, err := doc.MarshalJSON()
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"base":{"x":1,"y":2},"derived":{"y":3,"x":1}}`, string(out))
+	assert.Equal(t, `{"base":{"x":1,"y":2},"derived":{"y":3,"x":1}}`, string(out))
 }
 
-func TestDoesNotEscapeHTMLInJSON(t *testing.T) {
-	assert.Equal(t, "{\n  \"u\": \"a?b=1&c=<d>\"\n}\n", render(t, `{"u":"a?b=1&c=<d>"}`, JSON))
+// js-yaml's load turned timestamps into Dates, which JSON.stringify writes as ISO strings.
+func TestSendsYAMLTimestampsAsJavaScriptDates(t *testing.T) {
+	doc, err := ParseDocument([]byte("startAt: 2030-06-01T09:00:00Z\n"))
+	require.NoError(t, err)
+	out, _ := doc.MarshalJSON()
+	assert.Equal(t, `{"startAt":"2030-06-01T09:00:00.000Z"}`, string(out))
 }
 
 func TestSetFirstMovesTheKeyToTheTop(t *testing.T) {
 	doc, err := ParseDocument([]byte(`{"name":"x","key":"old"}`))
 	require.NoError(t, err)
 	doc.SetFirst("key", "ADM-1")
-	out, err := doc.Render(YAML)
-	require.NoError(t, err)
+	out, _ := doc.Render(YAML)
 	assert.Equal(t, "key: ADM-1\nname: x\n", string(out))
 }

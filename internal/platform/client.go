@@ -99,8 +99,10 @@ func New() (*Client, error) {
 		return nil, fmt.Errorf("invalid base URL '%s': %w", cfg.BaseURL, err)
 	}
 	httpClient := &http.Client{
+		// No client-wide timeout: it would also count the time a request waits for the
+		// rate limiter, which under a dump is far longer than any request takes. The
+		// transport bounds each attempt instead.
 		Transport: &transport{next: http.DefaultTransport, base: base},
-		Timeout:   30 * time.Second,
 		// Requests carry the access token; following a redirect could hand it to another host.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
@@ -127,6 +129,28 @@ func Check(resp *http.Response, body []byte) error {
 
 const maxRateLimitWait = 2 * time.Minute
 
+const defaultTimeout = 30 * time.Second
+
+type timeoutKey struct{}
+
+// WithTimeout gives the requests made with ctx a longer deadline than the default 30
+// seconds, as artifact downloads need.
+func WithTimeout(ctx context.Context, d time.Duration) context.Context {
+	return context.WithValue(ctx, timeoutKey{}, d)
+}
+
+// cancelOnClose ends an attempt's deadline once its body has been read, so the deadline
+// bounds the download of the body and not just the wait for the status line.
+type cancelOnClose struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (c cancelOnClose) Close() error {
+	defer c.cancel()
+	return c.ReadCloser.Close()
+}
+
 var idempotent = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true, "PUT": true, "DELETE": true}
 
 // transport retries what is safe to retry: a 429 for any method, since the request was
@@ -152,9 +176,17 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		if body != nil {
 			req.Body = io.NopCloser(bytes.NewReader(body))
 		}
-		logRequest(req, body)
-		resp, err := t.next.RoundTrip(req)
+		Limiter().Acquire()
+		timeout := defaultTimeout
+		if d, ok := req.Context().Value(timeoutKey{}).(time.Duration); ok {
+			timeout = d
+		}
+		ctx, cancel := context.WithTimeout(req.Context(), timeout)
+		sent := req.WithContext(ctx)
+		logRequest(sent, body)
+		resp, err := t.next.RoundTrip(sent)
 		if err != nil {
+			cancel()
 			if !idempotent[req.Method] || attempt >= 4 {
 				return nil, fmt.Errorf("failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
 			}
@@ -163,6 +195,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 		logResponse(resp)
 		if resp.StatusCode != http.StatusTooManyRequests {
+			resp.Body = cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
 			return resp, nil
 		}
 		wait := time.Second
@@ -173,9 +206,11 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 		}
 		if waited+wait > maxRateLimitWait {
+			resp.Body = cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
 			return resp, nil
 		}
 		_ = resp.Body.Close()
+		cancel()
 		time.Sleep(wait)
 		waited += wait
 	}

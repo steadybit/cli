@@ -15,7 +15,7 @@ import (
 
 func newExperiment() *cobra.Command {
 	cmd := &cobra.Command{Use: "experiment", Short: "Check and run experiments."}
-	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply())
+	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDump())
 	return cmd
 }
 
@@ -58,7 +58,7 @@ func newExperimentRun() *cobra.Command {
 	}
 	f := cmd.Flags()
 	f.StringVarP(&o.Key, "key", "k", "", "The experiment key.")
-	f.StringSliceVarP(&o.Files, "file", "f", nil, "The path to the experiment file or a directory containing multiple files.")
+	f.StringArrayVarP(&o.Files, "file", "f", nil, "The path to the experiment file or a directory containing multiple files.")
 	f.BoolVarP(&o.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
 	f.BoolVar(&noWait, "no-wait", false, "Do not wait for experiment run to finish.")
 	f.BoolVar(&o.Yes, "yes", false, "Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.")
@@ -72,6 +72,7 @@ func newExperimentRun() *cobra.Command {
 	f.VarP(&placeholders, "placeholder", "p", "With --template: a placeholder value. Repeat for more.")
 	cmd.MarkFlagsMutuallyExclusive("key", "file")
 	cmd.MarkFlagsMutuallyExclusive("template", "file")
+	variadic(cmd, "file")
 	return cmd
 }
 
@@ -105,8 +106,30 @@ func newExperimentApply() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&o.Key, "key", "k", "", "The experiment key.")
-	cmd.Flags().StringSliceVarP(&o.Files, "file", "f", nil, "The path to the experiment file or a directory containing multiple files.")
+	cmd.Flags().StringArrayVarP(&o.Files, "file", "f", nil, "The path to the experiment file or a directory containing multiple files.")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
 	_ = cmd.MarkFlagRequired("file")
+	variadic(cmd, "file")
+	return cmd
+}
+
+func newExperimentDump() *cobra.Command {
+	var o experiment.DumpOptions
+	cmd := &cobra.Command{
+		Use:   "dump",
+		Short: "Dump all experiments and executions from all teams in Steadybit.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit experiment dump -d ./dump",
+			"steadybit experiment dump -d ./dump -t json --team ADM WEBHOOK",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
+			return experiment.Dump(ctx, c, o)
+		}),
+	}
+	cmd.Flags().StringVarP(&o.Directory, "directory", "d", ".", "The path to dump all the experiments to")
+	cmd.Flags().StringVarP(&o.Type, "type", "t", "yaml", `The output format of the experiment ("json" or "yaml").`)
+	cmd.Flags().StringArrayVar(&o.Teams, "team", nil, "Only dump the given teams, by team key. Defaults to every accessible team.")
+	variadic(cmd, "team")
 	return cmd
 }

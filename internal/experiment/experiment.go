@@ -98,15 +98,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 		}
 		return nil
 	}
-	if datatype == output.JSON {
-		// Files were written as JSON.stringify left them, on a single line.
-		var compact bytes.Buffer
-		if err := json.Compact(&compact, rendered); err != nil {
-			return err
-		}
-		rendered = compact.Bytes()
-	}
-	if err := os.WriteFile(o.File, rendered, 0o644); err != nil {
+	if err := os.WriteFile(o.File, document.RenderFile(datatype), 0o644); err != nil {
 		return err
 	}
 	fmt.Printf("Experiment %s written to %s.\n", o.Key, o.File)
@@ -182,9 +174,7 @@ func writeBack(file string, document Document, datatype output.Datatype, key str
 		rendered = append([]byte("key: "+key+"\n"), content...)
 	} else {
 		document.SetFirst("key", key)
-		if rendered, err = document.Render(datatype); err != nil {
-			return err
-		}
+		rendered = document.RenderFile(datatype)
 	}
 	return os.WriteFile(file, rendered, 0o644)
 }
