@@ -239,16 +239,6 @@ type DownloadOptions struct {
 	Output                               string
 }
 
-// PathSegment reduces an id from the platform to one path segment, so that one
-// containing "../" cannot write outside the chosen directory; Base alone leaves "..".
-func PathSegment(id string) string {
-	segment := filepath.Base(id)
-	if segment == "" || segment == "." || segment == ".." || segment == string(filepath.Separator) {
-		return "_"
-	}
-	return segment
-}
-
 // Download writes every selected artifact to <directory>/<target execution>/<artifact>:
 // two targets of one step usually produce files of the same name.
 func Download(ctx context.Context, c *platform.Client, o DownloadOptions) error {
@@ -273,7 +263,7 @@ func Download(ctx context.Context, c *platform.Client, o DownloadOptions) error 
 	for _, a := range selected {
 		file := o.Output
 		if file == "" {
-			file = filepath.Join(o.Directory, PathSegment(a.TargetExecutionID), PathSegment(a.ArtifactID))
+			file = filepath.Join(o.Directory, output.PathSegment(a.TargetExecutionID), output.PathSegment(a.ArtifactID))
 		}
 		content, _, err := platform.Read(c.GetArtifact(ctx, o.ID, a.TargetExecutionID, a.ArtifactID))
 		if platform.IsStatus(err, http.StatusNotFound) {

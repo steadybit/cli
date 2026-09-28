@@ -8,10 +8,12 @@
 - **Breaking:** the CLI is no longer published to npm; `steadybit@5.0.0` there is the last
   version. Uninstall it with `npm uninstall -g steadybit` and install the binary. Commands,
   flags, messages, exit codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables
-  are unchanged, and experiment, schedule and service files are written byte for byte as
+  are unchanged, and files written by `get`, `dump` and `export` are byte for byte as
   before.
-- Writing a new experiment's key back into a YAML file no longer rewrites the file: the key
-  is added at the top and comments, anchors and formatting are kept.
+- Writing the key of a new experiment, or the id of a new schedule, service or other
+  resource, back into its YAML file no longer rewrites the file: the key is added at the
+  top and comments, anchors and formatting are kept. A file where a line in front would
+  not do, such as a flow mapping `{...}`, is written out again as before.
 - Shell completion: `steadybit completion bash|zsh|fish|powershell`, which completes
   experiment keys, team keys and the ids of templates, schedules, services and profiles
   from the platform.

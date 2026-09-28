@@ -197,7 +197,9 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		if body != nil {
 			req.Body = io.NopCloser(bytes.NewReader(body))
 		}
-		Limiter().Acquire()
+		if err := Limiter().Wait(req.Context()); err != nil {
+			return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
+		}
 		timeout := defaultTimeout
 		if d, ok := req.Context().Value(timeoutKey{}).(time.Duration); ok {
 			timeout = d
@@ -211,7 +213,9 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			if !idempotent[req.Method] || attempt >= 4 {
 				return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
 			}
-			time.Sleep(jitter(time.Duration(attempt) * RetryUnit))
+			if err := sleep(req.Context(), jitter(time.Duration(attempt)*RetryUnit)); err != nil {
+				return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
+			}
 			continue
 		}
 		logResponse(resp)
@@ -232,7 +236,9 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 		_ = resp.Body.Close()
 		cancel()
-		time.Sleep(wait)
+		if err := sleep(req.Context(), wait); err != nil {
+			return nil, fmt.Errorf("Failed to call Steadybit API at %s %s: %w", req.Method, req.URL, err)
+		}
 		waited += wait
 	}
 }

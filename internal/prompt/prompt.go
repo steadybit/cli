@@ -97,9 +97,14 @@ func Password(message string, validate Validator) (string, error) {
 	}
 }
 
-// Confirm asks a yes/no question. Without a terminal it answers nonInteractive.
+// Interactive reports whether a question would be seen: stdout is a terminal. Tests replace it.
+var Interactive = func() bool { return term.IsTerminal(int(os.Stdout.Fd())) }
+
+// Confirm asks a yes/no question. When stdout is not a terminal, as in a pipeline or with
+// output redirected to a file, nobody would see the question, and it answers nonInteractive.
+// This is the TypeScript CLI's check, so the same invocations ask as before.
 func Confirm(message string, defaultYes, nonInteractive bool) (bool, error) {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
+	if !Interactive() {
 		return nonInteractive, nil
 	}
 	hint := "y/N"

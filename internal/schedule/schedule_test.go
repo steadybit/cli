@@ -55,7 +55,8 @@ func TestApplyCreatesAndWritesTheIdFirst(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/schedules", platformtest.Reply{Status: http.StatusCreated, JSON: saved})
 	file := filepath.Join(t.TempDir(), "new.yml")
-	require.NoError(t, os.WriteFile(file, []byte("experimentKey: ADM-1\nstartAt: 2030-06-01T09:00:00Z\n"), 0o644))
+	original := "# nightly\nexperimentKey: ADM-1\nstartAt: 2030-06-01T09:00:00Z\n"
+	require.NoError(t, os.WriteFile(file, []byte(original), 0o644))
 
 	out, err := platformtest.Stdout(t, func() error { return schedule.Apply(ctx, p.Client, schedule.ApplyOptions{Files: []string{file}}) })
 
@@ -64,7 +65,8 @@ func TestApplyCreatesAndWritesTheIdFirst(t *testing.T) {
 	// A YAML timestamp was a JavaScript Date: sent, and written back, as an ISO string.
 	assert.Equal(t, map[string]any{"experimentKey": "ADM-1", "startAt": "2030-06-01T09:00:00.000Z"}, p.Requests("POST /api/experiments/schedules")[0].JSON(t))
 	content, _ := os.ReadFile(file)
-	assert.Equal(t, "id: "+id+"\nexperimentKey: ADM-1\nstartAt: 2030-06-01T09:00:00.000Z\n", string(content))
+	// The rest of the file, comment included, is kept as it was written.
+	assert.Equal(t, "id: "+id+"\n"+original, string(content))
 }
 
 func TestApplyKeepsAFileThatHasAnId(t *testing.T) {

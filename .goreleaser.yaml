@@ -38,6 +38,9 @@ snapshot:
 release:
   # The changelog is written by hand in CHANGELOG.md.
   mode: keep-existing
+  # A tag like v6.1.0-rc.1 is marked as a prerelease, so that releases/latest, which the
+  # action installs by default, keeps pointing at the last stable version.
+  prerelease: auto
 
 changelog:
   disable: true

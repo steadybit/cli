@@ -86,6 +86,36 @@ func TestApplyCreatesAndPrependsTheKeyKeepingTheFile(t *testing.T) {
 	}}}}, p.Requests("POST /api/experiments")[0].JSON(t))
 }
 
+// Each of these came out as a different experiment when the key was simply put in front.
+func TestApplyWritesTheKeyIntoFilesALineInFrontWouldBreak(t *testing.T) {
+	for name, tc := range map[string]struct{ file, original, written string }{
+		"document marker": {"e.yml", "---\nname: new\n", "---\nkey: NEW-1\nname: new\n"},
+		"empty key":       {"e.yml", "key: ''\nname: new\n", "key: NEW-1\nname: new\n"},
+		"flow mapping":    {"e.yml", "{name: new}\n", "key: NEW-1\nname: new\n"},
+		"json with a bom": {"e.json", "\ufeff{\"name\":\"new\"}", `{"key":"NEW-1","name":"new"}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := platformtest.New(t)
+			p.Reply("POST /api/experiments", platformtest.Reply{Status: http.StatusCreated, Headers: map[string]string{"Location": p.URL + "/api/experiments/NEW-1"}})
+			p.Reply("POST /api/experiments/NEW-1", platformtest.Reply{})
+			file := filepath.Join(t.TempDir(), tc.file)
+			require.NoError(t, os.WriteFile(file, []byte(tc.original), 0o644))
+			apply := func() error { return experiment.Apply(ctx, p.Client, experiment.ApplyOptions{Files: []string{file}}) }
+
+			_, err := platformtest.Stdout(t, apply)
+			require.NoError(t, err)
+			content, _ := os.ReadFile(file)
+			assert.Equal(t, tc.written, string(content))
+
+			// The next apply updates what the first one created, with the whole design.
+			_, err = platformtest.Stdout(t, apply)
+			require.NoError(t, err)
+			assert.Len(t, p.Requests("POST /api/experiments"), 1)
+			assert.Equal(t, map[string]any{"key": "NEW-1", "name": "new"}, p.Requests("POST /api/experiments/NEW-1")[0].JSON(t))
+		})
+	}
+}
+
 func TestApplyUpdatesByTheKeyInTheFile(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/TST-1", platformtest.Reply{})
@@ -423,10 +453,12 @@ func TestAReportNeedsWaiting(t *testing.T) {
 func TestAnInterruptCancelsTheRunItWaitsFor(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
-	polled := make(chan struct{}, 100)
-	var canceled atomic.Bool
+	var canceled, interrupted atomic.Bool
 	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
-		polled <- struct{}{}
+		// Before the first poll has been answered: the run id comes from where it started.
+		if !interrupted.Swap(true) {
+			interrupt.RunHandlers(os.Interrupt)
+		}
 		if canceled.Load() {
 			return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "CANCELED"}}
 		}
@@ -436,11 +468,6 @@ func TestAnInterruptCancelsTheRunItWaitsFor(t *testing.T) {
 		canceled.Store(true)
 		return platformtest.Reply{Status: http.StatusAccepted}
 	})
-	go func() {
-		<-polled
-		<-polled // the run id is known once the second poll has been answered
-		interrupt.RunHandlers(os.Interrupt)
-	}()
 
 	_, err := platformtest.Stdout(t, func() error {
 		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true})

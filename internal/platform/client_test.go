@@ -67,6 +67,20 @@ func TestGivesUpOnRateLimitsOnceTheBudgetIsSpent(t *testing.T) {
 	assert.ErrorContains(t, err, "responded with unexpected status code: 429 - slow down")
 }
 
+// Shell completion gives up after a few seconds; a long back-off must not outlast that.
+func TestTheCallersDeadlineBoundsTheRateLimitBackOff(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams", platformtest.Reply{Status: http.StatusTooManyRequests, Headers: map[string]string{"Retry-After": "60000"}})
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+
+	_, _, err := platform.Read(p.Client.GetTeams(ctx, nil))
+
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Less(t, time.Since(started), 5*time.Second)
+}
+
 // A POST that failed in transit may still have started a run, so only methods defined to
 // be idempotent are repeated.
 func TestRetriesTransportFailuresOnlyForIdempotentMethods(t *testing.T) {

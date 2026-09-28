@@ -71,7 +71,7 @@ func Read(file, what string) (*output.Document, output.Datatype, error) {
 }
 
 func isJSON(content []byte) bool {
-	trimmed := strings.TrimSpace(string(content))
+	trimmed := strings.TrimSpace(strings.TrimPrefix(string(content), "\ufeff"))
 	return strings.HasPrefix(trimmed, "{") && output.IsJSON(content)
 }
 
@@ -115,13 +115,28 @@ func ApplyFiles(paths []string, recursive bool, what string, upsert func(file st
 		}
 		// Resources named by a key, like teams, have no id to write back.
 		if (existingID == nil || existingID == "") && result.ID != "" {
-			doc.Value().SetFirst("id", result.ID)
-			if err := os.WriteFile(file, []byte(format(doc, datatype)), 0o644); err != nil {
+			if err := writeID(file, doc, datatype, result.ID); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// writeID puts the new id at the top of the file. YAML keeps its comments and anchors
+// when a line in front can hold it; otherwise the document is written out again.
+func writeID(file string, doc *output.Document, datatype output.Datatype, id string) error {
+	if datatype == output.YAML {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
+		if rendered, ok := output.WithFieldFirst(content, doc, "id", id); ok {
+			return os.WriteFile(file, rendered, 0o644)
+		}
+	}
+	doc.Value().SetFirst("id", id)
+	return os.WriteFile(file, []byte(format(doc, datatype)), 0o644)
 }
 
 func CreatedOrUpdated(created bool) string {

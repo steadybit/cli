@@ -59,3 +59,53 @@ func TestSetFirstMovesTheKeyToTheTop(t *testing.T) {
 	out, _ := doc.Render(YAML)
 	assert.Equal(t, "key: ADM-1\nname: x\n", string(out))
 }
+
+func TestWithFieldFirstKeepsTheFileWhereALineInFrontDoes(t *testing.T) {
+	for name, tc := range map[string]struct{ in, out string }{
+		"plain":           {"# kept\nname: new\n", "key: NEW-1\n# kept\nname: new\n"},
+		"document marker": {"# head\n---\nname: new\n", "# head\n---\nkey: NEW-1\nname: new\n"},
+		"byte order mark": {"\ufeffname: new\n", "\ufeffkey: NEW-1\nname: new\n"},
+		"crlf":            {"---\r\nname: new\r\n", "---\r\nkey: NEW-1\nname: new\r\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			doc, err := ParseDocument([]byte(tc.in))
+			require.NoError(t, err)
+			out, ok := WithFieldFirst([]byte(tc.in), doc, "key", "NEW-1")
+			require.True(t, ok)
+			assert.Equal(t, tc.out, string(out))
+		})
+	}
+}
+
+// Each of these would have come out as a different document, or not parse at all.
+func TestWithFieldFirstRefusesWhatALineInFrontWouldBreak(t *testing.T) {
+	for name, in := range map[string]string{
+		"flow mapping":      "{name: new, team: ADM}\n",
+		"empty field":       "key: ''\nname: new\n",
+		"null field":        "name: new\nkey:\n",
+		"marker with value": "--- {name: new}\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			doc, err := ParseDocument([]byte(in))
+			require.NoError(t, err)
+			_, ok := WithFieldFirst([]byte(in), doc, "key", "NEW-1")
+			assert.False(t, ok)
+		})
+	}
+}
+
+func TestReadsJSONAfterAByteOrderMark(t *testing.T) {
+	content := []byte("\ufeff{\"name\":\"new\"}")
+	assert.True(t, IsJSON(content))
+	doc, err := ParseDocument(content)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"name"}, doc.Value().Keys())
+}
+
+func TestNeverLetsAnIdStepOutOfADirectory(t *testing.T) {
+	for _, id := range []string{"..", ".", "", "../..", "a/../..", "/"} {
+		assert.Equal(t, "_", PathSegment(id), id)
+	}
+	assert.Equal(t, "evil", PathSegment("../../evil"))
+	assert.Equal(t, "report.zip", PathSegment("report.zip"))
+}

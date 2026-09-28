@@ -190,7 +190,7 @@ type experimentDump struct {
 func dumpTeam(ctx context.Context, c *platform.Client, list []listed, dir string, datatype output.Datatype) teamDump {
 	results := make([]experimentDump, len(list))
 	forEach(len(list), experimentConcurrency, func(i int) {
-		results[i] = dumpExperiment(ctx, c, list[i].Key, filepath.Join(dir, list[i].Key), datatype)
+		results[i] = dumpExperiment(ctx, c, list[i].Key, filepath.Join(dir, output.PathSegment(list[i].Key)), datatype)
 	})
 	var d teamDump
 	for _, r := range results {
