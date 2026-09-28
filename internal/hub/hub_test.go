@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/steadybit/cli/v6/internal/hub"
@@ -85,4 +86,31 @@ func TestResync(t *testing.T) {
 	assert.Equal(t, "Hub Reliability Hub synchronized, 1 template(s).\n", out)
 	assert.EqualError(t, hub.Resync(ctx, p.Client, "0194a7d4-0d1f-7b21-9c64-5b6e3c1f2a11"), "Hub Broken could not be synchronized: index.json not found")
 	assert.EqualError(t, hub.Resync(ctx, p.Client, "0194a7d4-0d1f-7b21-9c64-5b6e3c1f2a12"), "Hub 0194a7d4-0d1f-7b21-9c64-5b6e3c1f2a12 not found.")
+}
+
+// Synchronizing on apply reports what it found, and fails when the repository could not
+// be read, with the new id written to the file first.
+func TestApplySynchronizeReportsTheOutcome(t *testing.T) {
+	p := platformtest.New(t)
+	p.Handle("POST /api/hubs", func(r platformtest.Request) platformtest.Reply {
+		if strings.Contains(string(r.Body), `"Broken"`) {
+			return platformtest.Reply{Status: http.StatusCreated, Body: `{"id":"` + id + `","hubName":"Broken","syncError":"404 Not Found"}`}
+		}
+		return platformtest.Reply{Body: `{"id":"` + id + `","hubName":"Good","templates":[{},{}]}`}
+	})
+	dir := t.TempDir()
+	good := filepath.Join(dir, "good.yml")
+	require.NoError(t, os.WriteFile(good, []byte("id: "+id+"\nhubName: Good\n"), 0o644))
+	broken := filepath.Join(dir, "broken.yml")
+	require.NoError(t, os.WriteFile(broken, []byte("hubName: Broken\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error {
+		return hub.Apply(ctx, p.Client, hub.ApplyOptions{Files: []string{good, broken}, Synchronize: true})
+	})
+
+	assert.EqualError(t, err, "Hub Broken could not be synchronized: 404 Not Found")
+	assert.Contains(t, out, "Hub Good synchronized, 2 template(s).\n")
+	assert.Contains(t, out, "Hub Broken ("+id+") created.\n")
+	content, _ := os.ReadFile(broken)
+	assert.Equal(t, "id: "+id+"\nhubName: Broken\n", string(content))
 }

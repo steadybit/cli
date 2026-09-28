@@ -224,6 +224,13 @@ func (o MemberOptions) update() (api.TeamMembersUpdateAO, error) {
 
 func (o MemberOptions) count() int { return len(o.Usernames) + len(o.Emails) }
 
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
+}
+
 var errNoMembers = errors.New("No members given. Pass --username or --email.")
 
 func AddMembers(ctx context.Context, c *platform.Client, o MemberOptions) error {
@@ -269,7 +276,7 @@ func SetMembers(ctx context.Context, c *platform.Client, o MemberOptions) error 
 	if err != nil {
 		return err
 	}
-	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Make these %d the only members of team %s, removing everyone else?", o.count(), o.Key)); !ok || err != nil {
+	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Make %s the only %s of team %s, removing everyone else?", strings.Join(append(append([]string{}, o.Emails...), o.Usernames...), ", "), plural(o.count(), "member", "members"), o.Key)); !ok || err != nil {
 		return err
 	}
 	var result members
@@ -373,7 +380,7 @@ func SetEnvironments(ctx context.Context, c *platform.Client, o EnvironmentOptio
 	if len(o.Environments) == 0 {
 		return errNoEnvironments
 	}
-	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Make these %d the only environments of team %s?", len(o.Environments), o.Key)); !ok || err != nil {
+	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Make %s the only %s of team %s?", strings.Join(o.Environments, ", "), plural(len(o.Environments), "environment", "environments"), o.Key)); !ok || err != nil {
 		return err
 	}
 	var result environments

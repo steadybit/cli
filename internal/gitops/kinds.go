@@ -21,6 +21,10 @@ type Kind struct {
 	Name string
 	// ReadOnly fields are reported by the platform but not part of the file.
 	ReadOnly []string
+	// Defaults are the values the platform gives fields a file leaves out. Holding
+	// exactly that, such a field is not a difference; holding anything else, applying
+	// the file would reset it, which is.
+	Defaults map[string]any
 	// Identity is the field that names it on the platform. A file matched otherwise, by
 	// an externalId or a name, has none yet, which is not a difference.
 	Identity string
@@ -88,6 +92,7 @@ var Experiment = Kind{
 var Schedule = Kind{
 	Name:     "experiment schedule",
 	ReadOnly: []string{"editedBy", "lastUpdated", "nextExecution"},
+	Defaults: map[string]any{"allowParallel": true},
 	Identity: "id",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		id := str(local, "id")
@@ -102,6 +107,7 @@ var Schedule = Kind{
 var Service = Kind{
 	Name:     "service",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy"},
+	Defaults: map[string]any{"logoId": "service", "logoColor": "blue"},
 	Identity: "id",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		id := str(local, "id")
@@ -117,6 +123,7 @@ var Service = Kind{
 var ServiceProfile = Kind{
 	Name:     "service profile",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy", "defaultProfile"},
+	Defaults: map[string]any{"origin": "CUSTOM"},
 	Identity: "id",
 	// By its id, or by its name, which is unique among profiles.
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
@@ -187,7 +194,13 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	if _, has := local.Value().Get(k.Identity); !has {
 		ignored = append(append([]string{}, ignored...), k.Identity)
 	}
-	diff, err := Diff(file, strip(local.Value(), ignored), strip(remote, ignored))
+	// A field with a default is compared against that default: false is a value to
+	// report when the default is true.
+	var defaulted []string
+	for key := range k.Defaults {
+		defaulted = append(defaulted, key)
+	}
+	diff, err := Diff(file, strip(local.Value(), ignored), withoutDefaults(local.Value(), strip(remote, ignored), k.Defaults), defaulted...)
 	if err != nil {
 		return Result{}, err
 	}
@@ -206,4 +219,18 @@ func (r Result) Describe(k Kind) string {
 		return fmt.Sprintf("%s would update %s %s (%d lines changed).", r.File, k.Name, r.ID, Changes(r.Diff))
 	}
 	return fmt.Sprintf("%s matches %s %s.", r.File, k.Name, r.ID)
+}
+
+// withoutDefaults drops the fields the file leaves out that hold the platform's default.
+func withoutDefaults(local, remote *jsyaml.Map, defaults map[string]any) *jsyaml.Map {
+	out := jsyaml.Clone(remote).(*jsyaml.Map)
+	for key, value := range defaults {
+		if _, set := local.Get(key); set {
+			continue
+		}
+		if held, ok := out.Get(key); ok && jsyaml.CompactJSON(held) == jsyaml.CompactJSON(value) {
+			out.Delete(key)
+		}
+	}
+	return out
 }

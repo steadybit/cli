@@ -163,7 +163,8 @@ func TestRunByKeyAndWaitPollsTheConfiguredHost(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, "Executing experiment: TST-1\nExperiment run API: https://elsewhere.example.com/api/experiments/executions/1\nExperiment run UI: https://ui/TST-1\nCurrent run state: running\nCurrent run state: completed\n", out)
+	// By key, the TypeScript CLI printed the locations before the key; a file run the other way round.
+	assert.Equal(t, "Experiment run API: https://elsewhere.example.com/api/experiments/executions/1\nExperiment run UI: https://ui/TST-1\nExecuting experiment: TST-1\nCurrent run state: running\nCurrent run state: completed\n", out)
 	query := p.Requests("POST /api/experiments/TST-1/execute")[0].Query
 	assert.Equal(t, []string{"false"}, query["allowParallel"])
 	assert.Equal(t, []string{"true"}, query["forcePersist"])
@@ -628,4 +629,23 @@ func TestAsksBeforeRunningInParallel(t *testing.T) {
 			assert.Equal(t, !tc.yes, strings.Contains(out, "Do you want to start TST-1 in parallel?"), out)
 		})
 	}
+}
+
+// With --key, a file updates that experiment before it runs, whatever key the file has.
+func TestRunWithAKeyUpdatesItFromTheFile(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-7", platformtest.Reply{})
+	p.Reply("POST /api/experiments/TST-7/execute", started(p, "TST-7", 1))
+	file := filepath.Join(t.TempDir(), "e.yml")
+	require.NoError(t, os.WriteFile(file, []byte("name: from file\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-7", Files: []string{file}, Yes: true})
+	})
+
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(out, "Executing experiment: TST-7\n"), out)
+	assert.Equal(t, map[string]any{"name": "from file"}, p.Requests("POST /api/experiments/TST-7")[0].JSON(t))
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "name: from file\n", string(content))
 }

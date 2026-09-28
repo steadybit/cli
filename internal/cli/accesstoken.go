@@ -73,7 +73,7 @@ func newAccessToken() *cobra.Command {
 		}),
 	}
 	idFlag(recreate, &r.ID, "The access token id.")
-	recreate.Flags().StringVar(&r.ExpiresAt, "expires-at", "", "When the new token expires, a date or an RFC 3339 time. (default: never)")
+	recreate.Flags().StringVar(&r.ExpiresAt, "expires-at", "", `When the new token expires, a date, an RFC 3339 time, or "never". (default: when the current token expires)`)
 	recreate.Flags().StringVarP(&r.Output, "output", "t", "", tokenTypeHelp)
 	recreate.Flags().BoolVar(&r.Yes, "yes", false, yesHelp)
 

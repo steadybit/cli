@@ -293,13 +293,15 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 	type runner struct {
 		what string
 		run  func(parallel bool) (started, error)
+		// A run by key alone printed its locations before the key, one from a file after.
+		keyLast bool
 	}
 	runs := []runner{}
 	switch {
 	case o.Template != "" && o.Key != "":
 		return errors.New("--key cannot be combined with --template. Use `experiment apply --template -k` to update it.")
 	case o.Template != "":
-		runs = append(runs, runner{"this one", func(parallel bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }})
+		runs = append(runs, runner{"this one", func(parallel bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }, false})
 	case len(o.Files) > 0:
 		files, err := ResolveFiles(o.Files, o.Recursive)
 		if err != nil {
@@ -309,10 +311,10 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			return errors.New("If --key is specified, at most one --file can be specified.")
 		}
 		for _, file := range files {
-			runs = append(runs, runner{fileExperimentName(file), func(parallel bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }})
+			runs = append(runs, runner{fileExperimentName(file), func(parallel bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }, false})
 		}
 	case o.Key != "":
-		runs = append(runs, runner{o.Key, func(parallel bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }})
+		runs = append(runs, runner{o.Key, func(parallel bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }, true})
 	default:
 		return errors.New("Either --key, --file or --template must be specified.")
 	}
@@ -338,9 +340,14 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		if err != nil {
 			return errors.Join(err, report())
 		}
-		fmt.Println("Executing experiment:", result.Key)
+		if !r.keyLast {
+			fmt.Println("Executing experiment:", result.Key)
+		}
 		fmt.Println("Experiment run API:", result.APILocation)
 		fmt.Println("Experiment run UI:", result.UILocation)
+		if r.keyLast {
+			fmt.Println("Executing experiment:", result.Key)
+		}
 		if o.Wait && result.APILocation != "" {
 			done, err := wait(ctx, c, result.APILocation, o.WaitOptions)
 			if done != nil {

@@ -8,6 +8,7 @@ package gitops
 import (
 	"math"
 	"strings"
+	"time"
 
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/steadybit/cli/v6/internal/jsyaml"
@@ -18,6 +19,12 @@ import (
 // platform fills in defaults (false, empty lists and maps) that a file written by hand
 // omits; reporting those would bury every real difference.
 func Comparable(local, remote any) any {
+	return comparable(local, remote, nil)
+}
+
+// comparable is Comparable with fields reported even when they hold what looks like an
+// empty default, because their default is something else.
+func comparable(local, remote any, always map[string]bool) any {
 	lm, lok := local.(*jsyaml.Map)
 	rm, rok := remote.(*jsyaml.Map)
 	if lok && rok {
@@ -34,7 +41,7 @@ func Comparable(local, remote any) any {
 			if _, ok := lm.Get(k); ok {
 				continue
 			}
-			if rv, _ := rm.Get(k); !isEmpty(rv) {
+			if rv, _ := rm.Get(k); always[k] || !isEmpty(rv) {
 				out.Set(k, rv)
 			}
 		}
@@ -52,6 +59,15 @@ func Comparable(local, remote any) any {
 			}
 		}
 		return out
+	}
+	// An unquoted YAML date is the same moment as the platform's ISO string, however
+	// either writes its fractions of a second.
+	if lt, ok := local.(jsyaml.Timestamp); ok {
+		if rs, ok := remote.(string); ok {
+			if rt, err := time.Parse(time.RFC3339Nano, rs); err == nil && rt.Equal(time.Time(lt)) {
+				return local
+			}
+		}
 	}
 	return remote
 }
@@ -108,8 +124,13 @@ func withoutMissing(v any) any {
 
 // Diff is a unified diff from the platform's version to the file's, empty when they
 // agree. Both sides are rendered as YAML the way `get` writes it.
-func Diff(file string, local, remote *jsyaml.Map) (string, error) {
-	projected := withoutMissing(Comparable(local, remote)).(*jsyaml.Map)
+// Fields in always are reported whenever the platform holds them and the file does not.
+func Diff(file string, local, remote *jsyaml.Map, always ...string) (string, error) {
+	report := map[string]bool{}
+	for _, k := range always {
+		report[k] = true
+	}
+	projected := withoutMissing(comparable(local, remote, report)).(*jsyaml.Map)
 	before, after := jsyaml.Dump(projected), jsyaml.Dump(local)
 	if before == after {
 		return "", nil

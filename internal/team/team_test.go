@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/steadybit/cli/v6/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/prompt"
 	"github.com/steadybit/cli/v6/internal/team"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -170,4 +172,25 @@ func TestListPrintsThePlatformsTeamsAsJSON(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "[\n  {\n    \"key\": \"ADM\",\n    \"name\": \"Admins\",\n    \"members\": []\n  }\n]\n", out)
+}
+
+// The question names who stays; declined, nothing is sent.
+func TestSetAsksNamingWhoStays(t *testing.T) {
+	p := platformtest.New(t)
+	original := prompt.Interactive
+	prompt.Interactive = func() bool { return true }
+	t.Cleanup(func() { prompt.Interactive = original; prompt.UseInput(os.Stdin) })
+	prompt.UseInput(strings.NewReader("n\nn\n"))
+
+	out, err := platformtest.Stdout(t, func() error {
+		if err := team.SetMembers(ctx, p.Client, team.MemberOptions{Key: "OPS", Emails: []string{"jane@example.com"}, Role: "MEMBER"}); err != nil {
+			return err
+		}
+		return team.SetEnvironments(ctx, p.Client, team.EnvironmentOptions{Key: "OPS", Environments: []string{"Global", "Prod"}})
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Make jane@example.com the only member of team OPS, removing everyone else?")
+	assert.Contains(t, out, "Make Global, Prod the only environments of team OPS?")
+	assert.Empty(t, p.Requests("POST /api/teams/OPS/members/set"))
 }

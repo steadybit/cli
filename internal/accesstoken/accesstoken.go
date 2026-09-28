@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/steadybit/cli/v6/api"
 	"github.com/steadybit/cli/v6/internal/jsyaml"
@@ -141,9 +142,22 @@ type RecreateOptions struct {
 }
 
 func Recreate(ctx context.Context, c *platform.Client, o RecreateOptions) error {
-	expiresAt, err := resource.Time("expires-at", o.ExpiresAt)
-	if err != nil {
-		return err
+	var expiresAt *time.Time
+	switch o.ExpiresAt {
+	case "never":
+	case "":
+		// The platform gives a recreated token no expiry unless told one, which would
+		// quietly turn a token meant to expire into one that never does.
+		kept, err := currentExpiry(ctx, c, o.ID)
+		if err != nil {
+			return err
+		}
+		expiresAt = kept
+	default:
+		var err error
+		if expiresAt, err = resource.Time("expires-at", o.ExpiresAt); err != nil {
+			return err
+		}
 	}
 	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Recreate access token %s? The current token stops working.", o.ID)); !ok || err != nil {
 		return err
@@ -154,6 +168,41 @@ func Recreate(ctx context.Context, c *platform.Client, o RecreateOptions) error 
 		return notFoundOr(err, o.ID, "Failed to recreate access token %s")
 	}
 	return printToken(token, o.Output, fmt.Sprintf("Access token %s recreated as %s.", o.ID, token.ID))
+}
+
+// currentExpiry is when the token expires now, for the new one to expire then too, or
+// nil when it never does. One that has already expired needs an explicit new expiry.
+func currentExpiry(ctx context.Context, c *platform.Client, id string) (*time.Time, error) {
+	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
+		return c.GetAccessTokens1(ctx, &api.GetAccessTokens1Params{PageRequest: api.PageRequestAO{Page: &page, Size: &size}})
+	})
+	if err != nil {
+		return nil, platform.Failed(err, "Failed to get access token %s", id)
+	}
+	var tokens []struct {
+		ID        string  `json:"id"`
+		ExpiresAt *string `json:"expiresAt"`
+	}
+	if err := resource.DecodeEach(raw, &tokens); err != nil {
+		return nil, err
+	}
+	for _, token := range tokens {
+		if token.ID != id {
+			continue
+		}
+		if token.ExpiresAt == nil || *token.ExpiresAt == "" {
+			return nil, nil
+		}
+		expiry, err := time.Parse(time.RFC3339Nano, *token.ExpiresAt)
+		if err != nil {
+			return nil, fmt.Errorf("Access token %s expires at '%s', which is not a time the CLI can read. Pass --expires-at.", id, *token.ExpiresAt)
+		}
+		if !expiry.After(time.Now()) {
+			return nil, fmt.Errorf("Access token %s expired at %s. Pass --expires-at for the new one, or --expires-at never.", id, *token.ExpiresAt)
+		}
+		return &expiry, nil
+	}
+	return nil, fmt.Errorf("Access token %s not found.", id)
 }
 
 type DeleteOptions struct {

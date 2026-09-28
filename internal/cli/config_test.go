@@ -116,3 +116,12 @@ func TestProfileRemoveSaysWhenItWasTheActiveOne(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Profile dev removed.\nIt was the active profile; choose another with `steadybit config profile select`.\n", out)
 }
+
+func TestProfileListSaysWhenThereAreNone(t *testing.T) {
+	profiles(t)
+
+	out, err := run(t, "config", "profile", "list")
+
+	require.NoError(t, err)
+	assert.Empty(t, out)
+}
