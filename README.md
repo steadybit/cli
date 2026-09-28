@@ -18,7 +18,14 @@ You need a Steadybit account. You can create a free account [via our website](ht
 
 The CLI is a single binary for Linux, macOS and Windows, on amd64 and arm64.
 
-Download the archive for your platform from the
+With [Homebrew](https://brew.sh), on macOS or Linux, which also installs the shell
+completions:
+
+```sh
+brew install steadybit/tap/steadybit
+```
+
+Or download the archive for your platform from the
 [releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
 and put `steadybit` on your `PATH`:
 
@@ -30,7 +37,7 @@ sudo mv steadybit /usr/local/bin/
 With Go installed:
 
 ```sh
-go install github.com/steadybit/cli/cmd/steadybit@latest
+go install github.com/steadybit/cli/v6/cmd/steadybit@latest
 ```
 
 The CLI is also available as the [container image](#container-image) `steadybit/cli`, and

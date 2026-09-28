@@ -95,7 +95,10 @@ not generated structs, so that fields the spec does not know yet are never dropp
 ## Releasing
 
 Releases are published by CI, not from a workstation: pushing a `v*` tag builds the
-binaries with goreleaser, creates the GitHub release with them, and pushes the Docker image.
+binaries with goreleaser, creates the GitHub release with them, pushes the Homebrew cask to
+[steadybit/homebrew-tap](https://github.com/steadybit/homebrew-tap), and pushes the Docker
+image. The cask needs the `HOMEBREW_TAP_TOKEN` secret, a token that can write to that
+repository. Prereleases (`v6.1.0-rc.1`) are neither pushed to the tap nor tagged `latest`.
 
 ```sh
 # 1. Head the CHANGELOG.md entry with the version being released

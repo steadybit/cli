@@ -158,13 +158,15 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Binaries, archives and the GitHub release
+      - name: Binaries, archives, the GitHub release and the Homebrew cask
         uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pushes the cask to steadybit/homebrew-tap, which GITHUB_TOKEN cannot write to.
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       - name: 'snyk monitor'
         uses: snyk/actions/golang@master
         env:
