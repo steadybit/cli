@@ -4,6 +4,7 @@
 package platform
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -57,13 +58,27 @@ func BucketFromEnvironment() Bucket {
 // Clock is injected so tests can drive the bucket deterministically.
 type Clock interface {
 	Now() time.Time
-	Sleep(time.Duration)
+	// Sleep waits for d, or until ctx ends, and then returns ctx's error.
+	Sleep(ctx context.Context, d time.Duration) error
 }
 
 type systemClock struct{}
 
-func (systemClock) Now() time.Time        { return time.Now() }
-func (systemClock) Sleep(d time.Duration) { time.Sleep(d) }
+func (systemClock) Now() time.Time                                   { return time.Now() }
+func (systemClock) Sleep(ctx context.Context, d time.Duration) error { return sleep(ctx, d) }
+
+// sleep waits for d, or until ctx ends: a caller's timeout also bounds the waits between
+// attempts, as shell completion relies on.
+func sleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
 
 type RateLimiter struct {
 	mu         sync.Mutex
@@ -80,19 +95,25 @@ func NewRateLimiter(bucket Bucket, clock Clock) *RateLimiter {
 	return &RateLimiter{bucket: bucket, clock: clock, tokens: float64(bucket.Burst), lastRefill: clock.Now()}
 }
 
-// Acquire blocks until a request may be sent. Callers are served one at a time, so
-// concurrent ones cannot all spend the same token.
-func (r *RateLimiter) Acquire() {
+// Wait blocks until a request may be sent, or until ctx ends. Each caller takes the next
+// token under the lock, even one not refilled yet, and then sleeps until it is due, so
+// concurrent callers cannot spend the same token and one that gives up hands it back.
+func (r *RateLimiter) Wait(ctx context.Context) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	for {
-		r.refill()
-		if r.tokens >= 1 {
-			r.tokens--
-			return
-		}
-		r.clock.Sleep(r.untilNextToken())
+	r.refill()
+	r.tokens--
+	due := r.untilDue()
+	r.mu.Unlock()
+	if due <= 0 {
+		return nil
 	}
+	if err := r.clock.Sleep(ctx, due); err != nil {
+		r.mu.Lock()
+		r.tokens++
+		r.mu.Unlock()
+		return err
+	}
+	return nil
 }
 
 // DurationFor is how long `count` requests take once the burst is spent, which makes
@@ -112,8 +133,12 @@ func (r *RateLimiter) refill() {
 	r.lastRefill = now
 }
 
-func (r *RateLimiter) untilNextToken() time.Duration {
-	return max(time.Millisecond, time.Duration(math.Ceil((1-r.tokens)/r.perNanosecond())))
+// untilDue is how long until the token just taken has been refilled.
+func (r *RateLimiter) untilDue() time.Duration {
+	if r.tokens >= 0 {
+		return 0
+	}
+	return time.Duration(math.Ceil(-r.tokens / r.perNanosecond()))
 }
 
 var (

@@ -18,9 +18,13 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/steadybit/cli/v6/api"
@@ -155,7 +159,7 @@ func load(file string) (Document, output.Datatype, error) {
 		return nil, "", fmt.Errorf("Failed to parse experiment file at path '%s' as YAML/JSON: %w", file, err)
 	}
 	datatype := output.YAML
-	if json.Valid(content) {
+	if output.IsJSON(content) {
 		datatype = output.JSON
 	}
 	return document, datatype, nil
@@ -168,15 +172,13 @@ func writeBack(file string, document Document, datatype output.Datatype, key str
 	if err != nil {
 		return err
 	}
-	var rendered []byte
 	if datatype == output.YAML {
-		// Prepending keeps the rest of the file byte for byte, comments and anchors included.
-		rendered = append([]byte("key: "+key+"\n"), content...)
-	} else {
-		document.SetFirst("key", key)
-		rendered = document.RenderFile(datatype)
+		if rendered, ok := output.WithFieldFirst(content, document, "key", key); ok {
+			return os.WriteFile(file, rendered, 0o644)
+		}
 	}
-	return os.WriteFile(file, rendered, 0o644)
+	document.SetFirst("key", key)
+	return os.WriteFile(file, document.RenderFile(datatype), 0o644)
 }
 
 func keyOf(document Document) string {
@@ -503,6 +505,16 @@ func settle(ctx context.Context, c *platform.Client, path string, last *RunResul
 	return last
 }
 
+// runIDFromLocation reads the id at the end of a run's location, or 0 if there is none.
+func runIDFromLocation(location string) int64 {
+	u, err := url.Parse(location)
+	if err != nil {
+		return 0
+	}
+	id, _ := strconv.ParseInt(path.Base(u.Path), 10, 64)
+	return id
+}
+
 // ErrTimedOut is returned when --timeout cancelled the run.
 var ErrTimedOut = errors.New("timed out")
 
@@ -521,16 +533,20 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 		path += separator + "fields=steps"
 	}
 
-	var runID int64
+	// Known from the location before the first poll, so an interrupt right after the
+	// start still cancels the run. Read by the signal handler, hence atomic.
+	var runID atomic.Int64
+	runID.Store(runIDFromLocation(location))
 	cancel := func(why string) {
-		if runID == 0 {
+		id := runID.Load()
+		if id == 0 {
 			return
 		}
-		fmt.Fprintf(os.Stderr, "%s, canceling experiment run %d.\n", why, runID)
+		fmt.Fprintf(os.Stderr, "%s, canceling experiment run %d.\n", why, id)
 		cancelCtx, done := context.WithTimeout(context.Background(), 30*time.Second)
 		defer done()
-		if _, _, err := platform.Read(c.CancelExperimentExecution(cancelCtx, runID)); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to cancel experiment run %d: %s\n", runID, err)
+		if _, _, err := platform.Read(c.CancelExperimentExecution(cancelCtx, id)); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to cancel experiment run %d: %s\n", id, err)
 		}
 	}
 	if !o.KeepRunningOnInterrupt {
@@ -553,7 +569,7 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 		if err != nil {
 			return nil, err
 		}
-		runID = run.ID
+		runID.Store(run.ID)
 		fmt.Println("Current run state:", strings.ToLower(run.State))
 		if o.ShowSteps {
 			for i, step := range run.Steps {

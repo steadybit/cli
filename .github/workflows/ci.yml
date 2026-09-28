@@ -72,6 +72,8 @@ jobs:
 
   docker-build:
     if: github.event_name != 'schedule'
+    # Images are pushed from here, so a tag whose tests fail must not publish one.
+    needs: [verify, api-compatibility]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -85,7 +87,12 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
             MAJOR="${VERSION%%.*}"
-            echo "tags=steadybit/cli:latest,steadybit/cli:${MAJOR},steadybit/cli:${VERSION}" >> "$GITHUB_OUTPUT"
+            if [[ "${VERSION}" == *-* ]]; then
+              # A prerelease such as 6.1.0-rc.1 is published under its own version only.
+              echo "tags=steadybit/cli:${VERSION}" >> "$GITHUB_OUTPUT"
+            else
+              echo "tags=steadybit/cli:latest,steadybit/cli:${MAJOR},steadybit/cli:${VERSION}" >> "$GITHUB_OUTPUT"
+            fi
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
             echo "push=true" >> "$GITHUB_OUTPUT"
           elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
@@ -132,7 +139,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: snyk/actions/docker@master
         with:
-          image: 'steadybit/cli:latest'
+          image: 'steadybit/cli:${{ steps.tags.outputs.version }}'
           args: --file=Dockerfile --username=${{ secrets.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
           command: monitor
         env:

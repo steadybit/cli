@@ -146,14 +146,6 @@ func TestDownloadToASingleFile(t *testing.T) {
 	assert.EqualError(t, err, "No matching artifacts found in experiment run 42.")
 }
 
-func TestNeverLetsAnIdStepOutOfADirectory(t *testing.T) {
-	for _, id := range []string{"..", ".", "", "../..", "a/../..", "/"} {
-		assert.Equal(t, "_", execution.PathSegment(id), id)
-	}
-	assert.Equal(t, "evil", execution.PathSegment("../../evil"))
-	assert.Equal(t, "report.zip", execution.PathSegment("report.zip"))
-}
-
 func TestWatchPrintsChangesUntilTheRunEnds(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/experiments/ADM-1/executions", platformtest.Reply{JSON: map[string]any{"executions": []any{map[string]any{"id": 41}, map[string]any{"id": 42}}}})

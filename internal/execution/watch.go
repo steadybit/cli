@@ -15,7 +15,6 @@ import (
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/table"
-	"golang.org/x/term"
 )
 
 type WatchOptions struct {
@@ -62,7 +61,7 @@ func Watch(ctx context.Context, c *platform.Client, o WatchOptions) error {
 	if interval <= 0 {
 		interval = 2 * time.Second
 	}
-	live := term.IsTerminal(int(os.Stdout.Fd()))
+	live := output.Live()
 	drawn := 0
 	previous := map[string]string{}
 	for {

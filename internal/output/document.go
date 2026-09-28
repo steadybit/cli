@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ type Document struct {
 
 // ParseValue reads any JSON or YAML value, such as a placeholders file that is a list.
 func ParseValue(content []byte) (any, error) {
+	content = bytes.TrimPrefix(content, bom)
 	if json.Valid(content) {
 		return decodeJSON(json.NewDecoder(bytes.NewReader(content)))
 	}
@@ -45,6 +47,7 @@ func ParseValue(content []byte) (any, error) {
 func ParseDocument(content []byte) (*Document, error) {
 	// JSON is read with a JSON decoder: a YAML parser rejects characters JSON allows
 	// unescaped, such as DEL, and would fail on a platform response containing one.
+	content = bytes.TrimPrefix(content, bom)
 	if json.Valid(content) {
 		value, err := decodeJSON(json.NewDecoder(bytes.NewReader(content)))
 		if err != nil {
@@ -289,5 +292,37 @@ func resolve(node *yaml.Node) *yaml.Node {
 	return node
 }
 
-// IsJSON reports whether content is a JSON document, as JSON.parse would accept it.
-func IsJSON(content []byte) bool { return json.Valid(content) }
+// IsJSON reports whether content is a JSON document, as JSON.parse would accept it. A
+// leading byte order mark, which Windows editors write, is ignored.
+func IsJSON(content []byte) bool { return json.Valid(bytes.TrimPrefix(content, bom)) }
+
+var bom = []byte("\ufeff")
+
+// A file may open with comments and a `---` document marker; a new first key goes after them.
+var documentStart = regexp.MustCompile(`\A(?:[ \t]*(?:#[^\n]*)?\r?\n)*---[ \t]*\r?\n`)
+
+// WithFieldFirst returns YAML content with `field: value` added as its first key, and the
+// rest of the file, comments and anchors included, kept byte for byte. It reports false
+// when a line in front would not do that, as for a flow mapping `{...}` or a file that
+// already holds the field, empty; the caller then renders the document instead.
+func WithFieldFirst(content []byte, doc *Document, field, value string) ([]byte, bool) {
+	var head []byte
+	rest := content
+	if bytes.HasPrefix(rest, bom) {
+		head, rest = bom, rest[len(bom):]
+	}
+	if loc := documentStart.FindIndex(rest); loc != nil {
+		head, rest = append(head, rest[:loc[1]]...), rest[loc[1]:]
+	}
+	line := jsyaml.NewMap()
+	line.Set(field, value)
+	updated := append(append(append([]byte{}, head...), jsyaml.Dump(line)...), rest...)
+
+	expected := jsyaml.Clone(doc.value).(*jsyaml.Map)
+	expected.SetFirst(field, value)
+	parsed, err := ParseDocument(updated)
+	if err != nil || jsyaml.CompactJSON(parsed.value) != jsyaml.CompactJSON(expected) {
+		return nil, false
+	}
+	return updated, true
+}
