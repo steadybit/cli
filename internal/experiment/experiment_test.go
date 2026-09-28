@@ -590,3 +590,42 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, "Experiment TST-1 deleted.\n", out)
 	assert.EqualError(t, experiment.Delete(ctx, p.Client, "TST-9"), "Experiment TST-9 not found.")
 }
+
+// The question names the experiment, and --yes answers it, as in the TypeScript CLI.
+func TestAsksBeforeRunningInParallel(t *testing.T) {
+	for name, tc := range map[string]struct {
+		yes      bool
+		answer   string
+		parallel bool
+	}{
+		"answered yes": {answer: "y\n", parallel: true},
+		"answered no":  {answer: "\n"},
+		"--yes":        {yes: true, parallel: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := platformtest.New(t)
+			p.Handle("POST /api/experiments/TST-1/execute", func(r platformtest.Request) platformtest.Reply {
+				if q := r.Query["allowParallel"]; len(q) == 1 && q[0] == "true" {
+					return started(p, "TST-1", 1)
+				}
+				return platformtest.Reply{Status: http.StatusConflict, Body: `{"type":"https://steadybit.com/problems/another-experiment-running-exception"}`}
+			})
+			original := prompt.Interactive
+			prompt.Interactive = func() bool { return true }
+			t.Cleanup(func() { prompt.Interactive = original })
+			prompt.UseInput(strings.NewReader("y\n" + tc.answer))
+
+			out, err := platformtest.Stdout(t, func() error {
+				return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: tc.yes})
+			})
+
+			if tc.parallel {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Executing experiment: TST-1")
+			} else {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, !tc.yes, strings.Contains(out, "Do you want to start TST-1 in parallel?"), out)
+		})
+	}
+}

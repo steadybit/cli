@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -46,20 +47,32 @@ func newProfileAdd() *cobra.Command {
 		Args:    cobra.NoArgs,
 		Example: examples("steadybit config profile add", `steadybit config profile add -n prod -t "$STEADYBIT_TOKEN"`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// `-t "$STEADYBIT_TOKEN"` with the variable unset passes an empty token; asking
+			// for it instead would hide that the command line is wrong.
+			if cmd.Flags().Changed("token") && strings.TrimSpace(p.APIAccessToken) == "" {
+				return errors.New("The token given with --token is empty. Is the variable it comes from set?")
+			}
+			// Only what the options left out is asked for.
 			if p.Name == "" || p.APIAccessToken == "" {
 				var err error
 				fmt.Println(startHelp)
 				fmt.Println()
-				if p.Name, err = prompt.Input("Profile name:", "", prompt.NotBlank); err != nil {
-					return err
+				if p.Name == "" {
+					if p.Name, err = prompt.Input("Profile name:", "", prompt.NotBlank); err != nil {
+						return err
+					}
 				}
-				if p.BaseURL, err = prompt.Input("Base URL of the Steadybit server:", config.DefaultBaseURL, prompt.HTTPURL); err != nil {
-					return err
+				if !cmd.Flags().Changed("baseUrl") {
+					if p.BaseURL, err = prompt.Input("Base URL of the Steadybit server:", config.DefaultBaseURL, prompt.HTTPURL); err != nil {
+						return err
+					}
 				}
-				fmt.Printf("\nThe CLI will need an API access token of %s to communicate with\nthe Steadybit servers. You can generate one through the following URL:\n\n          %s/settings/api-tokens\n\n",
-					output.Bold("type team"), strings.TrimSuffix(p.BaseURL, "/"))
-				if p.APIAccessToken, err = prompt.Password("API access token:", prompt.NotBlank); err != nil {
-					return err
+				if p.APIAccessToken == "" {
+					fmt.Printf("\nThe CLI will need an API access token of %s to communicate with\nthe Steadybit servers. You can generate one through the following URL:\n\n          %s/settings/api-tokens\n\n",
+						output.Bold("type team"), strings.TrimSuffix(p.BaseURL, "/"))
+					if p.APIAccessToken, err = prompt.Password("API access token:", prompt.NotBlank); err != nil {
+						return err
+					}
 				}
 			}
 			if err := config.AddProfile(p); err != nil {
@@ -104,15 +117,24 @@ func newProfileList(use, short string) *cobra.Command {
 }
 
 func chooseProfile(message string, args []string) (string, error) {
-	if len(args) == 1 {
-		return args[0], nil
-	}
 	profiles, err := config.Profiles()
 	if err != nil {
 		return "", err
 	}
 	if len(profiles) == 0 {
 		return "", fmt.Errorf("no profiles configured")
+	}
+	// A name that is not a profile is refused: selected, it would silently fall back to
+	// the first profile, which may well be production.
+	if len(args) == 1 {
+		names := make([]string, len(profiles))
+		for i, p := range profiles {
+			if p.Name == args[0] {
+				return p.Name, nil
+			}
+			names[i] = p.Name
+		}
+		return "", fmt.Errorf("No profile named %s. Available: %s", args[0], strings.Join(names, ", "))
 	}
 	for i, p := range profiles {
 		fmt.Printf("  %d) %s\n", i+1, p.Name)
@@ -147,23 +169,47 @@ func newProfileSelect() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return config.SetActiveProfile(name)
+			if err := config.SetActiveProfile(name); err != nil {
+				return err
+			}
+			fmt.Printf("Profile %s is now active.\n", name)
+			return nil
 		},
 	}
 }
 
 func newProfileRemove() *cobra.Command {
-	return &cobra.Command{
+	var yes bool
+	cmd := &cobra.Command{
 		Use:     "remove [name]",
 		Short:   "Interactively remove an existing profile.",
 		Args:    cobra.MaximumNArgs(1),
-		Example: examples("steadybit config profile remove", "steadybit config profile remove old"),
+		Example: examples("steadybit config profile remove", "steadybit config profile remove old --yes"),
 		RunE: func(_ *cobra.Command, args []string) error {
 			name, err := chooseProfile("Profile to remove:", args)
 			if err != nil {
 				return err
 			}
-			return config.RemoveProfile(name)
+			if !yes {
+				ok, err := prompt.Confirm(fmt.Sprintf("Remove profile %s? Its access token is deleted from ~/.steadybit.", name), false, true)
+				if err != nil || !ok {
+					return err
+				}
+			}
+			active, err := config.ActiveProfile()
+			if err != nil {
+				return err
+			}
+			if err := config.RemoveProfile(name); err != nil {
+				return err
+			}
+			fmt.Printf("Profile %s removed.\n", name)
+			if active != nil && active.Name == name {
+				fmt.Println("It was the active profile; choose another with `steadybit config profile select`.")
+			}
+			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&yes, "yes", false, "Skip the confirmation prompt. Not necessary when no TTY is attached.")
+	return cmd
 }
