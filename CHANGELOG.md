@@ -3,8 +3,9 @@
 ## v6.0.0
 
 - **The CLI is now a single binary written in Go, and no longer needs Node.js.** It is
-  downloaded from the GitHub releases, installed with `go install`, or used as the
-  `steadybit/cli` container image, now 18 MB instead of 249 MB.
+  installed with `brew install steadybit/tap/steadybit`, downloaded from the GitHub
+  releases, installed with `go install`, or used as the `steadybit/cli` container image,
+  now 18 MB instead of 249 MB.
 - **Breaking:** the CLI is no longer published to npm; `steadybit@5.0.0` there is the last
   version. Uninstall it with `npm uninstall -g steadybit` and install the binary. Commands,
   flags, messages, exit codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables

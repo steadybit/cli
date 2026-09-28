@@ -6,6 +6,15 @@
 version: 2
 project_name: steadybit
 
+before:
+  hooks:
+    # Shell completions, shipped in the archives and installed by the Homebrew cask.
+    - rm -rf completions
+    - mkdir completions
+    - sh -c 'go run ./cmd/steadybit completion bash > completions/steadybit.bash'
+    - sh -c 'go run ./cmd/steadybit completion zsh > completions/_steadybit'
+    - sh -c 'go run ./cmd/steadybit completion fish > completions/steadybit.fish'
+
 builds:
   - id: steadybit
     main: ./cmd/steadybit
@@ -27,7 +36,7 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-    files: [LICENSE, README.md, CHANGELOG.md]
+    files: [LICENSE, README.md, CHANGELOG.md, completions/*]
 
 checksum:
   name_template: checksums.txt
@@ -44,3 +53,34 @@ release:
 
 changelog:
   disable: true
+
+# `brew install steadybit/tap/steadybit`. The cask is pushed to steadybit/homebrew-tap,
+# which the release's own GITHUB_TOKEN cannot write to.
+homebrew_casks:
+  - name: steadybit
+    binaries: [steadybit]
+    directory: Casks
+    homepage: https://github.com/steadybit/cli
+    description: Command-line interface for the Steadybit chaos engineering platform
+    license: MIT
+    # Prereleases stay off the tap, as they stay off releases/latest.
+    skip_upload: auto
+    commit_msg_template: 'steadybit {{ .Tag }}'
+    completions:
+      bash: completions/steadybit.bash
+      zsh: completions/_steadybit
+      fish: completions/steadybit.fish
+    # The binaries are not notarized, and macOS refuses to run one downloaded by Homebrew
+    # until the quarantine attribute is removed. Homebrew's declarative steps, since 5.1.14,
+    # as the Ruby `postflight` that goreleaser's hooks write is deprecated. `{{staged_path}}`
+    # is Homebrew's placeholder, escaped from goreleaser's own templates.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{" }}staged_path{{ "}}" }}/steadybit"]
+        end
+      end
+    repository:
+      owner: steadybit
+      name: homebrew-tap
+      token: '{{ .Env.HOMEBREW_TAP_TOKEN }}'
