@@ -167,6 +167,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pushes the cask to steadybit/homebrew-tap, which GITHUB_TOKEN cannot write to.
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      # `uses: steadybit/cli@v6` resolves through the major tag, so each stable release
+      # moves it. A push with GITHUB_TOKEN triggers no workflow, so the tag does not start
+      # another release.
+      - name: Move the major version tag of the action
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: |
+          major="${GITHUB_REF_NAME%%.*}"
+          git tag -f "${major}" "${GITHUB_SHA}"
+          git push -f origin "refs/tags/${major}"
       - name: 'snyk monitor'
         uses: snyk/actions/golang@master
         env:

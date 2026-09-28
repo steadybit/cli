@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,6 +22,21 @@ func TestEveryCommandHasAnExample(t *testing.T) {
 		if !cmd.HasSubCommands() {
 			assert.NotEmpty(t, cmd.Example, cmd.CommandPath())
 		}
+		for _, sub := range cmd.Commands() {
+			walk(sub)
+		}
+	}
+	walk(newRoot())
+}
+
+// Help takes backquoted text in a flag's usage as the name of its value, and would show
+// `--hub steadybit hub list` instead of `--hub string`.
+func TestNoFlagUsageHasBackquotes(t *testing.T) {
+	var walk func(*cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			assert.NotContains(t, f.Usage, "`", cmd.CommandPath()+" --"+f.Name)
+		})
 		for _, sub := range cmd.Commands() {
 			walk(sub)
 		}

@@ -100,7 +100,7 @@ func newTemplate() *cobra.Command {
 		Example: examples("steadybit template import --hub " + hubID + " --template " + templateID + " --overwrite"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Import(ctx, c, im) }),
 	}
-	imp.Flags().StringVar(&im.Hub, "hub", "", "The id of the hub, see `steadybit hub list`.")
+	imp.Flags().StringVar(&im.Hub, "hub", "", "The id of the hub, as steadybit hub list shows it.")
 	imp.Flags().StringArrayVar(&im.Templates, "template", nil, "The ids of the hub's templates to import.")
 	imp.Flags().BoolVar(&im.Overwrite, "overwrite", false, "Replace templates that exist already. Without it, the import fails if any does.")
 	_ = imp.MarkFlagRequired("hub")
