@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/steadybit/cli/v6/internal/auditlog"
+	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platformtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,6 +49,48 @@ func TestPrintsTheEntriesAsJSON(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "[\n  {\n    \"id\": \"a\",\n    \"eventName\": \"x\"\n  }\n]\n", out)
 	assert.Empty(t, p.Requests("GET /api/audit-log")[0].Query)
+}
+
+// The platform streams one entry per line, although its spec says array.
+func TestReadsTheEntriesTheWayThePlatformSendsThem(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/audit-log", platformtest.Reply{Body: `{"id":"a","eventName":"experiment.created","eventTime":"2026-09-01T10:00:00Z"}
+{"id":"b","eventName":"experiment.deleted","eventTime":"2026-09-02T10:00:00Z"}
+`})
+
+	table, err := platformtest.Stdout(t, func() error { return auditlog.Show(ctx, p.Client, auditlog.Options{}) })
+	require.NoError(t, err)
+	json, err := platformtest.Stdout(t, func() error { return auditlog.Show(ctx, p.Client, auditlog.Options{Type: "json"}) })
+	require.NoError(t, err)
+
+	assert.Contains(t, table, "experiment.created")
+	assert.Contains(t, table, "experiment.deleted")
+	assert.Contains(t, json, "\"id\": \"b\"")
+}
+
+func TestJQFiltersTheEntries(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/audit-log", platformtest.Reply{Body: entries})
+	output.JQ = "length"
+	t.Cleanup(func() { output.JQ = "" })
+
+	out, err := platformtest.Stdout(t, func() error { return auditlog.Show(ctx, p.Client, auditlog.Options{}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "3\n", out)
+}
+
+func TestSaysWhenThereAreNoEntries(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/audit-log", platformtest.Reply{Body: ""})
+
+	table, err := platformtest.Stdout(t, func() error { return auditlog.Show(ctx, p.Client, auditlog.Options{}) })
+	require.NoError(t, err)
+	json, err := platformtest.Stdout(t, func() error { return auditlog.Show(ctx, p.Client, auditlog.Options{Type: "json"}) })
+	require.NoError(t, err)
+
+	assert.Equal(t, "No audit log entries found.\n", table)
+	assert.Equal(t, "[]\n", json)
 }
 
 func TestRefusals(t *testing.T) {

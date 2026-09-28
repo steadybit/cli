@@ -35,6 +35,11 @@
 - `execution watch` follows a run live; `experiment init` creates an experiment from a
   template by asking for its placeholders.
 - `--profile <name>` uses a configured profile for one command.
+- `config profile add` asks only for what its options leave out, and refuses an empty
+  `--token`, as `-t "$STEADYBIT_TOKEN"` passes when the variable is unset.
+  `config profile select` and `remove` take the profile name as an argument, refuse a
+  name that is not a profile, and say what they did; `remove` asks first on a terminal
+  (`--yes` skips it).
 - A GitHub Action, `uses: steadybit/cli@v6`, installs the CLI on a runner.
 - `template apply` and `template delete` manage experiment templates as files in Git, and
   `template import` imports templates from a connected hub.

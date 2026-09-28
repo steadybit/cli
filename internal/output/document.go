@@ -26,6 +26,30 @@ type Document struct {
 	value *jsyaml.Map
 }
 
+// ParseList reads a JSON array, or JSON values one after another as newline-delimited
+// JSON sends them. The platform streams the audit log that way, although its spec says
+// array, so both are read.
+func ParseList(content []byte) ([]any, error) {
+	decoder := json.NewDecoder(bytes.NewReader(bytes.TrimPrefix(content, bom)))
+	values := []any{}
+	for {
+		value, err := decodeJSON(decoder)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, value)
+	}
+	if len(values) == 1 {
+		if list, ok := values[0].([]any); ok {
+			return list, nil
+		}
+	}
+	return values, nil
+}
+
 // ParseValue reads any JSON or YAML value, such as a placeholders file that is a list.
 func ParseValue(content []byte) (any, error) {
 	content = bytes.TrimPrefix(content, bom)

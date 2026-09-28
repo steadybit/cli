@@ -41,22 +41,12 @@ func Show(ctx context.Context, c *platform.Client, o Options) error {
 	if err != nil {
 		return platform.Failed(err, "Failed to get the audit log")
 	}
-	value, err := output.ParseValue(body)
+	entries, err := output.ParseList(body)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read the audit log: %w", err)
 	}
-	entries, _ := value.([]any)
-	if o.Type != "" {
-		datatype, err := output.ResolveDatatype(o.Type, "")
-		if err != nil {
-			return err
-		}
-		if datatype == output.JSON {
-			fmt.Println(jsyaml.JSON(entries))
-		} else {
-			fmt.Println(jsyaml.Dump(entries))
-		}
-		return nil
+	if resource.Machine(o.Type) {
+		return resource.PrintJSONValue([]byte(jsyaml.CompactJSON(entries)), o.Type)
 	}
 	if len(entries) == 0 {
 		fmt.Println("No audit log entries found.")

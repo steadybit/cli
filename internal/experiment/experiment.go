@@ -288,12 +288,18 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 	}
 
 	persist := o.Retries == 0
-	runs := []func(parallel bool) (started, error){}
+	// Each run names its experiment in the question about running in parallel, as the
+	// TypeScript CLI did.
+	type runner struct {
+		what string
+		run  func(parallel bool) (started, error)
+	}
+	runs := []runner{}
 	switch {
 	case o.Template != "" && o.Key != "":
 		return errors.New("--key cannot be combined with --template. Use `experiment apply --template -k` to update it.")
 	case o.Template != "":
-		runs = append(runs, func(parallel bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) })
+		runs = append(runs, runner{"this one", func(parallel bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }})
 	case len(o.Files) > 0:
 		files, err := ResolveFiles(o.Files, o.Recursive)
 		if err != nil {
@@ -303,10 +309,10 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			return errors.New("If --key is specified, at most one --file can be specified.")
 		}
 		for _, file := range files {
-			runs = append(runs, func(parallel bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) })
+			runs = append(runs, runner{fileExperimentName(file), func(parallel bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }})
 		}
 	case o.Key != "":
-		runs = append(runs, func(parallel bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) })
+		runs = append(runs, runner{o.Key, func(parallel bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }})
 	default:
 		return errors.New("Either --key, --file or --template must be specified.")
 	}
@@ -327,8 +333,8 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		}
 		return WriteGitHubSummary(finished)
 	}
-	for _, run := range runs {
-		result, err := withRetries(o, run)
+	for _, r := range runs {
+		result, err := withRetries(o, r.what, r.run)
 		if err != nil {
 			return errors.Join(err, report())
 		}
@@ -351,7 +357,7 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 
 // withRetries retries validation errors, which clear up once targets appear, and offers
 // a parallel run when another experiment is already running.
-func withRetries(o RunOptions, run func(parallel bool) (started, error)) (started, error) {
+func withRetries(o RunOptions, what string, run func(parallel bool) (started, error)) (started, error) {
 	parallel := o.AllowParallel
 	for attempt := 0; ; attempt++ {
 		result, err := run(parallel)
@@ -370,8 +376,10 @@ func withRetries(o RunOptions, run func(parallel bool) (started, error)) (starte
 		if !parallel && apiErr.ProblemType() == anotherExperimentRunning {
 			ok := o.Yes
 			if !ok {
-				if ok, err = prompt.Confirm("There is already an experiment running. Do you want to start it in parallel?", false, false); err != nil {
-					return result, err
+				// Its own error: the platform's is what a "no" reports.
+				var promptErr error
+				if ok, promptErr = prompt.Confirm("There is already an experiment running. Do you want to start "+what+" in parallel?", false, false); promptErr != nil {
+					return result, promptErr
 				}
 			}
 			if ok {
@@ -513,6 +521,21 @@ func runIDFromLocation(location string) int64 {
 	}
 	id, _ := strconv.ParseInt(path.Base(u.Path), 10, 64)
 	return id
+}
+
+// fileExperimentName is how the question about running in parallel names the experiment
+// of a file: its key, or its name.
+func fileExperimentName(file string) string {
+	document, _, err := load(file)
+	if err != nil {
+		return "the experiment"
+	}
+	for _, field := range []string{"key", "name"} {
+		if v, ok := document.Get(field); ok && v != "" {
+			return v
+		}
+	}
+	return "the experiment"
 }
 
 // ErrTimedOut is returned when --timeout cancelled the run.
