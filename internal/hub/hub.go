@@ -6,6 +6,7 @@ package hub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -92,14 +93,19 @@ type ApplyOptions struct {
 }
 
 func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
-	return resource.ApplyFiles(o.Files, o.Recursive, "hub", func(file string, doc *output.Document) (resource.Applied, error) {
+	// A hub that was saved but could not be synchronized keeps its id in the file, so
+	// the next apply does not create it again; the failure ends the command afterwards.
+	var syncErrs []error
+	err := resource.ApplyFiles(o.Files, o.Recursive, "hub", func(file string, doc *output.Document) (resource.Applied, error) {
 		name, _ := doc.Get("hubName")
 		if name == "" {
 			return resource.Applied{}, fmt.Errorf("Hub file '%s' does not name a hubName.", file)
 		}
 		var saved struct {
-			ID      string `json:"id"`
-			HubName string `json:"hubName"`
+			ID        string `json:"id"`
+			HubName   string `json:"hubName"`
+			Templates []any  `json:"templates"`
+			SyncError string `json:"syncError"`
 		}
 		resp, err := c.UpsertHubWithBody(ctx, &api.UpsertHubParams{Synchronize: &o.Synchronize}, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
 		resp, err = platform.Decode(resp, err, &saved)
@@ -108,8 +114,16 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		}
 		created := resp.StatusCode == http.StatusCreated
 		fmt.Printf("Hub %s (%s) %s.\n", saved.HubName, saved.ID, resource.CreatedOrUpdated(created))
+		if o.Synchronize {
+			if saved.SyncError != "" {
+				syncErrs = append(syncErrs, fmt.Errorf("Hub %s could not be synchronized: %s", saved.HubName, saved.SyncError))
+			} else {
+				fmt.Printf("Hub %s synchronized, %d template(s).\n", saved.HubName, len(saved.Templates))
+			}
+		}
 		return resource.Applied{ID: saved.ID, Created: created}, nil
 	})
+	return errors.Join(append([]error{err}, syncErrs...)...)
 }
 
 type DeleteOptions struct {

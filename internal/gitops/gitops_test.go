@@ -128,3 +128,46 @@ func TestProfilesAreFoundByName(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, file+" matches service profile "+id+".\n", out)
 }
+
+// A schedule written by hand, right after it was applied: the platform added its default
+// and gave the start time its own spelling. Neither is a difference.
+func TestAHandWrittenScheduleMatchesRightAfterApply(t *testing.T) {
+	p := platformtest.New(t)
+	stored := `{"id":"s1","experimentKey":"TST-1","startAt":"2030-07-01T09:00:00Z","enabled":false,"allowParallel":true}`
+	p.Reply("GET /api/experiments/schedules/s1", platformtest.Reply{Body: stored})
+	file := write(t, "s.yml", "id: s1\nexperimentKey: TST-1\nstartAt: 2030-07-01T09:00:00Z\nenabled: false\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Schedule, []string{file}, false) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "1 experiment schedule file(s) match the platform.\n", out)
+}
+
+// A default the file leaves out is a difference once it was changed on the platform:
+// applying the file would reset it.
+func TestAChangedDefaultIsADifference(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/schedules/s1", platformtest.Reply{Body: `{"id":"s1","experimentKey":"TST-1","startAt":"2030-07-01T10:00:00Z","allowParallel":false}`})
+	file := write(t, "s.yml", "id: s1\nexperimentKey: TST-1\nstartAt: 2030-07-01T09:00:00Z\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Schedule, []string{file}, false) })
+
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Contains(t, out, "-startAt: '2030-07-01T10:00:00Z'\n")
+	assert.Contains(t, out, "+startAt: 2030-07-01T09:00:00.000Z\n")
+	assert.Contains(t, out, "-allowParallel: false\n")
+}
+
+func TestAHandWrittenServiceAndProfileMatchRightAfterApply(t *testing.T) {
+	p := platformtest.New(t)
+	id := "019eacd7-fb2c-733a-bed5-99a935323db5"
+	p.Reply("GET /api/services/"+id, platformtest.Reply{Body: `{"id":"` + id + `","name":"svc","query":"a=b","validations":[],"logoId":"service","logoColor":"blue"}`})
+	p.Reply("GET /api/services/profiles/"+id, platformtest.Reply{Body: `{"id":"` + id + `","name":"p","templates":[],"origin":"CUSTOM"}`})
+	service := write(t, "svc.yml", "id: "+id+"\nname: svc\nquery: a=b\nvalidations: []\n")
+	profile := write(t, "p.yml", "id: "+id+"\nname: p\ntemplates: []\n")
+
+	_, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Service, []string{service}, false) })
+	require.NoError(t, err)
+	_, err = platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.ServiceProfile, []string{profile}, false) })
+	require.NoError(t, err)
+}

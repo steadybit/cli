@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/steadybit/cli/v6/internal/accesstoken"
 	"github.com/steadybit/cli/v6/internal/platformtest"
@@ -83,4 +84,36 @@ func TestRecreateAndDelete(t *testing.T) {
 	assert.Equal(t, "Access token "+id+" recreated as new-id. Store it now, it cannot be shown again:\nnew-secret\nAccess token "+id+" deleted.\n", out)
 	assert.Equal(t, map[string]any{"expiresAt": "2027-06-30T12:00:00+02:00"}, p.Requests("POST /api/access-tokens/v2/" + id + "/recreate")[0].JSON(t))
 	assert.EqualError(t, accesstoken.Delete(ctx, p.Client, accesstoken.DeleteOptions{ID: "nope", Yes: true}), "Access token nope not found.")
+}
+
+// Recreated without --expires-at, a token expires when the one it replaces would have,
+// not never, which the platform would make it.
+func TestRecreateKeepsTheExpiry(t *testing.T) {
+	future := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)
+	past := time.Now().Add(-48 * time.Hour).UTC().Truncate(time.Second)
+	p := platformtest.New(t)
+	p.Reply("GET /api/access-tokens/v2", platformtest.Reply{JSON: map[string]any{"items": []any{
+		map[string]any{"id": "soon", "expiresAt": future.Format(time.RFC3339)},
+		map[string]any{"id": "gone", "expiresAt": past.Format(time.RFC3339)},
+		map[string]any{"id": "forever"},
+	}}})
+	for _, token := range []string{"soon", "forever", "gone"} {
+		p.Reply("POST /api/access-tokens/v2/"+token+"/recreate", platformtest.Reply{JSON: map[string]any{"id": "new", "token": "s"}})
+	}
+	recreate := func(token, expiresAt string) error {
+		_, err := platformtest.Stdout(t, func() error {
+			return accesstoken.Recreate(ctx, p.Client, accesstoken.RecreateOptions{ID: token, ExpiresAt: expiresAt, Yes: true})
+		})
+		return err
+	}
+
+	require.NoError(t, recreate("soon", ""))
+	require.NoError(t, recreate("forever", ""))
+	assert.EqualError(t, recreate("gone", ""), "Access token gone expired at "+past.Format(time.RFC3339)+". Pass --expires-at for the new one, or --expires-at never.")
+	require.NoError(t, recreate("gone", "never"))
+	assert.EqualError(t, recreate("missing", ""), "Access token missing not found.")
+
+	assert.Equal(t, map[string]any{"expiresAt": future.Format(time.RFC3339)}, p.Requests("POST /api/access-tokens/v2/soon/recreate")[0].JSON(t))
+	assert.Equal(t, map[string]any{}, p.Requests("POST /api/access-tokens/v2/forever/recreate")[0].JSON(t))
+	assert.Equal(t, map[string]any{}, p.Requests("POST /api/access-tokens/v2/gone/recreate")[0].JSON(t))
 }

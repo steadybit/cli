@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -99,6 +100,11 @@ func newProfileList(use, short string) *cobra.Command {
 			profiles, err := config.Profiles()
 			if err != nil {
 				return err
+			}
+			if len(profiles) == 0 {
+				// On stderr: the listing itself stays empty, as it always was.
+				fmt.Fprintln(os.Stderr, "No profiles configured. Add one with `steadybit config profile add`.")
+				return nil
 			}
 			active, err := config.ActiveProfile()
 			if err != nil {

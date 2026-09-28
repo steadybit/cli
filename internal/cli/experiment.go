@@ -95,7 +95,7 @@ func newExperimentRun() *cobra.Command {
 	f.StringVar(&o.Report, "report", "", `With waiting: write a JUnit report of the runs to this file, or JSON if it ends in ".json".`)
 	f.Var(executionVariables, "execution-variable", "With --template: a variable for this run only, overriding experiment and environment variables. Repeat for more.")
 	addTemplateFlags(cmd, &o.TemplateOptions)
-	cmd.MarkFlagsMutuallyExclusive("key", "file")
+	// --key with one --file updates that experiment from the file and runs it, as it did.
 	variadic(cmd, "file")
 	return cmd
 }
