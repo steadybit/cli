@@ -34,8 +34,7 @@ go test ./...
 | `internal/platform`      | The HTTP client: authentication, retries, rate limiting, errors        |
 | `internal/jsyaml`        | YAML and JSON output byte-compatible with the former TypeScript CLI    |
 | `api`                    | The platform client, generated from `openapi/platform-api.json`        |
-| `internal/tools`         | The spec fetcher and the npm package builder, used by CI               |
-| `npm/steadybit`          | The launcher the `steadybit` npm package runs                          |
+| `internal/tools`         | The spec fetcher, used by CI                                           |
 
 ## Tests
 
@@ -96,8 +95,7 @@ not generated structs, so that fields the spec does not know yet are never dropp
 ## Releasing
 
 Releases are published by CI, not from a workstation: pushing a `v*` tag builds the
-binaries with goreleaser, creates the GitHub release, publishes the npm packages (one per
-platform, and `steadybit`, which installs the right one), and pushes the Docker image.
+binaries with goreleaser, creates the GitHub release with them, and pushes the Docker image.
 
 ```sh
 # 1. Head the CHANGELOG.md entry with the version being released

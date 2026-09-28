@@ -16,10 +16,10 @@ import (
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/prompt"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/prompt"
 )
 
 // Output writes to the file when one is given and to stdout otherwise, as JSON

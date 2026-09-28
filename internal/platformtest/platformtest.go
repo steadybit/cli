@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 type Request struct {

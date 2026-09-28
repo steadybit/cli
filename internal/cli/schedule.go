@@ -7,10 +7,10 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/gitops"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/schedule"
+	"github.com/steadybit/cli/v6/internal/gitops"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/schedule"
 )
 
 const scheduleID = "01951394-727f-76a0-8675-c7519ebd0ff5"

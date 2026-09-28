@@ -2,10 +2,11 @@
 
 ## v6.0.0
 
-- **The CLI is now a single binary written in Go.** It runs without Node.js, and is installed
-  the same ways: `npm install -g steadybit`, which now installs the binary for your platform
-  and works with any Node.js from 18 on, or the `steadybit/cli` container image, now 18 MB
-  instead of 249 MB. It can also be downloaded directly from the GitHub releases. Commands,
+- **The CLI is now a single binary written in Go, and no longer needs Node.js.** It is
+  downloaded from the GitHub releases, installed with `go install`, or used as the
+  `steadybit/cli` container image, now 18 MB instead of 249 MB.
+- **Breaking:** the CLI is no longer published to npm; `steadybit@5.0.0` there is the last
+  version. Uninstall it with `npm uninstall -g steadybit` and install the binary. Commands,
   flags, messages, exit codes, profiles in `~/.steadybit` and the `STEADYBIT_*` variables
   are unchanged, and experiment, schedule and service files are written byte for byte as
   before.

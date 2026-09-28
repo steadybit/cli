@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/steadybit/cli/internal/advice"
-	"github.com/steadybit/cli/internal/platformtest"
+	"github.com/steadybit/cli/v6/internal/advice"
+	"github.com/steadybit/cli/v6/internal/platformtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

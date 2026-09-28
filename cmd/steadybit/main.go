@@ -6,9 +6,9 @@ package main
 import (
 	"os"
 
-	"github.com/steadybit/cli/internal/cli"
+	"github.com/steadybit/cli/v6/internal/cli"
 	// Imported for its signal handling, which every command needs from the start.
-	_ "github.com/steadybit/cli/internal/interrupt"
+	_ "github.com/steadybit/cli/v6/internal/interrupt"
 )
 
 func main() {

@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/config"
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/gitops"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
+	"github.com/steadybit/cli/v6/internal/config"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/gitops"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
 )
 
 // Laid out like the TypeScript CLI's help, which pipelines and the e2e suite read.
@@ -56,7 +56,7 @@ func newRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "steadybit",
 		Short:         "Command-line interface to interact with the Steadybit API",
-		Version:       platform.Version,
+		Version:       platform.CurrentVersion(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Example: examples(

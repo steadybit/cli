@@ -7,8 +7,8 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/user"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/user"
 )
 
 func newUser() *cobra.Command {

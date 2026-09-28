@@ -23,12 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/interrupt"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/prompt"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/interrupt"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/prompt"
 )
 
 type Document = *output.Document

@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
 )
 
 // ErrDifferent ends `diff` with exit status 2 when files and platform disagree, so a

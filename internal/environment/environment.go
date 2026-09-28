@@ -10,11 +10,11 @@ import (
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/resource"
-	"github.com/steadybit/cli/internal/table"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/table"
 )
 
 // The state is the platform's, and the version is dropped as `service get` drops it: kept

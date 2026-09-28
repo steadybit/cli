@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/steadybit/cli/internal/interrupt"
+	"github.com/steadybit/cli/v6/internal/interrupt"
 	"golang.org/x/term"
 )
 

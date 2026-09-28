@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/report"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/report"
 )
 
 func newReport() *cobra.Command {

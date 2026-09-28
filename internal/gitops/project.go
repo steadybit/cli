@@ -14,14 +14,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/steadybit/cli/api"
-	"github.com/steadybit/cli/internal/experiment"
-	"github.com/steadybit/cli/internal/jsyaml"
-	"github.com/steadybit/cli/internal/output"
-	"github.com/steadybit/cli/internal/platform"
-	"github.com/steadybit/cli/internal/schedule"
-	"github.com/steadybit/cli/internal/service"
-	"github.com/steadybit/cli/internal/serviceprofile"
+	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/jsyaml"
+	"github.com/steadybit/cli/v6/internal/output"
+	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/schedule"
+	"github.com/steadybit/cli/v6/internal/service"
+	"github.com/steadybit/cli/v6/internal/serviceprofile"
 )
 
 // A project is a directory holding what a team keeps in Git, one kind per directory,

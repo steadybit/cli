@@ -11,7 +11,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/steadybit/cli/internal/output"
+	"github.com/steadybit/cli/v6/internal/output"
 )
 
 // Read takes a generated client call's result and returns the body, failing on any
