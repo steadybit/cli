@@ -25,6 +25,9 @@ type StatsOptions struct {
 // Stats prints how many targets of each type the platform knows. The platform counts
 // over the whole tenant: it takes a query but no environment.
 func Stats(ctx context.Context, c *platform.Client, o StatsOptions) error {
+	if _, err := output.ResolveDatatype(o.Type, ""); err != nil {
+		return err
+	}
 	var resp *http.Response
 	var err error
 	if o.Query == "" {

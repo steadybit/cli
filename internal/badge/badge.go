@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
 )
@@ -49,7 +50,14 @@ func Print(ctx context.Context, c *platform.Client, o Options) error {
 	if o.Scale < 0 {
 		return errors.New("--scale cannot be negative.")
 	}
+	// Checked before any request: the badge takes up to three.
+	if _, err := output.ResolveDatatype(o.Type, ""); err != nil {
+		return err
+	}
 	format := o.Format
+	if format != "" && resource.Machine(o.Type) {
+		return errors.New("--format cannot be combined with -t or --jq, which print every format.")
+	}
 	if format == "" {
 		format = "markdown"
 	}
@@ -117,15 +125,23 @@ func markdownText(s string) string {
 
 // tenantKey is the one given, or the one the license names. The access token does not
 // say which tenant it belongs to, and the license is the only other place that does.
+// A given key is still compared with the license when it can be read: the badge of
+// another tenant's experiment is an image saying "not found", with 200, which the check
+// of the badge cannot tell from a real one.
 func tenantKey(ctx context.Context, c *platform.Client, given string) (string, error) {
-	if given != "" {
-		return given, nil
-	}
 	var summary struct {
 		TenantKey string `json:"tenantKey"`
 	}
 	resp, err := c.GetLicenseSummary(ctx)
 	_, err = platform.Decode(resp, err, &summary)
+	if given != "" {
+		// Without an admin token the license cannot be read, and the given key is taken as it is.
+		if err == nil && summary.TenantKey != "" && summary.TenantKey != given {
+			return "", fmt.Errorf("The access token belongs to tenant %s, not %s: the badge would show \"not found\". Leave out --tenant, or use an access token of tenant %s.",
+				summary.TenantKey, given, given)
+		}
+		return given, nil
+	}
 	if platform.IsStatus(err, http.StatusForbidden) {
 		return "", errors.New("Finding the tenant key needs an admin access token. Pass it with --tenant: it is the tenant= of a platform URL.")
 	}

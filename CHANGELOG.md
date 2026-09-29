@@ -7,8 +7,10 @@
   `--tag` prints the badge of a tag instead, which invites to create the experiment
   while there is none. The URLs carry the tenant key, never the access token. The
   tenant key is read from the license, which needs an admin access token; `--tenant`
-  gives it otherwise. The badge is fetched once without the token, so a wrong tenant
-  key fails the command rather than showing as a broken image.
+  gives it otherwise, and with an admin access token must be the token's own tenant.
+  The badge is fetched once without the token, so a wrong tenant key fails the command
+  rather than showing as a broken image. `-t json|yaml` prints every format at once and
+  does not combine with `--format`.
 - `target stats` counts the targets of each type in the tenant, optionally only those
   matching a target query (`-q`), as a table or with `-t json|yaml` as the platform
   sends it.

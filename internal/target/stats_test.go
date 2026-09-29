@@ -77,3 +77,12 @@ func TestStatsReportsAnInvalidQuery(t *testing.T) {
 	assert.Contains(t, err.Error(), "Failed to get the target statistics: ")
 	assert.Contains(t, err.Error(), "Failed to parse query")
 }
+
+func TestStatsRejectsAWrongTypeBeforeAnyRequest(t *testing.T) {
+	p := platformtest.New(t)
+
+	// No route: a request would fail the test.
+	err := target.Stats(ctx, p.Client, target.StatsOptions{Type: "xml"})
+
+	assert.EqualError(t, err, `unsupported output format 'xml'. Use "json" or "yaml"`)
+}

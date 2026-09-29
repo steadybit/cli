@@ -6,6 +6,7 @@ package badge_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/steadybit/cli/v6/internal/badge"
@@ -38,6 +39,7 @@ func TestPrintsTheBadgeOfAnExperimentAsMarkdown(t *testing.T) {
 	assert.Equal(t, []string{"demo"}, checked.Query["tenantKey"])
 	// Fetched as a README does: with the token, the platform ignores a wrong tenant key.
 	assert.Empty(t, checked.Header.Get("Authorization"))
+	assert.True(t, strings.HasPrefix(checked.Header.Get("User-Agent"), "steadybit@"))
 	assert.NotEmpty(t, p.Requests("GET /api/experiments/ADM-1")[0].Header.Get("Authorization"))
 }
 
@@ -45,20 +47,41 @@ func TestPrintsTheBadgeAsHTMLOrURL(t *testing.T) {
 	p := platformWithExperiment(t)
 
 	html, err := platformtest.Stdout(t, func() error {
-		return badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Tenant: "shop", Scale: 2, Format: "html"})
+		return badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Tenant: "demo", Scale: 2, Format: "html"})
 	})
 	require.NoError(t, err)
 	url, err := platformtest.Stdout(t, func() error { return badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Format: "url"}) })
 	require.NoError(t, err)
 
-	assert.Equal(t, `<a href="`+p.URL+`/experiments/edit/ADM-1?team=ADM&amp;tenant=shop"><img alt="ADM-1" src="`+p.URL+`/api/experiments/ADM-1/badge.svg?scale=2&amp;tenantKey=shop"></a>`+"\n", html)
+	assert.Equal(t, `<a href="`+p.URL+`/experiments/edit/ADM-1?team=ADM&amp;tenant=demo"><img alt="ADM-1" src="`+p.URL+`/api/experiments/ADM-1/badge.svg?scale=2&amp;tenantKey=demo"></a>`+"\n", html)
 	assert.Equal(t, p.URL+"/api/experiments/ADM-1/badge.svg?tenantKey=demo\n", url)
-	// A given tenant key is taken as it is; only the other run reads the license.
-	assert.Len(t, p.Requests("GET /api/license"), 1)
+}
+
+func TestRefusesATenantOtherThanTheTokens(t *testing.T) {
+	p := platformWithExperiment(t)
+
+	err := badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Tenant: "shop"})
+
+	// The badge of another tenant is a 200 image saying "not found": only the license tells.
+	assert.EqualError(t, err, `The access token belongs to tenant demo, not shop: the badge would show "not found". Leave out --tenant, or use an access token of tenant shop.`)
+	assert.Empty(t, p.Requests("GET /api/experiments/ADM-1/badge.svg"))
+}
+
+func TestTakesAGivenTenantWhenTheLicenseCannotBeRead(t *testing.T) {
+	p := platformWithExperiment(t)
+	p.Reply("GET /api/license", platformtest.Reply{Status: http.StatusForbidden})
+
+	out, err := platformtest.Stdout(t, func() error {
+		return badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Tenant: "shop", Format: "url"})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, p.URL+"/api/experiments/ADM-1/badge.svg?tenantKey=shop\n", out)
 }
 
 func TestPrintsTheBadgeOfATag(t *testing.T) {
 	p := platformtest.New(t)
+	p.Reply("GET /api/license", platformtest.Reply{JSON: map[string]any{"tenantKey": "demo"}})
 	p.Reply("GET /api/badges/linked-badge.svg", svg)
 
 	out, err := platformtest.Stdout(t, func() error {
@@ -84,6 +107,7 @@ func TestPrintsTheBadgeAsJSON(t *testing.T) {
 
 func TestReportsAWrongTenantOrExperiment(t *testing.T) {
 	p := platformtest.New(t)
+	p.Reply("GET /api/license", platformtest.Reply{Status: http.StatusForbidden})
 	p.Reply("GET /api/experiments/ADM-1", platformtest.Reply{JSON: map[string]any{"key": "ADM-1", "team": "ADM"}})
 	p.Reply("GET /api/experiments/ADM-2", platformtest.Reply{Status: http.StatusNotFound})
 	p.Reply("GET /api/experiments/ADM-1/badge.svg", platformtest.Reply{Status: http.StatusBadRequest,
@@ -107,4 +131,7 @@ func TestRefusals(t *testing.T) {
 	assert.EqualError(t, badge.Print(ctx, p.Client, badge.Options{}), "Either --key or --tag must be specified.")
 	assert.EqualError(t, badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", CreateCaption: "x"}), "--create-caption only applies to a badge for --tag.")
 	assert.EqualError(t, badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Format: "svg"}), `Unsupported badge format 'svg'. Use "markdown", "html" or "url".`)
+	assert.EqualError(t, badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Type: "xml"}), `unsupported output format 'xml'. Use "json" or "yaml"`)
+	assert.EqualError(t, badge.Print(ctx, p.Client, badge.Options{Key: "ADM-1", Type: "json", Format: "html"}), "--format cannot be combined with -t or --jq, which print every format.")
+	// Refused before any request: the platform has no route to answer.
 }

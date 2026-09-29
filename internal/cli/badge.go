@@ -24,7 +24,11 @@ having the tag, or, while there is none, invites to create one with the tag.
 The badge URL carries no access token: anyone who knows the tenant key can load it,
 and it shows the experiment key and the state of its latest run. The link opens the
 platform, which asks to log in. Finding the tenant key needs an admin access token;
-with any other, pass it with --tenant.`,
+with any other, pass it with --tenant. With an admin access token, --tenant must be
+the token's own tenant.
+
+-t prints the image URL, the link and every snippet at once, so it does not combine
+with --format.`,
 		Args: cobra.NoArgs,
 		Example: examples(
 			"steadybit experiment badge -k ADM-1",
@@ -39,8 +43,8 @@ with any other, pass it with --tenant.`,
 	f.StringVar(&o.CreateCaption, "create-caption", "", "With --tag: the caption shown while no experiment has the tag. (default: the platform's, \"Create experiment\")")
 	f.StringVar(&o.Tenant, "tenant", "", "The tenant key, the tenant= of a platform URL. (default: read from the license)")
 	f.IntVar(&o.Scale, "scale", 0, "Scale the badge image by this factor. (default: the platform's, 1)")
-	f.StringVar(&o.Format, "format", "markdown", `Print the badge as "markdown", "html", or only the image "url".`)
-	f.StringVarP(&o.Type, "type", "t", "", `Print the image URL, link and snippets as "json" or "yaml" instead.`)
+	f.StringVar(&o.Format, "format", "", `Print the badge as "markdown", "html", or only the image "url". Not with -t or --jq. (default: markdown)`)
+	f.StringVarP(&o.Type, "type", "t", "", `Print the image URL, link and snippets as "json" or "yaml" instead. Not with --format.`)
 	cmd.MarkFlagsMutuallyExclusive("key", "tag")
 	return cmd
 }
