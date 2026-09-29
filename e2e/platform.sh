@@ -9,6 +9,9 @@
 #
 # Needs STEADYBIT_TOKEN (a team token) and STEADYBIT_URL, and `steadybit` on the PATH.
 # STEADYBIT_E2E_TEAM and STEADYBIT_E2E_ENVIRONMENT name the team and its environment.
+#
+# Other test suites run experiments on the same platform at the same time, so every run
+# here allows running in parallel, except the one whose refusal is the point of its check.
 
 set -uo pipefail
 
@@ -119,7 +122,7 @@ check "diff exits with 2 once a file changed" exits_with 2 steadybit experiment 
 check "apply updates the experiment" exits_with 0 steadybit experiment apply -f experiments
 
 check "a parallel run completes both experiments and reports them" sh -c '
-  steadybit experiment run -f experiments --yes --parallel 2 --report report.xml >run.log 2>&1 || { tail -n 20 run.log; exit 1; }
+  steadybit experiment run -f experiments --yes --parallel 2 --allowParallel --report report.xml >run.log 2>&1 || { tail -n 20 run.log; exit 1; }
   [ "$(grep -c "<testsuite " report.xml)" -eq 2 ] && grep -q "\[" run.log
 '
 
@@ -138,7 +141,8 @@ else
 fi
 
 # While one experiment runs, the platform accepts another and cancels it right away;
-# --no-wait has to notice instead of passing.
+# --no-wait has to notice instead of passing. This run alone does not allow running in
+# parallel: its refusal is what is checked.
 check "a run started with --no-wait begins" exits_with 0 steadybit experiment run -k "$LONG" --yes --no-wait --allowParallel
 until_run_is "$LONG" RUNNING
 check "--no-wait fails on a run the platform refused" exits_with 1 steadybit experiment run -k "$A" --yes --no-wait

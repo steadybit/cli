@@ -4,9 +4,10 @@ name: Platform E2E
 # the team token of the test team CLI-E2E. Only wait steps, and everything it creates is
 # deleted afterwards.
 on:
-  # Weekly, Tuesday evening, so a change on the platform side shows within a week.
+  # Weekly, Tuesday evening, so a change on the platform side shows within a week. Cron
+  # is UTC: 19:00 in Berlin in summer, 18:00 in winter.
   schedule:
-    - cron: '0 20 * * 2'
+    - cron: '0 17 * * 2'
   workflow_dispatch:
     inputs:
       from-source:
