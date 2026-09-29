@@ -38,14 +38,15 @@ jobs:
       STEADYBIT_E2E_ENVIRONMENT: Global
     steps:
       - uses: actions/checkout@v7
-      # The latest release through the action, as a pipeline installs it.
-      - if: ${{ !inputs.from-source }}
+      # The latest release through the action, as a pipeline installs it; a pull request
+      # tests its own code, which a change to the test may depend on.
+      - if: ${{ !inputs.from-source && github.event_name != 'pull_request' }}
         uses: ./
-      - if: ${{ inputs.from-source }}
+      - if: ${{ inputs.from-source || github.event_name == 'pull_request' }}
         uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - if: ${{ inputs.from-source }}
+      - if: ${{ inputs.from-source || github.event_name == 'pull_request' }}
         run: |
           go build -o "$RUNNER_TEMP/bin/steadybit" ./cmd/steadybit
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
