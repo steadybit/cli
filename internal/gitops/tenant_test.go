@@ -118,7 +118,7 @@ func TestApplyingAnExportedTenantSkipsMatchingIntegrations(t *testing.T) {
 	assert.Empty(t, p.Requests("POST /api/integrations/webhook"))
 	assert.Empty(t, p.Requests("POST /api/integrations/slack"))
 	assert.Equal(t, []string{"true"}, p.Requests("POST /api/hubs")[0].Query["synchronize"], "the hub's templates are there for the service profiles")
-	order :=[]string{"Property definition tribe", "Environment", "Team ADM", "Hub", "Experiment template", "Service profile"}
+	order := []string{"Property definition tribe", "Environment", "Team ADM", "Hub", "Experiment template", "Service profile"}
 	last := -1
 	for _, line := range order {
 		i := strings.Index(out, line)
@@ -276,7 +276,9 @@ func TestAnInvalidIDIsReported(t *testing.T) {
 	p := fakeTenant(t)
 	p.Reply("GET /api/hubs", platformtest.Reply{JSON: map[string]any{"hubs": []any{map[string]any{"id": "not-an-id"}}}})
 
-	_, err := platformtest.Stdout(t, func() error { return gitops.Export(ctx, p.Client, gitops.ExportOptions{Directory: t.TempDir(), Tenant: true}) })
+	_, err := platformtest.Stdout(t, func() error {
+		return gitops.Export(ctx, p.Client, gitops.ExportOptions{Directory: t.TempDir(), Tenant: true})
+	})
 
 	assert.EqualError(t, err, "Failed to get hub not-an-id: not a valid id")
 
