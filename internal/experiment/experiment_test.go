@@ -191,7 +191,9 @@ func TestAFailedRunFailsTheCommand(t *testing.T) {
 	assert.EqualError(t, err, "Experiment TST-1 (#1) failed, reason: hypothesis violated")
 }
 
-func TestRunRetriesValidationErrorsWithoutPersistingThem(t *testing.T) {
+// Only the last attempt is kept on the platform, so that it shows what was wrong without
+// the attempts before it, as the run-experiment action does.
+func TestRunRetriesValidationErrorsKeepingOnlyTheLast(t *testing.T) {
 	p := platformtest.New(t)
 	stillRunning(p)
 	var calls atomic.Int32
@@ -208,9 +210,11 @@ func TestRunRetriesValidationErrorsWithoutPersistingThem(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "Experiment has validation errors (attempt 1/3). Retrying in 0s...")
+	var persisted []string
 	for _, r := range p.Requests("POST /api/experiments/TST-1/execute") {
-		assert.Equal(t, []string{"false"}, r.Query["forcePersist"])
+		persisted = append(persisted, r.Query["forcePersist"][0])
 	}
+	assert.Equal(t, []string{"false", "false", "true"}, persisted)
 }
 
 func TestRunGivesUpAfterTheLastRetry(t *testing.T) {
@@ -1048,4 +1052,170 @@ func TestAParallelRunThatCannotStartIsReported(t *testing.T) {
 	assert.Contains(t, runs[0]["reason"], "Failed to execute experiment")
 	assert.Equal(t, "TST-2", runs[1]["key"])
 	assert.Equal(t, "COMPLETED", runs[1]["state"])
+}
+
+// run is one poll of a run, for the expectation tests.
+func runState(state, reason string) platformtest.Reply {
+	return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state, "reason": reason}}
+}
+
+func TestExpectedStatesAndReasons(t *testing.T) {
+	for name, tc := range map[string]struct {
+		states     []string
+		reason     string
+		expect     experiment.WaitOptions
+		err        string
+		lastPolled int
+	}{
+		"a failure that was expected passes":       {states: []string{"RUNNING", "FAILED"}, reason: "Check failure.", expect: experiment.WaitOptions{ExpectState: "FAILED"}},
+		"RUNNING passes before the run ends":       {states: []string{"CREATED", "RUNNING", "COMPLETED"}, expect: experiment.WaitOptions{ExpectState: "RUNNING"}, lastPolled: 2},
+		"another end fails, naming both":           {states: []string{"COMPLETED"}, expect: experiment.WaitOptions{ExpectState: "FAILED"}, err: "Experiment TST-1 (#1) completed, but failed was expected"},
+		"the reason has to match exactly":          {states: []string{"FAILED"}, reason: "Check failure.", expect: experiment.WaitOptions{ExpectState: "FAILED", ExpectReason: "Timeout."}, err: `Experiment TST-1 (#1) failed with reason "Check failure.", but the reason "Timeout." was expected`},
+		"without an expectation, as it always was": {states: []string{"FAILED"}, reason: "Check failure.", err: "Experiment TST-1 (#1) failed, reason: Check failure."},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := platformtest.New(t)
+			p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+			var polls atomic.Int32
+			p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+				i := int(polls.Add(1)) - 1
+				if i >= len(tc.states) {
+					i = len(tc.states) - 1
+				}
+				return runState(tc.states[i], tc.reason)
+			})
+
+			_, err := platformtest.Stdout(t, func() error {
+				return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, WaitOptions: tc.expect})
+			})
+
+			if tc.err == "" {
+				require.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.err)
+			}
+			if tc.lastPolled > 0 {
+				assert.EqualValues(t, tc.lastPolled, polls.Load(), "stops polling once the state is reached")
+			}
+		})
+	}
+}
+
+// The platform refuses a run while another one goes; --busy-retries waits instead of
+// starting in parallel, which --yes would otherwise do.
+func TestBusyRetriesWaitInsteadOfRunningInParallel(t *testing.T) {
+	busy := platformtest.Reply{Status: http.StatusUnprocessableEntity, Body: `{"type":"https://steadybit.com/problems/another-experiment-running-exception","title":"Another experiment is running"}`}
+	for name, tc := range map[string]struct {
+		refusals int
+		err      string
+	}{
+		"it starts once the other has ended": {refusals: 2},
+		"it gives up after its tries":        {refusals: 5, err: "Failed to execute experiment, another one was still running after 3 tries"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := platformtest.New(t)
+			var calls atomic.Int32
+			p.Handle("POST /api/experiments/TST-1/execute", func(r platformtest.Request) platformtest.Reply {
+				assert.Equal(t, []string{"false"}, r.Query["allowParallel"])
+				if int(calls.Add(1)) <= tc.refusals {
+					return busy
+				}
+				return started(p, "TST-1", 1)
+			})
+			p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", ""))
+
+			out, err := platformtest.Stdout(t, func() error {
+				return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, BusyRetries: 3})
+			})
+
+			if tc.err == "" {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Another experiment is running, trying again in 0s (2/3).")
+			} else {
+				assert.ErrorContains(t, err, tc.err)
+				assert.EqualValues(t, 4, calls.Load(), "the first try and three more")
+			}
+		})
+	}
+}
+
+// The platform may also accept a run and cancel it right away for the same reason.
+func TestBusyRetriesAlsoCoverARunCanceledForAnother(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var polls atomic.Int32
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		if polls.Add(1) == 1 {
+			return runState("CANCELED", "The run was started via CLI, but another experiment was running in parallel.")
+		}
+		return runState("COMPLETED", "")
+	})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, BusyRetries: 1})
+	})
+
+	require.NoError(t, err)
+	assert.Len(t, p.Requests("POST /api/experiments/TST-1/execute"), 2)
+}
+
+func TestExpectationRetriesRunTheExperimentAgain(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var polls atomic.Int32
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		if polls.Add(1) <= 2 {
+			return runState("FAILED", "flaky")
+		}
+		return runState("COMPLETED", "")
+	})
+	report := filepath.Join(t.TempDir(), "run.json")
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, ExpectationRetries: 2, Report: report})
+	})
+
+	require.NoError(t, err)
+	assert.Len(t, p.Requests("POST /api/experiments/TST-1/execute"), 3)
+	assert.Contains(t, out, "Experiment run 1 did not end as expected (attempt 1/3). Running it again in 0s.")
+	// The report holds the last run, with the API location run-experiment's output gives.
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	var runs []map[string]any
+	require.NoError(t, json.Unmarshal(content, &runs))
+	require.Len(t, runs, 1)
+	assert.Equal(t, "COMPLETED", runs[0]["state"])
+	assert.Equal(t, "https://elsewhere.example.com/api/experiments/executions/1", runs[0]["apiLocation"])
+}
+
+func TestRunByExternalID(t *testing.T) {
+	p := platformtest.New(t)
+	p.Handle("GET /api/experiments", func(r platformtest.Request) platformtest.Reply {
+		switch r.Query["externalId"][0] {
+		case "shop":
+			return platformtest.Reply{JSON: map[string]any{"experiments": []any{map[string]any{"key": "TST-1"}}}}
+		case "twice":
+			return platformtest.Reply{JSON: map[string]any{"experiments": []any{map[string]any{"key": "TST-1"}, map[string]any{"key": "TST-2"}}}}
+		}
+		return platformtest.Reply{JSON: map[string]any{"experiments": []any{}}}
+	})
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", ""))
+	run := func(o experiment.RunOptions) error {
+		o.Yes, o.Wait = true, true
+		_, err := platformtest.Stdout(t, func() error { return experiment.Run(ctx, p.Client, o) })
+		return err
+	}
+
+	require.NoError(t, run(experiment.RunOptions{TemplateOptions: experiment.TemplateOptions{ExternalID: "shop"}}))
+	assert.EqualError(t, run(experiment.RunOptions{TemplateOptions: experiment.TemplateOptions{ExternalID: "gone"}}), "No experiment has the external id 'gone'.")
+	assert.EqualError(t, run(experiment.RunOptions{TemplateOptions: experiment.TemplateOptions{ExternalID: "twice"}}), "2 experiments have the external id 'twice'; run one of them with --key.")
+	assert.EqualError(t, run(experiment.RunOptions{Key: "TST-1", TemplateOptions: experiment.TemplateOptions{ExternalID: "shop"}}), "--external-id finds the experiment to run; leave out --key.")
+}
+
+func TestExpectationsNeedWaitingAndARealState(t *testing.T) {
+	err := experiment.Run(ctx, nil, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, WaitOptions: experiment.WaitOptions{ExpectState: "done"}})
+	assert.EqualError(t, err, "--expect-state must be one of CREATED, PREPARED, RUNNING, FAILED, CANCELED, COMPLETED, ERRORED, not 'DONE'.")
+	err = experiment.Run(ctx, nil, experiment.RunOptions{Key: "TST-1", Yes: true, WaitOptions: experiment.WaitOptions{ExpectState: "FAILED"}})
+	assert.EqualError(t, err, "--expect-state, --expect-reason and --expectation-retries need to wait for the run; remove --no-wait.")
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/v6/internal/experiment"
@@ -75,6 +76,7 @@ func newExperimentRun() *cobra.Command {
 			"steadybit experiment run -f ./experiments -R --yes --timeout 30m --report steadybit.xml",
 			"steadybit experiment run -f ./experiments -R --yes --parallel 3 --report steadybit.xml",
 			"steadybit experiment run --template d7e65100-1d20-4980-be87-c351704910b8 --team ADM -p CLUSTER=prod",
+			"steadybit experiment run --external-id shop-latency --yes --expect-state FAILED --busy-retries 3",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
 			o.Wait = !noWait
@@ -90,6 +92,12 @@ func newExperimentRun() *cobra.Command {
 	f.BoolVar(&o.AllowParallel, "allowParallel", false, "Skip the prompt warning about another experiment running and allow always parallel execution.")
 	f.IntVar(&o.Retries, "retries", 0, "Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.")
 	f.IntVar(&o.RetryInterval, "retryInterval", 10, "Interval in seconds between retries.")
+	f.IntVar(&o.BusyRetries, "busy-retries", 0, "When another experiment is running and running in parallel is not allowed: try again this many times instead of asking, or failing in a pipeline.")
+	f.DurationVar(&o.BusyRetryInterval, "busy-retry-interval", 30*time.Second, "How long to wait before trying again while another experiment is running.")
+	f.StringVar(&o.ExpectState, "expect-state", "", "With waiting: pass once the run reaches this state, such as FAILED or RUNNING, and fail when it ends in another. (default: COMPLETED)")
+	f.StringVar(&o.ExpectReason, "expect-reason", "", "With waiting: also require the run's reason to be exactly this.")
+	f.IntVar(&o.ExpectationRetries, "expectation-retries", 0, "With waiting: run the experiment again this many times when a run does not end as expected.")
+	f.DurationVar(&o.ExpectationRetryInterval, "expectation-retry-interval", time.Minute, "How long to wait before running the experiment again after a run did not end as expected.")
 	f.IntVar(&o.Parallel, "parallel", 1, "How many of the experiments given with -f to run at once. Each waits for its own run; the command fails if any fails.")
 	f.DurationVar(&o.Timeout, "timeout", 0, `With waiting: cancel the run and fail when it has not ended after this long, e.g. "15m".`)
 	f.BoolVar(&o.KeepRunningOnInterrupt, "keep-running-on-interrupt", false, "With waiting: leave the run going when the CLI is interrupted, instead of cancelling it.")
@@ -97,6 +105,7 @@ func newExperimentRun() *cobra.Command {
 	f.StringVar(&o.Report, "report", "", `With waiting: write a JUnit report of the runs to this file, or JSON if it ends in ".json".`)
 	f.Var(executionVariables, "execution-variable", "With --template: a variable for this run only, overriding experiment and environment variables. Repeat for more.")
 	addTemplateFlags(cmd, &o.TemplateOptions)
+	cmd.Flags().Lookup("external-id").Usage = "Without --template: run the experiment with this external id. With --template: an identifier of your own; using the same one again updates the experiment it created before."
 	// --key with one --file updates that experiment from the file and runs it, as it did.
 	variadic(cmd, "file")
 	return cmd

@@ -1,5 +1,22 @@
 # Changelog
 
+## v6.2.0
+
+- `experiment run` can do what the `steadybit/run-experiment` GitHub Action does, so that
+  the action can run on the CLI:
+  - `--expect-state` passes once the run reaches a state, which need not be its end, such
+    as `FAILED` for an experiment expected to find a weakness, or `RUNNING`, and fails when
+    it ends in another; `--expect-reason` also requires the run's reason.
+  - `--expectation-retries` and `--expectation-retry-interval` run the experiment again
+    when a run did not end as expected.
+  - `--busy-retries` and `--busy-retry-interval` wait and try again while another
+    experiment is running, whether the platform refuses the run or cancels it right after
+    accepting it, instead of asking, failing, or running in parallel as `--yes` would.
+  - `--external-id` without `--template` runs the experiment with that external id.
+  - The JSON report gives each run's `apiLocation`.
+- With `--retries`, the last attempt at a run with validation errors is kept on the
+  platform, so the run shows what was wrong; the attempts before it are not.
+
 ## v6.1.0
 
 - `experiment run --parallel N` runs up to N of the experiments given with `-f` at once,

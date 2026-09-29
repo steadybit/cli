@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -273,6 +274,14 @@ type RunOptions struct {
 	RetryInterval int
 	// Parallel is how many runs go at once; 0 or 1 runs them one after another.
 	Parallel int
+	// BusyRetries tries a run again, BusyRetryInterval apart, when another experiment is
+	// running and running in parallel is not allowed, instead of asking or failing.
+	BusyRetries       int
+	BusyRetryInterval time.Duration
+	// ExpectationRetries runs an experiment again, ExpectationRetryInterval apart, when
+	// its run did not end as expected.
+	ExpectationRetries       int
+	ExpectationRetryInterval time.Duration
 	WaitOptions
 	// Report is a file to write a JUnit (or, for .json, JSON) report of the runs to.
 	Report string
@@ -295,7 +304,6 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		}
 	}
 
-	persist := o.Retries == 0
 	// Each run names its experiment in the question about running in parallel, as the
 	// TypeScript CLI did.
 	runs := []runner{}
@@ -303,7 +311,7 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 	case o.Template != "" && o.Key != "":
 		return errors.New("--key cannot be combined with --template. Use `experiment apply --template -k` to update it.")
 	case o.Template != "":
-		runs = append(runs, runner{"this one", func(parallel bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }, false})
+		runs = append(runs, runner{"this one", func(parallel, persist bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }, false})
 	case len(o.Files) > 0:
 		files, err := ResolveFiles(o.Files, o.Recursive)
 		if err != nil {
@@ -313,12 +321,39 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			return errors.New("If --key is specified, at most one --file can be specified.")
 		}
 		for _, file := range files {
-			runs = append(runs, runner{fileExperimentName(file), func(parallel bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }, false})
+			runs = append(runs, runner{fileExperimentName(file), func(parallel, persist bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }, false})
 		}
 	case o.Key != "":
-		runs = append(runs, runner{o.Key, func(parallel bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }, true})
+		if o.ExternalID != "" {
+			return errors.New("--external-id finds the experiment to run; leave out --key.")
+		}
+		runs = append(runs, runner{o.Key, func(parallel, persist bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }, true})
+	case o.ExternalID != "":
+		// Without --template, the external id names an experiment that exists, as the
+		// run-experiment action's externalId does.
+		key, err := keyByExternalID(ctx, c, o.ExternalID)
+		if err != nil {
+			return err
+		}
+		runs = append(runs, runner{key, func(parallel, persist bool) (started, error) { return runKey(ctx, c, key, parallel, persist) }, true})
 	default:
 		return errors.New("Either --key, --file or --template must be specified.")
+	}
+
+	if o.ExpectReason != "" && o.ExpectState == "" {
+		o.ExpectState = "COMPLETED"
+	}
+	if o.ExpectState != "" {
+		o.ExpectState = strings.ToUpper(o.ExpectState)
+		if !slices.Contains(runStates, o.ExpectState) {
+			return fmt.Errorf("--expect-state must be one of %s, not '%s'.", strings.Join(runStates, ", "), o.ExpectState)
+		}
+	}
+	if !o.Wait && (o.ExpectState != "" || o.ExpectationRetries > 0) {
+		return errors.New("--expect-state, --expect-reason and --expectation-retries need to wait for the run; remove --no-wait.")
+	}
+	if o.Retries < 0 || o.BusyRetries < 0 || o.ExpectationRetries < 0 {
+		return errors.New("--retries, --busy-retries and --expectation-retries cannot be negative.")
 	}
 
 	if o.Parallel < 0 {
@@ -352,31 +387,72 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		return runConcurrently(ctx, c, o, runs, report, &finished)
 	}
 	for _, r := range runs {
-		result, err := withRetries(o, r.what, "", r.run)
+		done, err := runUntilExpected(ctx, c, o, r, "", func(result started) { printStarted(result, r.keyLast) })
+		if done != nil {
+			finished = append(finished, done)
+		}
 		if err != nil {
 			return errors.Join(err, report())
 		}
-		printStarted(result, r.keyLast)
-		if o.Wait && result.APILocation != "" {
-			done, err := wait(ctx, c, result.APILocation, o.WaitOptions)
-			if done != nil {
-				done.UILocation = result.UILocation
-				finished = append(finished, done)
-			}
-			if err != nil {
-				return errors.Join(err, report())
-			}
-		} else if result.APILocation != "" {
-			// Only a run that failed the check is reported: one still running has no
-			// result yet.
-			if run, err := checkStarted(ctx, c, result.APILocation); err != nil {
-				run.UILocation = result.UILocation
-				finished = append(finished, run)
-				return errors.Join(err, report())
-			}
-		}
 	}
 	return report()
+}
+
+// canceledForAnother is a run the platform accepted and then canceled, because another
+// experiment was running.
+func canceledForAnother(run *RunResult) bool {
+	return run.State == "CANCELED" && strings.Contains(run.Reason, "another experiment was running")
+}
+
+// runUntilExpected starts one run and waits for it. It runs the experiment again when
+// --expectation-retries asks for it and the run did not end as expected, and, with
+// --busy-retries, when the platform canceled it because another experiment was running.
+// It returns the last run, for the report, or nil when nothing started or --no-wait
+// left a run going.
+func runUntilExpected(ctx context.Context, c *platform.Client, o RunOptions, r runner, prefix string, onStart func(started)) (*RunResult, error) {
+	busy := 0
+	for attempt := 0; ; attempt++ {
+		result, err := withRetries(o, r.what, prefix, r.run)
+		if err != nil {
+			return nil, err
+		}
+		onStart(result)
+		if result.APILocation == "" {
+			return nil, nil
+		}
+		if !o.Wait {
+			// Only a run that failed the check is reported: one still running has no result yet.
+			run, err := checkStarted(ctx, c, result.APILocation)
+			if err != nil {
+				run.UILocation, run.APILocation = result.UILocation, result.APILocation
+				return run, err
+			}
+			return nil, nil
+		}
+		waitOptions := o.WaitOptions
+		if prefix != "" {
+			waitOptions.Prefix = "[" + result.Key + "] "
+		}
+		done, err := wait(ctx, c, result.APILocation, waitOptions)
+		if done != nil {
+			done.UILocation, done.APILocation = result.UILocation, result.APILocation
+		}
+		if err == nil || done == nil || !errors.Is(err, ErrUnexpected) || interrupt.Interrupted() {
+			return done, err
+		}
+		if !o.AllowParallel && canceledForAnother(done) && busy < o.BusyRetries {
+			busy++
+			fmt.Printf("%sAnother experiment is running, trying again in %s (%d/%d).\n", prefix, o.BusyRetryInterval, busy, o.BusyRetries)
+			time.Sleep(o.BusyRetryInterval)
+			attempt--
+			continue
+		}
+		if attempt >= o.ExpectationRetries {
+			return done, err
+		}
+		fmt.Printf("%sExperiment run %d did not end as expected (attempt %d/%d). Running it again in %s.\n", prefix, done.ID, attempt+1, o.ExpectationRetries+1, o.ExpectationRetryInterval)
+		time.Sleep(o.ExpectationRetryInterval)
+	}
 }
 
 // A run by key alone printed its locations before the key, one from a file after.
@@ -419,25 +495,17 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 				unreported(i, "CANCELED", errors.New("not started, the command was interrupted"))
 				return
 			}
-			result, err := withRetries(o, r.what, "["+r.what+"] ", r.run)
-			if err != nil {
-				unreported(i, "ERRORED", err)
-				return
-			}
-			printing.Lock()
-			printStarted(result, r.keyLast)
-			printing.Unlock()
-			if result.APILocation == "" {
-				return
-			}
-			waitOptions := o.WaitOptions
-			waitOptions.Prefix = "[" + result.Key + "] "
-			done, err := wait(ctx, c, result.APILocation, waitOptions)
+			done, err := runUntilExpected(ctx, c, o, r, "["+r.what+"] ", func(result started) {
+				printing.Lock()
+				defer printing.Unlock()
+				printStarted(result, r.keyLast)
+			})
 			if done == nil {
-				unreported(i, "ERRORED", err)
+				if err != nil {
+					unreported(i, "ERRORED", err)
+				}
 				return
 			}
-			done.UILocation = result.UILocation
 			results[i] = done
 			errs[i] = err
 		}()
@@ -454,18 +522,23 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 // runner is one run to start: how the question about running in parallel names it, how
 // to start it, and where its key goes in what is printed.
 type runner struct {
-	what    string
-	run     func(parallel bool) (started, error)
+	what string
+	// run starts it; persist keeps a run the platform refused, so that its errors can be
+	// seen in the platform.
+	run     func(parallel, persist bool) (started, error)
 	keyLast bool
 }
 
 // withRetries retries validation errors, which clear up once targets appear, and offers
-// a parallel run when another experiment is already running.
+// a parallel run when another experiment is already running, or, with --busy-retries,
+// waits for it instead. Only the last attempt at a run with validation errors is kept on
+// the platform, so that it shows what was wrong without the attempts before it.
 // The prefix starts its messages, telling runs apart when several start at once.
-func withRetries(o RunOptions, what, prefix string, run func(parallel bool) (started, error)) (started, error) {
+func withRetries(o RunOptions, what, prefix string, run func(parallel, persist bool) (started, error)) (started, error) {
 	parallel := o.AllowParallel
+	busy := 0
 	for attempt := 0; ; attempt++ {
-		result, err := run(parallel)
+		result, err := run(parallel, attempt >= o.Retries)
 		if err == nil {
 			return result, nil
 		}
@@ -473,12 +546,18 @@ func withRetries(o RunOptions, what, prefix string, run func(parallel bool) (sta
 		if !errors.As(err, &apiErr) {
 			return result, err
 		}
-		if apiErr.Status == http.StatusUnprocessableEntity && attempt < o.Retries {
-			fmt.Printf("%sExperiment has validation errors (attempt %d/%d). Retrying in %ds...\n", prefix, attempt+1, o.Retries+1, o.RetryInterval)
-			time.Sleep(time.Duration(o.RetryInterval) * time.Second)
-			continue
-		}
 		if !parallel && apiErr.ProblemType() == anotherExperimentRunning {
+			if busy < o.BusyRetries {
+				busy++
+				fmt.Printf("%sAnother experiment is running, trying again in %s (%d/%d).\n", prefix, o.BusyRetryInterval, busy, o.BusyRetries)
+				time.Sleep(o.BusyRetryInterval)
+				attempt--
+				continue
+			}
+			// Waiting was asked for; starting in parallel after all is what it rules out.
+			if o.BusyRetries > 0 {
+				return result, platform.Failed(err, "Failed to execute experiment, another one was still running after %d tries", o.BusyRetries)
+			}
 			ok := o.Yes
 			if !ok {
 				// Its own error: the platform's is what a "no" reports.
@@ -492,6 +571,11 @@ func withRetries(o RunOptions, what, prefix string, run func(parallel bool) (sta
 				attempt--
 				continue
 			}
+		}
+		if apiErr.Status == http.StatusUnprocessableEntity && attempt < o.Retries {
+			fmt.Printf("%sExperiment has validation errors (attempt %d/%d). Retrying in %ds...\n", prefix, attempt+1, o.Retries+1, o.RetryInterval)
+			time.Sleep(time.Duration(o.RetryInterval) * time.Second)
+			continue
 		}
 		return result, platform.Failed(err, "Failed to execute experiment")
 	}
@@ -582,6 +666,31 @@ func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, parallel
 // PollInterval is how often --wait asks for the state of a run. Tests shorten it.
 var PollInterval = 5 * time.Second
 
+// runStates are the states a run goes through, which --expect-state can name.
+var runStates = []string{"CREATED", "PREPARED", "RUNNING", "FAILED", "CANCELED", "COMPLETED", "ERRORED"}
+
+// keyByExternalID finds the experiment with an external id; exactly one must have it.
+func keyByExternalID(ctx context.Context, c *platform.Client, externalID string) (string, error) {
+	var list struct {
+		Experiments []struct {
+			Key string `json:"key"`
+		} `json:"experiments"`
+	}
+	ids := []string{externalID}
+	resp, err := c.GetExperiments(ctx, &api.GetExperimentsParams{ExternalId: &ids})
+	if _, err := platform.Decode(resp, err, &list); err != nil {
+		return "", platform.Failed(err, "Failed to find the experiment with external id %s", externalID)
+	}
+	switch len(list.Experiments) {
+	case 0:
+		return "", fmt.Errorf("No experiment has the external id '%s'.", externalID)
+	case 1:
+	default:
+		return "", fmt.Errorf("%d experiments have the external id '%s'; run one of them with --key.", len(list.Experiments), externalID)
+	}
+	return list.Experiments[0].Key, nil
+}
+
 var terminal = map[string]bool{"FAILED": true, "ERRORED": true, "CANCELED": true, "COMPLETED": true}
 
 // WaitOptions shape what `run --wait` does besides waiting.
@@ -596,6 +705,11 @@ type WaitOptions struct {
 	ShowSteps bool
 	// Prefix starts each line about the run, telling runs apart when several go at once.
 	Prefix string
+	// ExpectState passes the run once it reaches this state, which need not be an end
+	// such as RUNNING, and fails it when it ends in another. Empty expects COMPLETED.
+	ExpectState string
+	// ExpectReason also requires the run's reason to be exactly this.
+	ExpectReason string
 	// Steps asks the platform for the steps of the run, which reports need.
 	Steps bool
 }
@@ -715,6 +829,12 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 				}
 			}
 		}
+		if o.ExpectState != "" && run.State == o.ExpectState {
+			if o.ExpectReason != "" && run.Reason != o.ExpectReason {
+				return run, unexpected(fmt.Sprintf("Experiment %s (#%d) %s with reason %q, but the reason %q was expected", run.Key, run.ID, strings.ToLower(run.State), run.Reason, o.ExpectReason))
+			}
+			return run, nil
+		}
 		if !terminal[run.State] {
 			if !deadline.IsZero() && time.Now().After(deadline) {
 				cancel(fmt.Sprintf("Experiment run %d did not end within %s", run.ID, o.Timeout))
@@ -728,12 +848,25 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 			}
 			continue
 		}
+		if o.ExpectState != "" {
+			return run, unexpected(notCompleted(run).Error() + ", but " + strings.ToLower(o.ExpectState) + " was expected")
+		}
 		if run.State != "COMPLETED" {
-			return run, notCompleted(run)
+			return run, unexpected(notCompleted(run).Error())
 		}
 		return run, nil
 	}
 }
+
+// ErrUnexpected marks a run that did not end as expected, by --expect-state and
+// --expect-reason or by completing, which --expectation-retries runs again.
+var ErrUnexpected = errors.New("the run did not end as expected")
+
+// unexpected is such a run's error: its message says how it ended, and it is ErrUnexpected.
+type unexpected string
+
+func (e unexpected) Error() string      { return string(e) }
+func (unexpected) Is(target error) bool { return target == ErrUnexpected }
 
 func notCompleted(run *RunResult) error {
 	reason := ""

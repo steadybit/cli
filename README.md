@@ -327,13 +327,18 @@ platform fills in with defaults are not reported as differences.
 still watches the run until it started, for up to 15 seconds, and fails when the platform
 canceled or errored it before it ran. A few options make it fit pipelines:
 
-| Option                        | Does                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                 |
-| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                  |
-| `--show-steps`                | Prints each step's state as it changes                                   |
-| `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
-| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                |
+| Option                        | Does                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                  |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                   |
+| `--show-steps`                | Prints each step's state as it changes                                    |
+| `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped  |
+| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                 |
+| `--expect-state FAILED`       | Passes once the run reaches this state, and fails when it ends in another |
+| `--expect-reason "…"`         | Also requires the run's reason to be exactly this                         |
+| `--expectation-retries 2`     | Runs the experiment again when a run did not end as expected              |
+| `--busy-retries 3`            | Waits and tries again while another experiment runs, instead of failing   |
+| `--external-id shop-latency`  | Runs the experiment with this external id, instead of `-k`                |
 
 In GitHub Actions a summary of every run is added to the job summary.
 
