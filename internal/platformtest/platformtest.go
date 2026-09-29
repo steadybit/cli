@@ -168,12 +168,23 @@ func Home(t *testing.T) string {
 // Stdout captures what fn prints.
 func Stdout(t *testing.T, fn func() error) (string, error) {
 	t.Helper()
-	original := os.Stdout
+	return capture(t, &os.Stdout, fn)
+}
+
+// Stderr captures what fn prints to STDERR.
+func Stderr(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+	return capture(t, &os.Stderr, fn)
+}
+
+func capture(t *testing.T, file **os.File, fn func() error) (string, error) {
+	t.Helper()
+	original := *file
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Stdout = w
+	*file = w
 	done := make(chan string)
 	go func() {
 		var buf bytes.Buffer
@@ -182,6 +193,6 @@ func Stdout(t *testing.T, fn func() error) (string, error) {
 	}()
 	runErr := fn()
 	_ = w.Close()
-	os.Stdout = original
+	*file = original
 	return <-done, runErr
 }

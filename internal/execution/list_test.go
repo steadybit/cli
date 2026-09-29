@@ -4,6 +4,7 @@
 package execution_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -85,6 +86,79 @@ func TestListStopsAtTheLimit(t *testing.T) {
 	requests := p.Requests(executions)
 	require.Len(t, requests, 3, "150 runs are two pages of 100")
 	assert.Equal(t, 1.0, requests[2].JSON(t).(map[string]any)["page"])
+}
+
+// A date to --to takes the whole day: the platform includes a run created at
+// createdTo, so the end is the last instant of the day, not the next day's 00:00.
+func TestListTakesTheWholeDayOfADate(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply(executions, platformtest.Reply{JSON: map[string]any{"items": []any{}, "totalItems": 0}})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return execution.List(ctx, p.Client, execution.ListOptions{From: "2026-09-28", To: "2026-09-28"})
+	})
+
+	require.NoError(t, err)
+	body := p.Requests(executions)[0].JSON(t).(map[string]any)
+	assert.Equal(t, "2026-09-28T00:00:00Z", body["createdFrom"])
+	assert.Equal(t, "2026-09-28T23:59:59.999999999Z", body["createdTo"])
+}
+
+// A run created while the pages are walked pushes the others down one place, so the
+// next page repeats the last run of the one before.
+func TestListLeavesOutARunSeenOnTheLastPage(t *testing.T) {
+	p := platformtest.New(t)
+	p.Handle(executions, func(r platformtest.Request) platformtest.Reply {
+		if r.JSON(t).(map[string]any)["page"] == 0.0 {
+			return platformtest.Reply{JSON: map[string]any{"items": []any{pageItem(3, "FAILED"), pageItem(2, "FAILED")}, "totalItems": 3, "nextPage": 1}}
+		}
+		return platformtest.Reply{JSON: map[string]any{"items": []any{pageItem(2, "FAILED"), pageItem(1, "FAILED")}, "totalItems": 4, "nextPage": nil}}
+	})
+	output.JQ = "[.[].id]"
+	t.Cleanup(func() { output.JQ = "" })
+
+	out, err := platformtest.Stdout(t, func() error { return execution.List(ctx, p.Client, execution.ListOptions{Type: "json"}) })
+
+	require.NoError(t, err)
+	assert.JSONEq(t, "[3, 2, 1]", out)
+}
+
+func TestListStopsAtANextPageThatDoesNotMoveOn(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply(executions, platformtest.Reply{JSON: map[string]any{"items": []any{pageItem(1, "FAILED")}, "totalItems": 5, "nextPage": 0}})
+
+	_, err := platformtest.Stdout(t, func() error { return execution.List(ctx, p.Client, execution.ListOptions{Limit: 0}) })
+
+	require.NoError(t, err)
+	assert.Len(t, p.Requests(executions), 1)
+}
+
+// A script reading JSON must learn that the limit cut the list, without the note
+// breaking what it parses.
+func TestListSaysOnStderrThatTheLimitCutTheItems(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply(executions, platformtest.Reply{JSON: map[string]any{"items": []any{pageItem(2, "FAILED"), pageItem(1, "FAILED")}, "totalItems": 80, "nextPage": 1}})
+
+	var out string
+	stderr, err := platformtest.Stderr(t, func() error {
+		var err error
+		out, err = platformtest.Stdout(t, func() error { return execution.List(ctx, p.Client, execution.ListOptions{Limit: 2, Type: "json"}) })
+		return err
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Showing the 2 most recent of 80 experiment runs. Raise --limit, or 0 for all.\n", stderr)
+	assert.NotContains(t, out, "Showing")
+	assert.True(t, json.Valid([]byte(out)))
+
+	// Not cut, nothing is said.
+	p.Reply(executions, platformtest.Reply{JSON: map[string]any{"items": []any{pageItem(1, "FAILED")}, "totalItems": 1}})
+	stderr, err = platformtest.Stderr(t, func() error {
+		_, err := platformtest.Stdout(t, func() error { return execution.List(ctx, p.Client, execution.ListOptions{Limit: 2, Type: "yaml"}) })
+		return err
+	})
+	require.NoError(t, err)
+	assert.Empty(t, stderr)
 }
 
 func TestListPrintsThePlatformItems(t *testing.T) {

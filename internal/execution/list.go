@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -55,6 +56,13 @@ func (o ListOptions) request() (api.ExperimentExecutionsRequestAO, error) {
 	if err != nil {
 		return api.ExperimentExecutionsRequestAO{}, err
 	}
+	// A date given to --to means the whole day: 00:00 would leave it out. The platform
+	// includes a run created at createdTo, so the next day's 00:00 would take its first
+	// runs too; the last instant of the day is exact.
+	if _, err := time.Parse(time.DateOnly, o.To); err == nil {
+		end := to.AddDate(0, 0, 1).Add(-time.Nanosecond)
+		to = &end
+	}
 	var states []string
 	for _, s := range o.States {
 		state := strings.ToUpper(s)
@@ -75,7 +83,8 @@ func (o ListOptions) request() (api.ExperimentExecutionsRequestAO, error) {
 }
 
 // search pages through the runs, newest first, until limit of them (0 for all). The
-// page size stays the same throughout, as the platform counts pages in it.
+// page size stays the same throughout, as the platform counts pages in it. The request
+// takes no sort: the platform sends the most recently requested run first.
 func search(ctx context.Context, c *platform.Client, r api.ExperimentExecutionsRequestAO, limit int) ([]json.RawMessage, int64, error) {
 	size := platform.PageSize
 	if limit > 0 && limit < int(size) {
@@ -83,6 +92,9 @@ func search(ctx context.Context, c *platform.Client, r api.ExperimentExecutionsR
 	}
 	var items []json.RawMessage
 	var total int64
+	// A run created during the walk pushes the others one place down, so the next page
+	// starts with the last of this one again.
+	seen := map[int64]bool{}
 	page := int32(0)
 	for {
 		r.Page, r.Size = &page, &size
@@ -95,12 +107,25 @@ func search(ctx context.Context, c *platform.Client, r api.ExperimentExecutionsR
 		if _, err := platform.Decode(resp, err, &body); err != nil {
 			return nil, 0, err
 		}
-		items, total = append(items, body.Items...), body.TotalItems
+		for _, item := range body.Items {
+			var run struct {
+				ID int64 `json:"id"`
+			}
+			if err := json.Unmarshal(item, &run); err != nil {
+				return nil, 0, err
+			}
+			if !seen[run.ID] {
+				seen[run.ID] = true
+				items = append(items, item)
+			}
+		}
+		total = body.TotalItems
 		if limit > 0 && len(items) >= limit {
 			return items[:limit], total, nil
 		}
-		// An empty page ends it too, rather than asking for the next one forever.
-		if body.NextPage == nil || len(body.Items) == 0 {
+		// An empty page, or a next page that does not move on, ends it too, rather than
+		// asking for the same pages forever.
+		if body.NextPage == nil || *body.NextPage <= page || len(body.Items) == 0 {
 			return items, total, nil
 		}
 		page = *body.NextPage
@@ -123,6 +148,11 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 	}
 	if err := resource.List(raw, o.Type, func() error { return printRuns(raw, total) }); err != nil {
 		return err
+	}
+	// JSON and YAML go to a script, which the note must not break, yet it must learn
+	// that the limit cut the list.
+	if resource.Machine(o.Type) && total > int64(len(raw)) {
+		fmt.Fprintln(os.Stderr, cutNote(len(raw), total))
 	}
 	if o.FailOnMatch && len(raw) > 0 {
 		if n := max(total, int64(len(raw))); n > 1 {
@@ -159,9 +189,13 @@ func printRuns(raw []json.RawMessage, total int64) error {
 	}
 	t.Print()
 	if total > int64(len(runs)) {
-		fmt.Printf("Showing the %d most recent of %d experiment runs. Raise --limit, or 0 for all.\n", len(runs), total)
+		fmt.Println(cutNote(len(runs), total))
 	}
 	return nil
+}
+
+func cutNote(shown int, total int64) string {
+	return fmt.Sprintf("Showing the %d most recent of %d experiment runs. Raise --limit, or 0 for all.", shown, total)
 }
 
 // trigger names who started a run: a schedule, or the user or access token.
