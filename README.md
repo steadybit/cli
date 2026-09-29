@@ -272,8 +272,8 @@ are not reported as differences.
 ## In CI
 
 `experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
-still looks at the run once, 2 seconds after starting it, and fails when the platform ended
-it right away. A few options make it fit pipelines:
+still watches the run until it started, for up to 15 seconds, and fails when the platform
+canceled or errored it before it ran. A few options make it fit pipelines:
 
 | Option                        | Does                                                                     |
 | ----------------------------- | ------------------------------------------------------------------------ |
