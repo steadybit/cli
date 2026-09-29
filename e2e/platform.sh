@@ -151,12 +151,17 @@ check "execution list --fail-on-match gates on that canceled run" exits_with 1 \
   steadybit execution list --key "$A" --state CANCELED --ended-from "$(date -u +%F)" --limit 1 --fail-on-match
 # What the run-experiment action relies on: the experiment found by its external id, an
 # expected state reached before the end, and waiting while another experiment runs.
-check "an expected state passes as soon as the run reaches it" sh -c "
-  steadybit experiment run --external-id $MARK-$RUN-a --yes --allowParallel --expect-state RUNNING --report expect.json >/dev/null 2>&1 &&
-  grep -Eq '\"state\": *\"RUNNING\"' expect.json && grep -q '\"apiLocation\"' expect.json
-"
+check "the experiment is found by its external id and passes at the expected state" exits_with 0 \
+  steadybit experiment run --external-id "$MARK-$RUN-a" --yes --allowParallel --expect-state RUNNING --report expect.json
+check "the report has the state reached and the run's API location" sh -c '
+  grep -Eq "\"state\": *\"RUNNING\"" expect.json && grep -q "\"apiLocation\"" expect.json || { cat expect.json; exit 1; }
+'
 until_run_is "$A" COMPLETED CANCELED
-check "a run that ends otherwise than expected fails" exits_with 1 steadybit experiment run -k "$A" --yes --allowParallel --expect-state FAILED
+check "a run that ends otherwise than expected fails" sh -c "
+  steadybit experiment run -k $A --yes --allowParallel --expect-state FAILED >otherwise.log 2>&1
+  status=\$?
+  grep -q 'but failed was expected' otherwise.log && [ \$status -eq 1 ] || { tail -n 5 otherwise.log; exit 1; }
+"
 # The long run still goes, so both tries are refused: what is checked is that the CLI tries
 # again instead of failing at once or, as --yes would otherwise do, running in parallel.
 # Waiting for the platform to be free would depend on what other suites run at the time.
