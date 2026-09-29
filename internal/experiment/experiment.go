@@ -327,11 +327,17 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 	if o.Report != "" && !o.Wait {
 		return errors.New("--report needs to wait for the runs to end; remove --no-wait.")
 	}
+	// Without waiting, a slot frees as soon as its run started: --parallel would limit how
+	// fast runs start, not how many run at once.
+	if o.Parallel > 1 && !o.Wait {
+		return errors.New("--parallel needs to wait for the runs; remove --no-wait.")
+	}
 	o.WaitOptions.Steps = o.Report != "" || os.Getenv("GITHUB_STEP_SUMMARY") != ""
 
 	var finished []*RunResult
-	// The report and summary cover the runs up to and including the first one that
-	// failed, which ends the command.
+	// The report and summary cover the runs that were started: one after the other, up to
+	// and including the first one that failed, which ends the command; with --parallel,
+	// every run, a failed one not stopping the others.
 	report := func() error {
 		if o.Report != "" {
 			if err := WriteReport(o.Report, finished); err != nil {
@@ -340,11 +346,13 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		}
 		return WriteGitHubSummary(finished)
 	}
-	if o.Parallel > 1 {
+	// A single run has nothing to run in parallel with, and telling the platform it runs in
+	// parallel on purpose would skip the check for another experiment running.
+	if o.Parallel > 1 && len(runs) > 1 {
 		return runConcurrently(ctx, c, o, runs, report, &finished)
 	}
 	for _, r := range runs {
-		result, err := withRetries(o, r.what, r.run)
+		result, err := withRetries(o, r.what, "", r.run)
 		if err != nil {
 			return errors.Join(err, report())
 		}
@@ -391,6 +399,12 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 	var printing sync.Mutex
 	results := make([]*RunResult, len(runs))
 	errs := make([]error, len(runs))
+	// A run that has no result from the platform is still reported, so that the report and
+	// summary name every run that failed the command.
+	unreported := func(i int, state string, err error) {
+		results[i] = &RunResult{Key: runs[i].what, State: state, Reason: err.Error()}
+		errs[i] = fmt.Errorf("%s: %w", runs[i].what, err)
+	}
 	slots := make(chan struct{}, o.Parallel)
 	var group sync.WaitGroup
 	for i, r := range runs {
@@ -399,9 +413,15 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 		go func() {
 			defer group.Done()
 			defer func() { <-slots }()
-			result, err := withRetries(o, r.what, r.run)
+			// Interrupted while waiting for a slot: the handlers that cancel the runs have
+			// already been collected, and would miss this one.
+			if interrupt.Interrupted() {
+				unreported(i, "CANCELED", errors.New("not started, the command was interrupted"))
+				return
+			}
+			result, err := withRetries(o, r.what, "["+r.what+"] ", r.run)
 			if err != nil {
-				errs[i] = err
+				unreported(i, "ERRORED", err)
 				return
 			}
 			printing.Lock()
@@ -410,22 +430,15 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 			if result.APILocation == "" {
 				return
 			}
-			if !o.Wait {
-				run, err := checkStarted(ctx, c, result.APILocation)
-				if err != nil {
-					run.UILocation = result.UILocation
-					results[i] = run
-				}
-				errs[i] = err
-				return
-			}
 			waitOptions := o.WaitOptions
 			waitOptions.Prefix = "[" + result.Key + "] "
 			done, err := wait(ctx, c, result.APILocation, waitOptions)
-			if done != nil {
-				done.UILocation = result.UILocation
-				results[i] = done
+			if done == nil {
+				unreported(i, "ERRORED", err)
+				return
 			}
+			done.UILocation = result.UILocation
+			results[i] = done
 			errs[i] = err
 		}()
 	}
@@ -448,7 +461,8 @@ type runner struct {
 
 // withRetries retries validation errors, which clear up once targets appear, and offers
 // a parallel run when another experiment is already running.
-func withRetries(o RunOptions, what string, run func(parallel bool) (started, error)) (started, error) {
+// The prefix starts its messages, telling runs apart when several start at once.
+func withRetries(o RunOptions, what, prefix string, run func(parallel bool) (started, error)) (started, error) {
 	parallel := o.AllowParallel
 	for attempt := 0; ; attempt++ {
 		result, err := run(parallel)
@@ -460,7 +474,7 @@ func withRetries(o RunOptions, what string, run func(parallel bool) (started, er
 			return result, err
 		}
 		if apiErr.Status == http.StatusUnprocessableEntity && attempt < o.Retries {
-			fmt.Printf("Experiment has validation errors (attempt %d/%d). Retrying in %ds...\n", attempt+1, o.Retries+1, o.RetryInterval)
+			fmt.Printf("%sExperiment has validation errors (attempt %d/%d). Retrying in %ds...\n", prefix, attempt+1, o.Retries+1, o.RetryInterval)
 			time.Sleep(time.Duration(o.RetryInterval) * time.Second)
 			continue
 		}
@@ -655,16 +669,24 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 		if id == 0 {
 			return
 		}
-		fmt.Fprintf(os.Stderr, "%s, canceling experiment run %d.\n", why, id)
+		fmt.Fprintf(os.Stderr, "%s%s, canceling experiment run %d.\n", o.Prefix, why, id)
 		cancelCtx, done := context.WithTimeout(context.Background(), 30*time.Second)
 		defer done()
 		if _, _, err := platform.Read(c.CancelExperimentExecution(cancelCtx, id)); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to cancel experiment run %d: %s\n", id, err)
+			fmt.Fprintf(os.Stderr, "%sFailed to cancel experiment run %d: %s\n", o.Prefix, id, err)
 		}
 	}
 	if !o.KeepRunningOnInterrupt {
-		pop := interrupt.Push(func(os.Signal) { cancel("Interrupted") })
+		// Once: the handler and the check below can both see the interrupt.
+		var once sync.Once
+		interrupted := func() { once.Do(func() { cancel("Interrupted") }) }
+		pop := interrupt.Push(func(os.Signal) { interrupted() })
 		defer pop()
+		// Interrupted while the run was starting, the handlers ran before this one was
+		// pushed: the run is canceled here, or it would be left running.
+		if interrupt.Interrupted() {
+			interrupted()
+		}
 	}
 
 	var deadline time.Time

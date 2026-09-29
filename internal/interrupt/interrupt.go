@@ -11,12 +11,16 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
 var (
 	mu       sync.Mutex
 	handlers []*func(os.Signal)
+	// interrupted is set before the handlers run: something started after RunHandlers
+	// took its snapshot has no handler that will clean it up, so it asks Interrupted.
+	interrupted atomic.Bool
 )
 
 func init() {
@@ -39,6 +43,7 @@ func init() {
 // RunHandlers runs what is registered for sig, most recent first, without exiting. The
 // signal handler calls it before exiting; tests call it to stand in for Ctrl-C.
 func RunHandlers(sig os.Signal) {
+	interrupted.Store(true)
 	mu.Lock()
 	pending := make([]*func(os.Signal), len(handlers))
 	copy(pending, handlers)
@@ -46,6 +51,17 @@ func RunHandlers(sig os.Signal) {
 	for i := len(pending) - 1; i >= 0; i-- {
 		(*pending[i])(sig)
 	}
+}
+
+// Interrupted reports whether the CLI was interrupted. Code that starts something to
+// clean up checks it after pushing its handler, which may have come too late to run.
+func Interrupted() bool {
+	return interrupted.Load()
+}
+
+// Reset forgets an interrupt, for tests that stand in for one with RunHandlers.
+func Reset() {
+	interrupted.Store(false)
 }
 
 func code(s os.Signal) int {
