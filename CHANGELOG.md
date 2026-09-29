@@ -1,5 +1,13 @@
 # Changelog
 
+## v6.0.1
+
+- `experiment apply` and `experiment run` no longer send a `version` from the file. The
+  platform now rejects a stale one with `409 Conflict`, so a file downloaded from the UI,
+  which carries one, failed to apply once the experiment was edited after the download.
+  The file wins, as it did before; files written by `get`, `dump` and `export` never had
+  a `version`.
+
 ## v6.0.0
 
 - **The CLI is now a single binary written in Go, and no longer needs Node.js.** It is
