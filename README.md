@@ -146,6 +146,8 @@ steadybit experiment run --template <template-id> --team ADM --placeholders valu
 ### Experiment runs
 
 ```bash
+steadybit execution list --team ADM --state FAILED --from 2026-09-28
+steadybit execution list --team ADM --state FAILED ERRORED --from 2026-09-28 --fail-on-match   # fail a pipeline
 steadybit execution get -i 1234 -t json
 steadybit execution cancel -i 1234
 steadybit execution property set -i 1234 -k approvedBy --value "Jane Doe"
@@ -251,8 +253,9 @@ steadybit execution watch -k ADM-1            # follow the latest run of an expe
 steadybit experiment get -k ADM-1 --profile prod   # use another configured profile for one command
 ```
 
-Shell completion (`steadybit completion --help`) completes experiment keys, team keys and
-the ids of templates, schedules, services and service profiles from the platform.
+Shell completion (`steadybit completion --help`) completes experiment keys, team keys,
+environment names, and the ids of templates, schedules, services and service profiles
+from the platform.
 
 ## GitOps
 

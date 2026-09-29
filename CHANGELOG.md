@@ -1,5 +1,15 @@
 # Changelog
 
+## v6.1.0
+
+- `execution list` searches the runs of all experiments, most recent first, by team,
+  experiment key, state, environment, service, name and creation time (`--from`/`--to`),
+  as a table or with `-t json|yaml` and `--jq`. It lists the 50 most recent by default;
+  `--limit 0` lists all. `--fail-on-match` exits with 1 when any run matches, so a
+  pipeline can stop on a failed run: `execution list --team ADM --state FAILED ERRORED
+  --from 2026-09-28 --fail-on-match`.
+- Shell completion completes environment names for `--environment`.
+
 ## v6.0.1
 
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The

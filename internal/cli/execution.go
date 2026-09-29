@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,7 @@ func runID(cmd *cobra.Command, id *int64) {
 }
 
 func newExecution() *cobra.Command {
-	cmd := &cobra.Command{Use: "execution", Short: "Inspect, cancel and annotate experiment runs, and download their artifacts."}
+	cmd := &cobra.Command{Use: "execution", Short: "Search, inspect, cancel and annotate experiment runs, and download their artifacts."}
 
 	var g execution.GetOptions
 	get := &cobra.Command{
@@ -142,6 +143,32 @@ func newExecution() *cobra.Command {
 	watch.Flags().StringVarP(&w.Key, "key", "k", "", "Watch the latest run of this experiment instead.")
 	watch.Flags().DurationVar(&w.Interval, "interval", 2*time.Second, "How often to refresh.")
 
-	cmd.AddCommand(get, cancel, property, artifact, watch)
+	var l execution.ListOptions
+	runs := &cobra.Command{
+		Use:   "list",
+		Short: "Search the runs of all experiments, most recent first. Filters of the same kind match any of the given values.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit execution list --team ADM",
+			"steadybit execution list --team ADM --state FAILED ERRORED --from 2026-09-28 --fail-on-match",
+			"steadybit execution list -k ADM-1 --limit 0 --jq '.[] | select(.state == \"COMPLETED\") | .id'",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return execution.List(ctx, c, l) }),
+	}
+	runs.Flags().StringArrayVar(&l.Teams, "team", nil, "Only list runs of experiments of these teams, by team key.")
+	runs.Flags().StringArrayVarP(&l.Experiments, "key", "k", nil, "Only list runs of these experiments, by experiment key.")
+	runs.Flags().StringArrayVar(&l.States, "state", nil, "Only list runs in these states: "+strings.Join(execution.States, ", ")+".")
+	runs.Flags().StringArrayVar(&l.Environments, "environment", nil, "Only list runs in these environments, by name.")
+	runs.Flags().StringArrayVar(&l.Services, "service", nil, "Only list runs of experiments linked to these services, by name.")
+	runs.Flags().StringVar(&l.Name, "name", "", "Only list runs of experiments whose name or key contains this text.")
+	runs.Flags().StringVar(&l.From, "from", "", "Only list runs created at or after this time, a date or an RFC 3339 time.")
+	runs.Flags().StringVar(&l.To, "to", "", "Only list runs created at or before this time, a date or an RFC 3339 time. A date means 00:00 UTC of that day.")
+	runs.Flags().IntVar(&l.Limit, "limit", 50, "The most runs to list, 0 for all of them.")
+	runs.Flags().BoolVar(&l.FailOnMatch, "fail-on-match", false, "Exit with a non-zero status when any run matches, to stop a pipeline.")
+	runs.Flags().StringVarP(&l.Type, "type", "t", "", resource.ListTypeHelp)
+	variadic(runs, "team", "key", "state", "environment", "service")
+	_ = runs.RegisterFlagCompletionFunc("state", cobra.FixedCompletions(execution.States, cobra.ShellCompDirectiveNoFileComp))
+
+	cmd.AddCommand(runs, get, cancel, property, artifact, watch)
 	return cmd
 }

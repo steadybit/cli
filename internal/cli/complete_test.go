@@ -38,6 +38,8 @@ func TestIdFlagsComplete(t *testing.T) {
 		{"experiment", "get", "--key"}, {"experiment", "run", "--template"}, {"schedule", "delete", "--id"},
 		{"service", "risk", "--id"}, {"service-profile", "get", "--id"}, {"template", "get", "--id"},
 		{"export", "--team"}, {"schedule", "create", "--experiment"},
+		{"execution", "list", "--key"}, {"execution", "list", "--team"}, {"execution", "list", "--environment"},
+		{"execution", "list", "--state"}, {"service", "list", "--environment"},
 	} {
 		cmd, _, err := root.Find(path[:len(path)-1])
 		require.NoError(t, err, strings.Join(path, " "))
