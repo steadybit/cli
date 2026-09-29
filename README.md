@@ -29,8 +29,12 @@ On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release
 installs the shell completions:
 
 ```sh
+# Debian, Ubuntu
 curl -sLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.deb
-sudo apt-get install ./steadybit-cli_amd64.deb   # or: sudo dnf install ./steadybit-cli_amd64.rpm
+sudo apt-get install ./steadybit-cli_amd64.deb
+# Fedora, RHEL, Amazon Linux
+curl -sLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.rpm
+sudo dnf install ./steadybit-cli_amd64.rpm
 ```
 
 Or download the archive for your platform from the
