@@ -158,6 +158,13 @@ steadybit execution artifact list -i 1234
 steadybit execution artifact download -i 1234 -d ./artifacts
 ```
 
+Show the state of an experiment's latest run in a README with a status badge. The badge
+URL carries the tenant key, never the access token:
+
+```bash
+steadybit experiment badge -k ADM-1              # Markdown; --format html or url
+```
+
 ### Experiment schedules
 
 ```bash
@@ -234,6 +241,7 @@ steadybit access-token create --name ci --type TEAM --team ADM --expires-at 2026
 steadybit user invite --email jane@example.com --team ADM
 steadybit killswitch status
 steadybit audit-log --from 2026-09-01 -t json
+steadybit license show
 steadybit report experiments-executed --group-by STATE --rollup MONTHLY
 ```
 
@@ -245,6 +253,7 @@ Commands that cannot be undone, such as `killswitch activate`, `access-token del
 ```bash
 steadybit target query -e Global --target-type com.steadybit.extension_container.container --attribute k8s.namespace
 steadybit target attribute values -e Global --target-type com.steadybit.extension_container.container -k k8s.namespace
+steadybit target stats -q 'k8s.namespace="shop"'
 steadybit action list --kind ATTACK
 ```
 

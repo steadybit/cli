@@ -89,7 +89,7 @@ type Client struct {
 
 // Get fetches a path the spec has no operation for, such as the Location of a run.
 func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)
+	req, err := c.newRequest(ctx, http.MethodGet, path)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +98,29 @@ func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {
 	}
 	return c.http.Do(req)
 }
+
+// GetAnonymously fetches a path without the access token, as a README showing a badge
+// does: with the token, the platform takes the tenant from it and ignores a wrong one
+// in the URL.
+func (c *Client) GetAnonymously(ctx context.Context, path string) (*http.Response, error) {
+	req, err := c.newRequest(ctx, http.MethodGet, path)
+	if err != nil {
+		return nil, err
+	}
+	return c.http.Do(req)
+}
+
+// newRequest is a request to a path of the platform, before any authorization.
+func (c *Client) newRequest(ctx context.Context, method, path string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent())
+	return req, nil
+}
+
+func userAgent() string { return "steadybit@" + CurrentVersion() }
 
 var Verbose bool
 
@@ -124,7 +147,7 @@ func New() (*Client, error) {
 	authorize := func(_ context.Context, req *http.Request) error {
 		req.Header.Set("Authorization", "accessToken "+cfg.APIAccessToken)
 		req.Header.Set("Accept", "application/json, */*")
-		req.Header.Set("User-Agent", "steadybit@"+CurrentVersion())
+		req.Header.Set("User-Agent", userAgent())
 		return nil
 	}
 	client, err := api.NewClientWithResponses(cfg.BaseURL, api.WithHTTPClient(httpClient), api.WithRequestEditorFn(authorize))
