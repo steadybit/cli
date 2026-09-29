@@ -363,7 +363,11 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 				return errors.Join(err, report())
 			}
 		} else if result.APILocation != "" {
-			if err := checkStarted(ctx, c, result.APILocation); err != nil {
+			// Only a run that failed the check is reported: one still running has no
+			// result yet.
+			if run, err := checkStarted(ctx, c, result.APILocation); err != nil {
+				run.UILocation = result.UILocation
+				finished = append(finished, run)
 				return errors.Join(err, report())
 			}
 		}
@@ -644,29 +648,64 @@ func notCompleted(run *RunResult) error {
 	return fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
 }
 
-// StartCheckDelay is how long --no-wait gives a run before looking at it once. The
+// StartCheckDelay is how long --no-wait gives a run before first looking at it. The
 // platform accepts a run and may cancel it moments later, when its validation finds
 // another experiment running; unchecked, a pipeline would pass on a run that never ran.
 var StartCheckDelay = 2 * time.Second
 
-// checkStarted fails when the run already ended without completing. The check is a
-// courtesy: when the platform cannot be asked, the run was still started, so it warns.
-func checkStarted(ctx context.Context, c *platform.Client, location string) error {
-	time.Sleep(StartCheckDelay)
-	body, _, err := platform.Read(c.Get(ctx, runPath(location)))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not check that the experiment run started: %s\n", err)
+// StartCheckTimeout bounds the whole check, requests and the client's back-off included:
+// --no-wait promises not to wait for the run, so a slow platform only earns a warning.
+var StartCheckTimeout = 15 * time.Second
+
+// checkStarted polls the run until the platform is done validating it, and fails when the
+// platform ended it before it ran: canceled or errored. A run that failed is the
+// experiment's result, which --no-wait does not wait for. The check is a courtesy: when
+// the platform cannot be asked in time, the run was still started, so it only warns.
+func checkStarted(ctx context.Context, c *platform.Client, location string) (*RunResult, error) {
+	ctx, done := context.WithTimeout(ctx, StartCheckTimeout)
+	defer done()
+	path := runPath(location)
+	var last *RunResult
+	warn := func(err error) (*RunResult, error) {
+		if last != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			err = fmt.Errorf("the run was still %s after %s", strings.ToLower(last.State), StartCheckTimeout)
+		}
+		fmt.Fprintln(os.Stderr, platform.Failed(err, "Could not check that the experiment run started"))
+		return nil, nil
+	}
+	for delay := StartCheckDelay; ; delay = PollInterval {
+		if err := sleep(ctx, delay); err != nil {
+			return warn(err)
+		}
+		body, _, err := platform.Read(c.Get(ctx, path))
+		if err != nil {
+			return warn(err)
+		}
+		run, err := parseRun(body)
+		if err != nil {
+			return warn(err)
+		}
+		switch run.State {
+		case "CREATED", "REQUESTED", "PREPARED":
+			last = run
+			continue
+		case "CANCELED", "ERRORED":
+			return run, notCompleted(run)
+		}
+		return run, nil
+	}
+}
+
+// sleep waits for d, or until ctx ends.
+func sleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
 		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	run, err := parseRun(body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not check that the experiment run started: %s\n", err)
-		return nil
-	}
-	if terminal[run.State] && run.State != "COMPLETED" {
-		return notCompleted(run)
-	}
-	return nil
 }
 
 // runPath is a run's location relative to the API, which the client sends to its host.

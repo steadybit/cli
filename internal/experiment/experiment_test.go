@@ -684,30 +684,96 @@ func TestAVersionInTheFileIsNotSent(t *testing.T) {
 	assert.Equal(t, "key: NEW-1\n"+original, string(content))
 }
 
-// The platform accepts a run and may cancel it right after; --no-wait must not pass then.
-func TestNoWaitFailsWhenTheRunEndsRightAway(t *testing.T) {
+// The platform accepts a run and may cancel or error it right after; --no-wait must not
+// pass then. A run that failed ran, and its result is what --no-wait does not wait for.
+func TestNoWaitChecksThatTheRunStarted(t *testing.T) {
+	for state, want := range map[string]string{
+		"RUNNING":   "",
+		"COMPLETED": "",
+		"FAILED":    "",
+		"CANCELED":  "Experiment TST-1 (#1) canceled, reason: The run was started via CLI, but another experiment was running in parallel.",
+		"ERRORED":   "Experiment TST-1 (#1) errored, reason: The run was started via CLI, but another experiment was running in parallel.",
+	} {
+		t.Run(state, func(t *testing.T) {
+			p := platformtest.New(t)
+			p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+			p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state,
+				"reason": "The run was started via CLI, but another experiment was running in parallel."}})
+
+			_, err := platformtest.Stdout(t, func() error {
+				return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+			})
+
+			if want == "" {
+				require.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, want)
+			}
+		})
+	}
+}
+
+// Validation can take longer than the first look: the check keeps looking while the run is
+// still being prepared, and the failed run is in the summary of the job it failed.
+func TestNoWaitKeepsCheckingWhileTheRunIsPrepared(t *testing.T) {
 	p := platformtest.New(t)
+	summary := filepath.Join(t.TempDir(), "summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", summary)
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
-	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "CANCELED",
-		"reason": "The run was started via CLI, but another experiment was running in parallel."}})
+	var polls atomic.Int32
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		state := []string{"CREATED", "PREPARED", "CANCELED"}[min(polls.Add(1)-1, 2)]
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state, "reason": "another experiment was running"}}
+	})
 
 	_, err := platformtest.Stdout(t, func() error {
 		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
 	})
 
-	assert.EqualError(t, err, "Experiment TST-1 (#1) canceled, reason: The run was started via CLI, but another experiment was running in parallel.")
+	assert.EqualError(t, err, "Experiment TST-1 (#1) canceled, reason: another experiment was running")
+	assert.Equal(t, int32(3), polls.Load())
+	content, _ := os.ReadFile(summary)
+	assert.Contains(t, string(content), "Run [#1](https://ui/TST-1) canceled")
 }
 
 // The run was started either way; only being unable to look at it is no reason to fail.
 func TestNoWaitOnlyWarnsWhenTheRunCannotBeChecked(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
-	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{Status: http.StatusBadGateway})
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{Status: http.StatusBadGateway, JSON: map[string]any{"title": "Bad Gateway"}})
 
-	out, err := platformtest.Stdout(t, func() error {
-		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+	var out string
+	stderr, err := platformtest.Stderr(t, func() error {
+		var err error
+		out, err = platformtest.Stdout(t, func() error {
+			return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+		})
+		return err
 	})
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "Executing experiment: TST-1\n")
+	assert.Contains(t, stderr, "Could not check that the experiment run started: ")
+	assert.Contains(t, stderr, `"title": "Bad Gateway"`)
+}
+
+// --no-wait does not wait for a run the platform takes long to validate: past the
+// deadline, it warns and passes.
+func TestNoWaitGivesUpCheckingAfterTheTimeout(t *testing.T) {
+	timeout := experiment.StartCheckTimeout
+	experiment.StartCheckTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { experiment.StartCheckTimeout = timeout })
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "CREATED"}})
+
+	stderr, err := platformtest.Stderr(t, func() error {
+		_, err := platformtest.Stdout(t, func() error {
+			return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+		})
+		return err
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Could not check that the experiment run started: the run was still created after 50ms\n", stderr)
 }
