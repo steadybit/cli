@@ -362,6 +362,14 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			if err != nil {
 				return errors.Join(err, report())
 			}
+		} else if result.APILocation != "" {
+			// Only a run that failed the check is reported: one still running has no
+			// result yet.
+			if run, err := checkStarted(ctx, c, result.APILocation); err != nil {
+				run.UILocation = result.UILocation
+				finished = append(finished, run)
+				return errors.Join(err, report())
+			}
 		}
 	}
 	return report()
@@ -556,10 +564,7 @@ var ErrTimedOut = errors.New("timed out")
 // wait polls the run until it ends. A run that did not complete is an error, which is
 // what lets a pipeline fail on it. The finished run is returned for reports.
 func wait(ctx context.Context, c *platform.Client, location string, o WaitOptions) (*RunResult, error) {
-	path := location
-	if i := strings.Index(location, "/api/"); i >= 0 {
-		path = location[i:]
-	}
+	path := runPath(location)
 	if o.Steps || o.ShowSteps {
 		separator := "?"
 		if strings.Contains(path, "?") {
@@ -629,12 +634,84 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 			continue
 		}
 		if run.State != "COMPLETED" {
-			reason := ""
-			if run.Reason != "" {
-				reason = ", reason: " + run.Reason
-			}
-			return run, fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
+			return run, notCompleted(run)
 		}
 		return run, nil
 	}
+}
+
+func notCompleted(run *RunResult) error {
+	reason := ""
+	if run.Reason != "" {
+		reason = ", reason: " + run.Reason
+	}
+	return fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
+}
+
+// StartCheckDelay is how long --no-wait gives a run before first looking at it. The
+// platform accepts a run and may cancel it moments later, when its validation finds
+// another experiment running; unchecked, a pipeline would pass on a run that never ran.
+var StartCheckDelay = 2 * time.Second
+
+// StartCheckTimeout bounds the whole check, requests and the client's back-off included:
+// --no-wait promises not to wait for the run, so a slow platform only earns a warning.
+var StartCheckTimeout = 15 * time.Second
+
+// checkStarted polls the run until the platform is done validating it, and fails when the
+// platform ended it before it ran: canceled or errored. A run that failed is the
+// experiment's result, which --no-wait does not wait for. The check is a courtesy: when
+// the platform cannot be asked in time, the run was still started, so it only warns.
+func checkStarted(ctx context.Context, c *platform.Client, location string) (*RunResult, error) {
+	ctx, done := context.WithTimeout(ctx, StartCheckTimeout)
+	defer done()
+	path := runPath(location)
+	var last *RunResult
+	warn := func(err error) (*RunResult, error) {
+		if last != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			err = fmt.Errorf("the run was still %s after %s", strings.ToLower(last.State), StartCheckTimeout)
+		}
+		fmt.Fprintln(os.Stderr, platform.Failed(err, "Could not check that the experiment run started"))
+		return nil, nil
+	}
+	for delay := StartCheckDelay; ; delay = PollInterval {
+		if err := sleep(ctx, delay); err != nil {
+			return warn(err)
+		}
+		body, _, err := platform.Read(c.Get(ctx, path))
+		if err != nil {
+			return warn(err)
+		}
+		run, err := parseRun(body)
+		if err != nil {
+			return warn(err)
+		}
+		switch run.State {
+		case "CREATED", "REQUESTED", "PREPARED":
+			last = run
+			continue
+		case "CANCELED", "ERRORED":
+			return run, notCompleted(run)
+		}
+		return run, nil
+	}
+}
+
+// sleep waits for d, or until ctx ends.
+func sleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// runPath is a run's location relative to the API, which the client sends to its host.
+func runPath(location string) string {
+	if i := strings.Index(location, "/api/"); i >= 0 {
+		return location[i:]
+	}
+	return location
 }
