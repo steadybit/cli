@@ -1,6 +1,6 @@
 # Changelog
 
-## v6.1.0 (unreleased)
+## v6.1.0
 
 - `export --tenant -d dir` writes the tenant's configuration, to keep in Git: experiment
   templates, environments, teams, property definitions, hubs, webhook, Slack and preflight
