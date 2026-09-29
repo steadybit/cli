@@ -9,7 +9,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,6 +20,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/update"
 )
 
 // Laid out like the TypeScript CLI's help, which pipelines and the e2e suite read.
@@ -109,6 +112,8 @@ func setUsage(cmd *cobra.Command) {
 }
 
 func Execute() int {
+	notice := updateNotice(os.Args[1:])
+	defer notice(os.Stderr)
 	root := newRoot()
 	root.SetArgs(expandVariadic(root, os.Args[1:]))
 	err := root.ExecuteContext(context.Background())
@@ -127,4 +132,17 @@ func Execute() int {
 		fmt.Fprintln(os.Stderr, output.Red(err.Error()))
 	}
 	return 1
+}
+
+// updateNotice starts the daily look for a newer release. Completion runs on every Tab and
+// writes a script, so it neither waits for the look nor prints a notice.
+func updateNotice(args []string) func(io.Writer) {
+	if len(args) > 0 && (strings.HasPrefix(args[0], "__complete") || args[0] == "completion") {
+		return func(io.Writer) {}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return func(io.Writer) {}
+	}
+	return update.Start(platform.CurrentVersion(), filepath.Join(home, ".steadybit", "update-check.json"))
 }
