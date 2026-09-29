@@ -24,12 +24,33 @@ import (
 var States = []string{"CREATED", "PREPARED", "RUNNING", "FAILED", "CANCELED", "COMPLETED", "ERRORED"}
 
 type ListOptions struct {
-	Name                                               string
-	Teams, Experiments, Environments, Services, States []string
-	From, To                                           string
-	Limit                                              int
-	FailOnMatch                                        bool
-	Type                                               string
+	Name                                                             string
+	Teams, ExcludeTeams, Experiments, Environments, Services, States []string
+	// From and To bound when a run was created, the others when it was requested (queued
+	// to start) and when it ended.
+	From, To                   string
+	RequestedFrom, RequestedTo string
+	EndedFrom, EndedTo         string
+	Limit                      int
+	FailOnMatch                bool
+	Type                       string
+}
+
+// timeRange reads a pair of bounds. A date given to the end means the whole day: 00:00
+// would leave it out. The platform includes a run at the bound, so the next day's 00:00
+// would take its first runs too; the last instant of the day is exact.
+func timeRange(fromFlag, fromValue, toFlag, toValue string) (from, to *time.Time, err error) {
+	if from, err = resource.Time(fromFlag, fromValue); err != nil {
+		return nil, nil, err
+	}
+	if to, err = resource.Time(toFlag, toValue); err != nil {
+		return nil, nil, err
+	}
+	if _, err := time.Parse(time.DateOnly, toValue); err == nil {
+		end := to.AddDate(0, 0, 1).Add(-time.Nanosecond)
+		to = &end
+	}
+	return from, to, nil
 }
 
 type summary struct {
@@ -48,20 +69,17 @@ type summary struct {
 }
 
 func (o ListOptions) request() (api.ExperimentExecutionsRequestAO, error) {
-	from, err := resource.Time("from", o.From)
+	from, to, err := timeRange("from", o.From, "to", o.To)
 	if err != nil {
 		return api.ExperimentExecutionsRequestAO{}, err
 	}
-	to, err := resource.Time("to", o.To)
+	requestedFrom, requestedTo, err := timeRange("requested-from", o.RequestedFrom, "requested-to", o.RequestedTo)
 	if err != nil {
 		return api.ExperimentExecutionsRequestAO{}, err
 	}
-	// A date given to --to means the whole day: 00:00 would leave it out. The platform
-	// includes a run created at createdTo, so the next day's 00:00 would take its first
-	// runs too; the last instant of the day is exact.
-	if _, err := time.Parse(time.DateOnly, o.To); err == nil {
-		end := to.AddDate(0, 0, 1).Add(-time.Nanosecond)
-		to = &end
+	endedFrom, endedTo, err := timeRange("ended-from", o.EndedFrom, "ended-to", o.EndedTo)
+	if err != nil {
+		return api.ExperimentExecutionsRequestAO{}, err
 	}
 	var states []string
 	for _, s := range o.States {
@@ -72,9 +90,11 @@ func (o ListOptions) request() (api.ExperimentExecutionsRequestAO, error) {
 		states = append(states, state)
 	}
 	r := api.ExperimentExecutionsRequestAO{
-		TeamKeys: resource.Optional(o.Teams), ExperimentKeys: resource.Optional(o.Experiments),
-		Environments: resource.Optional(o.Environments), Services: resource.Optional(o.Services),
-		States: resource.Optional(states), CreatedFrom: from, CreatedTo: to,
+		TeamKeys: resource.Optional(o.Teams), TeamKeysExclude: resource.Optional(o.ExcludeTeams),
+		ExperimentKeys: resource.Optional(o.Experiments), Environments: resource.Optional(o.Environments),
+		Services: resource.Optional(o.Services), States: resource.Optional(states),
+		CreatedFrom: from, CreatedTo: to, RequestedFrom: requestedFrom, RequestedTo: requestedTo,
+		EndedFrom: endedFrom, EndedTo: endedTo,
 	}
 	if o.Name != "" {
 		r.Name = &o.Name

@@ -2,10 +2,12 @@
 
 ## v6.1.0
 
-- `execution list` searches the runs of all experiments, most recent first, by team,
-  experiment key, state, environment, service, name and creation time (`--from`/`--to`;
-  a date to `--to` takes the whole day, UTC), as a table or with `-t json|yaml` and
-  `--jq`. It lists the 50 most recent by default, and says on STDERR when `-t` or `--jq`
+- `execution list` searches the runs of all experiments, most recent first, with every
+  filter the API has: teams (and `--exclude-team`), experiment keys, states, environments,
+  services, name, and the times a run was created (`--from`/`--to`), requested
+  (`--requested-from`/`--requested-to`) and ended (`--ended-from`/`--ended-to`); a date as
+  the end of a range takes the whole day, UTC. It prints a table or, with `-t json|yaml`,
+  the platform's items, and `--jq` applies. It lists the 20 most recent by default, and says on STDERR when `-t` or `--jq`
   output was cut; `--limit 0` lists all. `--fail-on-match` exits with 1 when any run matches, so a
   pipeline can stop on a failed run: `execution list --team ADM --state FAILED ERRORED
   --from 2026-09-28 --fail-on-match`.

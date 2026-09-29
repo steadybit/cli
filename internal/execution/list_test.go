@@ -37,8 +37,10 @@ func TestListWalksEveryPageWithTheFilters(t *testing.T) {
 
 	out, err := platformtest.Stdout(t, func() error {
 		return execution.List(ctx, p.Client, execution.ListOptions{
-			Name: "shop", Teams: []string{"ADM", "OPS"}, Experiments: []string{"ADM-1"}, Environments: []string{"Global"},
-			Services: []string{"shop"}, States: []string{"failed", "COMPLETED"}, From: "2026-09-28", To: "2026-09-29T12:00:00Z",
+			Name: "shop", Teams: []string{"ADM", "OPS"}, ExcludeTeams: []string{"SANDBOX"}, Experiments: []string{"ADM-1"},
+			Environments: []string{"Global"}, Services: []string{"shop"}, States: []string{"failed", "COMPLETED"},
+			From: "2026-09-28", To: "2026-09-29T12:00:00Z", RequestedFrom: "2026-09-27", RequestedTo: "2026-09-27",
+			EndedFrom: "2026-09-28T06:00:00Z", EndedTo: "2026-09-30",
 		})
 	})
 
@@ -52,6 +54,9 @@ func TestListWalksEveryPageWithTheFilters(t *testing.T) {
 		"page": 0.0, "size": 100.0, "name": "shop", "teamKeys": []any{"ADM", "OPS"}, "experimentKeys": []any{"ADM-1"},
 		"environments": []any{"Global"}, "services": []any{"shop"}, "states": []any{"FAILED", "COMPLETED"},
 		"createdFrom": "2026-09-28T00:00:00Z", "createdTo": "2026-09-29T12:00:00Z",
+		"teamKeysExclude": []any{"SANDBOX"},
+		"requestedFrom":   "2026-09-27T00:00:00Z", "requestedTo": "2026-09-27T23:59:59.999999999Z",
+		"endedFrom": "2026-09-28T06:00:00Z", "endedTo": "2026-09-30T23:59:59.999999999Z",
 	}, requests[0].JSON(t))
 	assert.Equal(t, 1.0, requests[1].JSON(t).(map[string]any)["page"])
 }

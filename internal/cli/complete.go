@@ -212,6 +212,7 @@ func registerCompletions(root *cobra.Command) {
 			}
 		}
 		register("team", completeTeams)
+		register("exclude-team", completeTeams)
 		register("template", completeTemplates)
 		register("environment", completeEnvironmentNames)
 		switch group {
