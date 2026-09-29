@@ -161,7 +161,8 @@ func environments(ctx context.Context, c *platform.Client, prefix string, value 
 	for _, e := range list.Environments {
 		values = append(values, value(e.ID, e.Name))
 	}
-	return matching(values, prefix), cobra.ShellCompDirectiveDefault
+	// An environment is never a file, so nothing matching must not offer file names.
+	return matching(values, prefix), cobra.ShellCompDirectiveNoFileComp
 }
 
 func completeEnvironments(ctx context.Context, c *platform.Client, prefix string) ([]string, cobra.ShellCompDirective) {
