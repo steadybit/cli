@@ -49,6 +49,9 @@ Profiles in `~/.steadybit` keep working.
 
 Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
 
+At a terminal, the CLI tells you once a day when a newer release is out. Set
+`STEADYBIT_NO_UPDATE_CHECK=1` to turn that off; it is always off in CI.
+
 ## Authorization
 
 You need an API access token. You can grab one via our [platform](https://platform.steadybit.com/settings/api-tokens) through the `Settings -> API Access Tokens` page.

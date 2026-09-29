@@ -20,6 +20,11 @@
   run: `execution list --team ADM --state FAILED ERRORED
   --from 2026-09-28 --fail-on-match`.
 - Shell completion completes environment names for `--environment`.
+- At a terminal, the CLI tells you once a day when a newer release is out, on stderr, with
+  `brew upgrade steadybit` when it was installed with Homebrew. It stays quiet in CI, when
+  stderr is not a terminal, for builds that are not releases, and with
+  `STEADYBIT_NO_UPDATE_CHECK` set. The check asks GitHub where its latest release is and
+  waits for the answer at most a second, once a day.
 
 ## v6.0.1
 
