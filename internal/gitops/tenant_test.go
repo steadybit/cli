@@ -117,13 +117,33 @@ func TestApplyingAnExportedTenantSkipsMatchingIntegrations(t *testing.T) {
 	assert.Contains(t, out, "chat.yaml matches Slack integration "+slackID+".\n")
 	assert.Empty(t, p.Requests("POST /api/integrations/webhook"))
 	assert.Empty(t, p.Requests("POST /api/integrations/slack"))
-	order := []string{"Property definition tribe", "Environment", "Team ADM", "Hub", "Experiment template", "Service profile"}
+	assert.Equal(t, []string{"true"}, p.Requests("POST /api/hubs")[0].Query["synchronize"], "the hub's templates are there for the service profiles")
+	order :=[]string{"Property definition tribe", "Environment", "Team ADM", "Hub", "Experiment template", "Service profile"}
 	last := -1
 	for _, line := range order {
 		i := strings.Index(out, line)
 		assert.Greater(t, i, last, "%s is applied after what it depends on:\n%s", line, out)
 		last = i
 	}
+}
+
+// Service profiles may name the templates a hub brings, so a hub that cannot be
+// synchronized ends the apply before them.
+func TestAHubThatCannotBeSynchronizedEndsTheApply(t *testing.T) {
+	p := fakeTenant(t)
+	dir := t.TempDir()
+	_, err := platformtest.Stdout(t, func() error { return gitops.Export(ctx, p.Client, gitops.ExportOptions{Directory: dir, Tenant: true}) })
+	require.NoError(t, err)
+	for _, route := range []string{"POST /api/properties/definitions", "POST /api/environments", "POST /api/teams", "POST /api/experiments/templates", "POST /api/services/profiles"} {
+		p.Reply(route, platformtest.Reply{JSON: map[string]any{}})
+	}
+	p.Reply("POST /api/hubs", platformtest.Reply{JSON: map[string]any{"id": hubID, "hubName": "Own Hub", "syncError": "index.json not found"}})
+
+	_, err = platformtest.Stdout(t, func() error { return gitops.ApplyProject(ctx, p.Client, gitops.ApplyOptions{Directory: dir}) })
+
+	assert.EqualError(t, err, "Hub Own Hub could not be synchronized: index.json not found")
+	assert.Empty(t, p.Requests("POST /api/experiments/templates"))
+	assert.Empty(t, p.Requests("POST /api/services/profiles"))
 }
 
 // A changed integration is applied with the credentials the platform reads back in the

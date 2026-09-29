@@ -49,8 +49,11 @@ var projectKinds = []struct {
 	{"teams", Team, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
 		return team.Apply(ctx, c, team.ApplyOptions{Files: []string{path}, Recursive: true})
 	}},
+	// Synchronized, as `hub apply --synchronize` does: service profiles name the templates
+	// a hub brings, so on a restored tenant those have to be there first. A hub that cannot
+	// be synchronized ends the apply.
 	{"hubs", Hub, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
-		return hub.Apply(ctx, c, hub.ApplyOptions{Files: []string{path}, Recursive: true})
+		return hub.Apply(ctx, c, hub.ApplyOptions{Files: []string{path}, Recursive: true, Synchronize: true})
 	}},
 	{"templates", Template, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
 		return template.Apply(ctx, c, template.ApplyOptions{Files: []string{path}, Recursive: true})

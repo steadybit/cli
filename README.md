@@ -278,7 +278,8 @@ steadybit apply -d ./platform             # definitions, environments, teams, hu
 ```
 
 What the platform provides is left out: the hubs it connects, the templates imported from
-a hub (`template import` brings them back) and Steadybit's service profiles.
+a hub (`template import` brings them back) and Steadybit's service profiles. Hubs are
+synchronized as they are applied, so that the service profiles find their templates.
 
 Credentials of integrations (secrets, header values, Slack webhook URLs) are written as
 `'********'`. A mask stands for what the platform holds: `diff` does not report it, and
