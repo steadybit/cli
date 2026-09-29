@@ -168,13 +168,17 @@ var ServiceProfile = Kind{
 	},
 }
 
-// byID finds the platform's version of a file by the id in it.
+// byID finds the platform's version of a file by the id in it. A file without one is new;
+// one whose id is no UUID names nothing on the platform, and applying it would not work.
 func byID(get func(ctx context.Context, c *platform.Client, id openapi_types.UUID) (*http.Response, error)) func(context.Context, *platform.Client, *jsyaml.Map) (string, *jsyaml.Map, error) {
 	return func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		id := str(local, "id")
+		if id == "" {
+			return "", nil, nil
+		}
 		u, ok := uuid(id)
 		if !ok {
-			return "", nil, nil
+			return "", nil, fmt.Errorf("%s is not a valid id", id)
 		}
 		remote, err := fetch(get(ctx, c, u))
 		return id, remote, err

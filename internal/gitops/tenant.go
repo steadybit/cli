@@ -5,6 +5,7 @@ package gitops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -50,7 +51,10 @@ func (e *tenantExport) each(ids []string, what string, get func(id string) (*htt
 
 func byUUID(get func(openapi_types.UUID) (*http.Response, error)) func(string) (*http.Response, error) {
 	return func(id string) (*http.Response, error) {
-		u, _ := uuid(id)
+		u, ok := uuid(id)
+		if !ok {
+			return nil, errors.New("not a valid id")
+		}
 		return get(u)
 	}
 }
@@ -152,7 +156,10 @@ func exportTenant(ctx context.Context, c *platform.Client, o ExportOptions) erro
 			ID string `json:"id"`
 		} `json:"templates"`
 	}
-	resp, err = c.GetExperimentTemplates(ctx, &api.GetExperimentTemplatesParams{})
+	// Hidden templates, and those whose actions, target types or property definitions are
+	// not available right now, are the tenant's too; the platform lists them only if asked.
+	all := true
+	resp, err = c.GetExperimentTemplates(ctx, &api.GetExperimentTemplatesParams{IncludeHidden: &all, IncludeNonAvailable: &all})
 	if _, err := platform.Decode(resp, err, &templates); err != nil {
 		return platform.Failed(err, "Failed to get the experiment templates")
 	}

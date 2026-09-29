@@ -90,6 +90,9 @@ func TestExportTenantLeavesOutWhatThePlatformProvides(t *testing.T) {
 		assert.NoFileExists(t, filepath.Join(dir, filepath.FromSlash(gone)))
 	}
 	assert.Empty(t, p.Requests("GET /api/experiments/templates/"+importedID), "a template imported from a hub is not even fetched")
+	listed := p.Requests("GET /api/experiments/templates")[0].Query
+	assert.Equal(t, []string{"true"}, listed["includeHidden"], "hidden templates are exported too")
+	assert.Equal(t, []string{"true"}, listed["includeNonAvailable"], "so are those whose actions are not available right now")
 
 	out, err = platformtest.Stdout(t, func() error { return gitops.DiffProject(ctx, p.Client, dir) })
 	require.NoError(t, err)
@@ -214,4 +217,18 @@ func TestAnUnknownTeamWouldBeCreated(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, file+" would create a new team.\n", out)
+}
+
+// An id that is no UUID is reported, not sent to the platform as the zero UUID.
+func TestAnInvalidIDIsReported(t *testing.T) {
+	p := fakeTenant(t)
+	p.Reply("GET /api/hubs", platformtest.Reply{JSON: map[string]any{"hubs": []any{map[string]any{"id": "not-an-id"}}}})
+
+	_, err := platformtest.Stdout(t, func() error { return gitops.Export(ctx, p.Client, gitops.ExportOptions{Directory: t.TempDir(), Tenant: true}) })
+
+	assert.EqualError(t, err, "Failed to get hub not-an-id: not a valid id")
+
+	file := write(t, "hub.yml", "hubName: Own Hub\nrepositoryUrl: https://example.com/index.json\nid: not-an-id\n")
+	_, err = platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Hub, []string{file}, false) })
+	assert.EqualError(t, err, "Failed to get the hub for "+file+": not-an-id is not a valid id")
 }
