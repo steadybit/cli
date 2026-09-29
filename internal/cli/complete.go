@@ -17,9 +17,10 @@ import (
 	"github.com/steadybit/cli/v6/internal/platform"
 )
 
-// Shell completion offers what exists on the platform: experiment keys, team keys and
-// the ids of templates, schedules, services and profiles, each with its name. It must
-// never print an error or keep the shell waiting, so any failure offers nothing.
+// Shell completion offers what exists on the platform: experiment keys, team keys,
+// environment names and the ids of templates, schedules, services and profiles, each
+// with its name. It must never print an error or keep the shell waiting, so any failure
+// offers nothing.
 
 type completer func(ctx context.Context, c *platform.Client, toComplete string) ([]string, cobra.ShellCompDirective)
 
@@ -148,7 +149,7 @@ func completePaged(fetch func(ctx context.Context, c *platform.Client, page, siz
 	}
 }
 
-func completeEnvironments(ctx context.Context, c *platform.Client, prefix string) ([]string, cobra.ShellCompDirective) {
+func environments(ctx context.Context, c *platform.Client, prefix string, value func(id, name string) string) ([]string, cobra.ShellCompDirective) {
 	var list struct {
 		Environments []struct{ ID, Name string } `json:"environments"`
 	}
@@ -158,9 +159,19 @@ func completeEnvironments(ctx context.Context, c *platform.Client, prefix string
 	}
 	var values []string
 	for _, e := range list.Environments {
-		values = append(values, e.ID+"\t"+e.Name)
+		values = append(values, value(e.ID, e.Name))
 	}
-	return matching(values, prefix), cobra.ShellCompDirectiveDefault
+	// An environment is never a file, so nothing matching must not offer file names.
+	return matching(values, prefix), cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeEnvironments(ctx context.Context, c *platform.Client, prefix string) ([]string, cobra.ShellCompDirective) {
+	return environments(ctx, c, prefix, func(id, name string) string { return id + "\t" + name })
+}
+
+// Outside the environment commands, --environment takes the name.
+func completeEnvironmentNames(ctx context.Context, c *platform.Client, prefix string) ([]string, cobra.ShellCompDirective) {
+	return environments(ctx, c, prefix, func(_, name string) string { return name })
 }
 
 var completeServices = completePaged(func(ctx context.Context, c *platform.Client, page, size int32) (*http.Response, error) {
@@ -201,7 +212,9 @@ func registerCompletions(root *cobra.Command) {
 			}
 		}
 		register("team", completeTeams)
+		register("exclude-team", completeTeams)
 		register("template", completeTemplates)
+		register("environment", completeEnvironmentNames)
 		switch group {
 		case "experiment", "execution":
 			register("key", completeExperimentKeys)

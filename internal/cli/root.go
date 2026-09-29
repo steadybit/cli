@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/update"
 )
 
 // Laid out like the TypeScript CLI's help, which pipelines and the e2e suite read.
@@ -73,7 +75,7 @@ func newRoot() *cobra.Command {
 	root.PersistentFlags().StringVar(&output.JQ, "jq", "", "Filter the JSON a command prints with a jq expression; strings are printed raw.")
 	root.Flags().BoolP("version", "V", false, "output the version number")
 	root.SetVersionTemplate("{{.Version}}\n")
-	root.AddCommand(newAccessToken(), newAction(), newAdvice(), newAuditLog(), newConfig(), newEnvironment(), newExecution(), newExperiment(), newHub(), newIntegration(), newKillswitch(), newProperty(), newReport(), newSchedule(), newService(), newServiceProfile(), newTarget(), newTeam(), newTemplate(), newUser(),
+	root.AddCommand(newAccessToken(), newAction(), newAdvice(), newAuditLog(), newConfig(), newEnvironment(), newExecution(), newExperiment(), newHub(), newIntegration(), newKillswitch(), newLicense(), newProperty(), newReport(), newSchedule(), newService(), newServiceProfile(), newTarget(), newTeam(), newTemplate(), newUser(),
 		newExport(), newApplyProject(), newDiffProject())
 	// Shell completion is new with the Go CLI; it gets examples like every other command.
 	root.InitDefaultCompletionCmd()
@@ -109,6 +111,8 @@ func setUsage(cmd *cobra.Command) {
 }
 
 func Execute() int {
+	notice := updateNotice(os.Args[1:])
+	defer notice(os.Stderr)
 	root := newRoot()
 	root.SetArgs(expandVariadic(root, os.Args[1:]))
 	err := root.ExecuteContext(context.Background())
@@ -127,4 +131,27 @@ func Execute() int {
 		fmt.Fprintln(os.Stderr, output.Red(err.Error()))
 	}
 	return 1
+}
+
+// updateNotice starts the daily look for a newer release. Completion runs on every Tab and
+// writes a script, so it neither waits for the look nor prints a notice, wherever global
+// flags put its command in the arguments.
+func updateNotice(args []string) func(io.Writer) {
+	if completing(args) {
+		return func(io.Writer) {}
+	}
+	cache, err := config.Path("update-check.json")
+	if err != nil {
+		return func(io.Writer) {}
+	}
+	return update.Start(platform.CurrentVersion(), cache)
+}
+
+func completing(args []string) bool {
+	for _, arg := range args {
+		if arg == "completion" || strings.HasPrefix(arg, "__complete") {
+			return true
+		}
+	}
+	return false
 }

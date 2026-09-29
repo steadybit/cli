@@ -79,5 +79,5 @@ func TestAProjectEditedLocallyDrifts(t *testing.T) {
 func TestApplyNeedsAProject(t *testing.T) {
 	err := gitops.ApplyProject(ctx, nil, gitops.ApplyOptions{Directory: t.TempDir()})
 
-	assert.ErrorContains(t, err, "holds none of experiments/, schedules/, services/ or service-profiles/.")
+	assert.ErrorContains(t, err, "holds none of property-definitions/, environments/, teams/, hubs/, templates/, integrations/webhook/, integrations/slack/, integrations/preflight/, integrations/preflight-action/, service-profiles/, services/, experiments/ or schedules/.")
 }

@@ -35,3 +35,10 @@ func TestKeepsEveryCommandOfTheTypeScriptCLI(t *testing.T) {
 		}
 	}
 }
+
+// A tenant keeps thousands of runs; a listing shows a screenful unless asked for more.
+func TestExecutionListShowsTwentyRunsByDefault(t *testing.T) {
+	cmd, _, err := newRoot().Find([]string{"execution", "list"})
+	assert.NoError(t, err)
+	assert.Equal(t, "20", cmd.Flags().Lookup("limit").DefValue)
+}

@@ -13,7 +13,7 @@ import (
 )
 
 // newDiff is the `diff` command of a kind of file: `experiment diff`, `schedule diff`...
-func newDiff(k gitops.Kind, group, example string) *cobra.Command {
+func newDiff(k gitops.Kind, group, example, dir string) *cobra.Command {
 	var files []string
 	var recursive bool
 	cmd := &cobra.Command{
@@ -22,7 +22,7 @@ func newDiff(k gitops.Kind, group, example string) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Example: examples(
 			"steadybit "+group+" diff -f "+example,
-			"steadybit "+group+" diff -f ./"+group+"s -R || echo drift",
+			"steadybit "+group+" diff -f ./"+dir+" -R || echo drift",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
 			return gitops.DiffFiles(ctx, c, k, files, recursive)
@@ -57,16 +57,19 @@ func newExport() *cobra.Command {
 	var o gitops.ExportOptions
 	cmd := &cobra.Command{
 		Use:   "export",
-		Short: "Write a team's experiments, schedules, services and the custom service profiles they use to a directory, to keep in Git.",
+		Short: "Write a team's experiments, schedules, services and the custom service profiles they use to a directory, to keep in Git. With --tenant, write the tenant's experiment templates, environments, teams, property definitions, hubs, integrations and custom service profiles instead.",
 		Args:  cobra.NoArgs,
 		Example: examples(
 			"steadybit export --team ADM -d ./chaos",
+			"steadybit export --tenant -d ./platform",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return gitops.Export(ctx, c, o) }),
 	}
 	cmd.Flags().StringVar(&o.Team, "team", "", "The key of the team to export.")
+	cmd.Flags().BoolVar(&o.Tenant, "tenant", false, "Export the configuration of the tenant rather than a team. Credentials of integrations are written masked.")
 	cmd.Flags().StringVarP(&o.Directory, "directory", "d", ".", "The directory to write the project to.")
-	_ = cmd.MarkFlagRequired("team")
+	cmd.MarkFlagsOneRequired("team", "tenant")
+	cmd.MarkFlagsMutuallyExclusive("team", "tenant")
 	return cmd
 }
 
@@ -74,11 +77,12 @@ func newApplyProject() *cobra.Command {
 	var o gitops.ApplyOptions
 	cmd := &cobra.Command{
 		Use:   "apply",
-		Short: "Apply a project written by `export`: service profiles, then services, experiments and schedules.",
+		Short: "Apply a project written by `export`: property definitions, environments, teams, hubs, experiment templates, integrations and service profiles, then services, experiments and schedules.",
 		Args:  cobra.NoArgs,
 		Example: examples(
 			"steadybit apply -d ./chaos --dry-run",
 			"steadybit apply -d ./chaos",
+			"steadybit apply -d ./platform",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return gitops.ApplyProject(ctx, c, o) }),
 	}
@@ -94,7 +98,7 @@ func newDiffProject() *cobra.Command {
 		Use:     "diff",
 		Short:   "Show how a project written by `export` differs from the platform. Exits with 2 when it does.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit diff -d ./chaos"),
+		Example: examples("steadybit diff -d ./chaos", "steadybit diff -d ./platform"),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
 			return gitops.DiffProject(ctx, c, dir)
 		}),

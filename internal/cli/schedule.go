@@ -126,7 +126,7 @@ func newSchedule() *cobra.Command {
 		scheduleIDFlag(c, &id)
 		return c
 	}
-	cmd.AddCommand(list, get, apply, newDiff(gitops.Schedule, "schedule", "schedule.yml"), create, update,
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Schedule, "schedule", "schedule.yml", "schedules"), create, update,
 		idCommand("enable", "Enable an experiment schedule.", func(ctx context.Context, c *platform.Client, id string) error {
 			return schedule.SetEnabled(ctx, c, id, true)
 		}),

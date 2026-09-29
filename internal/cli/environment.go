@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steadybit/cli/v6/internal/environment"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
 )
@@ -48,6 +49,7 @@ func newEnvironment() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return environment.Apply(ctx, c, a) }),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "environment")
+	dryRun(apply, gitops.Environment, &a.Files, &a.Recursive)
 
 	var d environment.DeleteOptions
 	del := &cobra.Command{
@@ -90,6 +92,6 @@ func newEnvironment() *cobra.Command {
 	vset.Flags().BoolVar(&vs.Replace, "replace", false, "Remove every variable not given.")
 	variable.AddCommand(vget, vset)
 
-	cmd.AddCommand(list, get, apply, del, variable)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Environment, "environment", "environment.yml", "environments"), del, variable)
 	return cmd
 }

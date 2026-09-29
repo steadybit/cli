@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
 	"github.com/steadybit/cli/v6/internal/template"
@@ -80,6 +81,7 @@ func newTemplate() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return template.Apply(ctx, c, a) }),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "template")
+	dryRun(apply, gitops.Template, &a.Files, &a.Recursive)
 
 	var d template.DeleteOptions
 	del := &cobra.Command{
@@ -107,6 +109,6 @@ func newTemplate() *cobra.Command {
 	_ = imp.MarkFlagRequired("template")
 	variadic(imp, "template")
 
-	cmd.AddCommand(list, get, apply, del, imp)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Template, "template", "template.yml", "templates"), del, imp)
 	return cmd
 }

@@ -198,7 +198,7 @@ func newService() *cobra.Command {
 	vset.Flags().BoolVar(&vs.Replace, "replace", false, "Remove every variable not given.")
 	variable.AddCommand(vget, vset)
 
-	cmd.AddCommand(list, get, apply, newDiff(gitops.Service, "service", "service.yml"), del, risk, experiments, variable)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Service, "service", "service.yml", "services"), del, risk, experiments, variable)
 	return cmd
 }
 
@@ -260,6 +260,6 @@ func newServiceProfile() *cobra.Command {
 	}
 	idFlag(del, &deleteID, "The service profile id.")
 
-	cmd.AddCommand(list, get, apply, newDiff(gitops.ServiceProfile, "service-profile", "profile.yml"), del)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.ServiceProfile, "service-profile", "profile.yml", "service-profiles"), del)
 	return cmd
 }
