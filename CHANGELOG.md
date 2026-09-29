@@ -16,7 +16,8 @@
   sends it.
 - `license show` prints the tenant's license, when it expires, and how much of each
   limit is used; `-t json|yaml` prints the platform's summary. `license report`
-  downloads the license usage report, a zip archive. Both need an admin access token.
+  downloads the license usage report, a zip archive, under the platform's name without
+  overwriting a file, or to `-o`. Both need an admin access token.
 
 ## v6.0.1
 

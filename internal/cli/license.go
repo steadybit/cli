@@ -32,7 +32,7 @@ func newLicense() *cobra.Command {
 		Example: examples("steadybit license report", "steadybit license report -o usage.zip"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return license.Report(ctx, c, r) }),
 	}
-	report.Flags().StringVarP(&r.Output, "output", "o", "", "Write the report to this file. (default: the name the platform gives it, in the current directory)")
+	report.Flags().StringVarP(&r.Output, "output", "o", "", "Write the report to this file, overwriting it. (default: the name the platform gives it, in the current directory, which is never overwritten)")
 
 	cmd.AddCommand(show, report)
 	return cmd

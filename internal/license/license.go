@@ -51,6 +51,9 @@ type feature struct {
 
 // Show prints the license of the tenant and how much of each limit is used.
 func Show(ctx context.Context, c *platform.Client, o ShowOptions) error {
+	if _, err := output.ResolveDatatype(o.Type, ""); err != nil {
+		return err
+	}
 	body, _, err := platform.Read(c.GetLicenseSummary(ctx))
 	if platform.IsStatus(err, http.StatusForbidden) {
 		return errNotAdmin
@@ -69,8 +72,7 @@ func Show(ctx context.Context, c *platform.Client, o ShowOptions) error {
 		fmt.Println("The tenant has no license.")
 		return nil
 	}
-	fmt.Printf("%s license %s of tenant %s, valid from %s to %s%s.\n", title(s.License.LicenseType), s.License.OrderNumber, s.TenantKey,
-		s.License.ValidFrom, s.License.ValidTo, expiry(s.Expires, time.Now()))
+	fmt.Println(sentence(s, time.Now()))
 
 	// The platform sends the features in no particular order.
 	sort.Slice(s.Features, func(i, j int) bool { return s.Features[i].Name < s.Features[j].Name })
@@ -88,19 +90,7 @@ func Show(ctx context.Context, c *platform.Client, o ShowOptions) error {
 			continue
 		}
 		limited = true
-		limit, color := "unlimited", table.Default
-		switch {
-		case f.HardLimit != nil:
-			limit = fmt.Sprint(*f.HardLimit)
-			if f.Usage != nil && *f.Usage > *f.HardLimit {
-				color = table.Red
-			}
-		case f.SoftLimit != nil:
-			limit = fmt.Sprintf("%d (soft)", *f.SoftLimit)
-			if f.Usage != nil && *f.Usage > *f.SoftLimit {
-				color = table.Red
-			}
-		}
+		limit, color := limitOf(f)
 		used := ""
 		if f.Usage != nil {
 			used = fmt.Sprint(*f.Usage)
@@ -114,6 +104,51 @@ func Show(ctx context.Context, c *platform.Client, o ShowOptions) error {
 		fmt.Printf("Included: %s\n", strings.Join(included, ", "))
 	}
 	return nil
+}
+
+// sentence describes the license from the parts the platform sent: an order number or
+// a tenant key can be missing, and must not leave a gap or a dangling "of tenant".
+func sentence(s summary, now time.Time) string {
+	text := title(s.License.LicenseType) + " license"
+	if s.License.OrderNumber != "" {
+		text += " " + s.License.OrderNumber
+	}
+	if s.TenantKey != "" {
+		text += " of tenant " + s.TenantKey
+	}
+	switch from, to := s.License.ValidFrom, s.License.ValidTo; {
+	case from != "" && to != "":
+		text += ", valid from " + from + " to " + to
+	case from != "":
+		text += ", valid from " + from
+	case to != "":
+		text += ", valid to " + to
+	}
+	return text + expiry(s.Expires, now) + "."
+}
+
+// limitOf is the licensed amount of a feature and whether its usage is highlighted.
+// The feature's type says which limit applies; the platform can send the other field
+// too. A hard limit is highlighted once reached, since nothing more can be added; a
+// soft one only once exceeded.
+func limitOf(f feature) (string, table.Color) {
+	highlight := func(over bool) table.Color {
+		if over {
+			return table.Red
+		}
+		return table.Default
+	}
+	switch f.Type {
+	case "SOFT_LIMIT":
+		if f.SoftLimit != nil {
+			return fmt.Sprintf("%d (soft)", *f.SoftLimit), highlight(f.Usage != nil && *f.Usage > *f.SoftLimit)
+		}
+	case "HARD_LIMIT":
+		if f.HardLimit != nil {
+			return fmt.Sprint(*f.HardLimit), highlight(f.Usage != nil && *f.Usage >= *f.HardLimit)
+		}
+	}
+	return "unlimited", table.Default
 }
 
 func title(licenseType string) string {
@@ -130,7 +165,11 @@ func expiry(expires *time.Time, now time.Time) string {
 	case left <= 0:
 		return ", expired"
 	case left < 30*24*time.Hour:
-		return fmt.Sprintf(", expires in %d days", int(left.Hours()/24)+1)
+		days := int(left.Hours()/24) + 1
+		if days == 1 {
+			return ", expires in 1 day"
+		}
+		return fmt.Sprintf(", expires in %d days", days)
 	}
 	return ""
 }
@@ -140,7 +179,9 @@ type ReportOptions struct {
 }
 
 // Report downloads the license usage report, a zip archive of the tenant's usage over
-// each license period, as the platform names it unless an output file is given.
+// each license period, as the platform names it unless an output file is given. Only a
+// file given with -o is overwritten: the platform's name is not the user's choice, and
+// could be that of any file in the current directory.
 func Report(ctx context.Context, c *platform.Client, o ReportOptions) error {
 	// The report covers every license period; building it takes longer than an API response.
 	ctx = platform.WithTimeout(ctx, 5*time.Minute)
@@ -151,28 +192,43 @@ func Report(ctx context.Context, c *platform.Client, o ReportOptions) error {
 	if err != nil {
 		return platform.Failed(err, "Failed to download the license report")
 	}
-	file := o.Output
+	file, flags := o.Output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC
 	if file == "" {
-		file = fileName(resp.Header.Get("Content-Disposition"))
+		file, flags = fileName(resp.Header.Get("Content-Disposition")), os.O_WRONLY|os.O_CREATE|os.O_EXCL
 	}
 	if dir := filepath.Dir(file); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 	}
-	if err := os.WriteFile(file, content, 0o644); err != nil {
+	f, err := os.OpenFile(file, flags, 0o644)
+	if errors.Is(err, os.ErrExist) {
+		return fmt.Errorf("%s already exists. Pass -o %s to overwrite it, or -o another file.", file, file)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(content)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
 		return err
 	}
 	fmt.Printf("License report written to %s.\n", file)
 	return nil
 }
 
-// fileName takes the name the platform gives the report, but only as one path segment:
-// the header must not decide where on disk the file goes.
+// fileName takes the name the platform gives the report, but only as one path segment
+// and not as a hidden file: the header must not decide where on disk the file goes.
 func fileName(disposition string) string {
 	_, params, err := mime.ParseMediaType(disposition)
-	if err != nil || params["filename"] == "" {
+	if err != nil {
 		return "license-report.zip"
 	}
-	return output.PathSegment(strings.ReplaceAll(params["filename"], `\`, "/"))
+	name := strings.TrimLeft(output.PathSegment(strings.ReplaceAll(params["filename"], `\`, "/")), ".")
+	if name == "" || name == "_" {
+		return "license-report.zip"
+	}
+	return name
 }
