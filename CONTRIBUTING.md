@@ -96,7 +96,9 @@ not generated structs, so that fields the spec does not know yet are never dropp
 
 Releases are published by CI, not from a workstation: pushing a `v*` tag builds the
 binaries and the signed `.deb`/`.rpm` packages with goreleaser, creates the GitHub release
-with them, publishes the packages to the apt and yum repositories at packages.steadybit.com,
+with them, publishes the packages to the apt and yum repositories at packages.steadybit.com (when
+the repository variable `PUBLISH_LINUX_PACKAGES` is `true`; that needs the Google Cloud
+workload identity provider to trust `steadybit/cli`),
 pushes the Homebrew cask to
 [steadybit/homebrew-tap](https://github.com/steadybit/homebrew-tap), and pushes the Docker
 image. The cask needs the `HOMEBREW_TAP_TOKEN` secret, a token that can write to that

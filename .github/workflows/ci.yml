@@ -176,8 +176,10 @@ jobs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           NFPM_KEY_FILE: gpg.key
           NFPM_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+      # Off until Google Cloud lets this repository upload: the workload identity provider
+      # has to trust steadybit/cli first. The repository variable turns it on.
       - name: Publish the Linux packages to packages.steadybit.com
-        if: ${{ !contains(github.ref_name, '-') }}
+        if: ${{ !contains(github.ref_name, '-') && vars.PUBLISH_LINUX_PACKAGES == 'true' }}
         uses: steadybit/.github/actions/gar-upload-linux-packages@main
         with:
           workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}
@@ -245,7 +247,7 @@ jobs:
           docker run --rm -v "$PWD/dist:/dist" fedora:latest \
             sh -c 'dnf install -y -q /dist/steadybit-cli_amd64.rpm && steadybit -V'
       - name: Publish to the dev repositories
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && vars.PUBLISH_LINUX_PACKAGES == 'true'
         uses: steadybit/.github/actions/gar-upload-linux-packages@main
         with:
           workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}

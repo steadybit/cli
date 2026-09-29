@@ -25,6 +25,7 @@ completions:
 brew install steadybit/tap/steadybit
 ```
 
+<!-- Available once packages are published to packages.steadybit.com (see CONTRIBUTING). -->
 On Debian or Ubuntu, from the package repository the Steadybit agent comes from, so that
 `apt upgrade` updates the CLI too:
 
