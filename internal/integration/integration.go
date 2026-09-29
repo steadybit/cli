@@ -144,13 +144,12 @@ func (k Kind) MaskSecrets(doc *jsyaml.Map) {
 	}
 }
 
-// keepStored puts back what the platform holds in place of the masks `export` writes
-// for the credentials it reads back in the clear, so that an exported file applies as
-// it is. The secret it never reads back; a masked one is refused afterwards.
-func (k Kind) keepStored(ctx context.Context, c *platform.Client, file string, doc *jsyaml.Map) error {
+// stored reads, once and only when asked, what the platform holds for the integration
+// the file names: nil when it names none.
+func (k Kind) stored(ctx context.Context, c *platform.Client, doc *jsyaml.Map) func() (*jsyaml.Map, error) {
 	var stored *jsyaml.Map
 	loaded := false
-	value := func(field, key string) (any, error) {
+	return func() (*jsyaml.Map, error) {
 		if !loaded {
 			loaded = true
 			id, _ := doc.Get("id")
@@ -163,6 +162,38 @@ func (k Kind) keepStored(ctx context.Context, c *platform.Client, file string, d
 					stored = d.Value()
 				}
 			}
+		}
+		return stored, nil
+	}
+}
+
+// unchanged tells a file that holds what the platform does, its secret aside, which a
+// mask in the file stands for.
+func unchanged(doc, stored *jsyaml.Map) bool {
+	if stored == nil {
+		return false
+	}
+	if secret, _ := stored.Get("secret"); secret == nil || secret == "" {
+		return false
+	}
+	without := func(m *jsyaml.Map) string {
+		c := jsyaml.Clone(m).(*jsyaml.Map)
+		for _, f := range append([]string{"secret"}, ReadOnly...) {
+			c.Delete(f)
+		}
+		return jsyaml.CompactJSON(c)
+	}
+	return without(doc) == without(stored)
+}
+
+// keepStored puts back what the platform holds in place of the masks `export` writes
+// for the credentials it reads back in the clear, so that an exported file applies as
+// it is. The secret it never reads back; a masked one is refused afterwards.
+func (k Kind) keepStored(file string, doc *jsyaml.Map, load func() (*jsyaml.Map, error)) error {
+	value := func(field, key string) (any, error) {
+		stored, err := load()
+		if err != nil {
+			return nil, err
 		}
 		name := field
 		var v any
@@ -289,12 +320,23 @@ func Apply(ctx context.Context, c *platform.Client, k Kind, o ApplyOptions) erro
 		if name == "" {
 			return resource.Applied{}, fmt.Errorf("%s file '%s' does not name the integration.", k.Title, file)
 		}
-		if err := k.keepStored(ctx, c, file, doc.Value()); err != nil {
+		stored := k.stored(ctx, c, doc.Value())
+		if err := k.keepStored(file, doc.Value(), stored); err != nil {
 			return resource.Applied{}, err
 		}
 		// The platform masks secrets when reading them back and rejects the mask, while
-		// leaving the secret out removes it. Neither is what a file from `get` means.
+		// leaving the secret out removes it. Neither is what a file from `get` means. Left
+		// as it was written, though, the file has nothing to apply, as `apply -d` finds.
 		if secret, _ := doc.Value().Get("secret"); Masked(secret) {
+			held, err := stored()
+			if err != nil {
+				return resource.Applied{}, err
+			}
+			if unchanged(doc.Value(), held) {
+				id, _ := doc.Get("id")
+				fmt.Printf("%s %s (%s) unchanged.\n", k.Title, name, id)
+				return resource.Applied{}, nil
+			}
 			return resource.Applied{}, fmt.Errorf("%s file '%s' holds the masked secret `get` and `export` write. Put the secret in, or remove it for none.", k.Title, file)
 		}
 		var saved struct{ ID, Name string }

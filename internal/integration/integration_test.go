@@ -72,6 +72,7 @@ func TestGetAndApplyRoundTrip(t *testing.T) {
 func TestApplyCreatesAndRefusesAMaskedSecret(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/integrations/webhook", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"id": id, "name": "Notify"}})
+	p.Reply("GET /api/integrations/webhook/"+id, platformtest.Reply{Status: http.StatusNotFound})
 	dir := t.TempDir()
 	file := filepath.Join(dir, "webhook.yml")
 	require.NoError(t, os.WriteFile(file, []byte("name: Notify\nscope: GLOBAL\nurl: https://example.com\nsecret: s3cret\n"), 0o644))
@@ -115,6 +116,29 @@ func TestApplyKeepsTheStoredValueOfAMaskedHeader(t *testing.T) {
 	assert.Equal(t, map[string]any{"Authorization": "Bearer abc", "X-Team": "chaos"}, sent[0].JSON(t).(map[string]any)["headers"])
 	content, _ := os.ReadFile(file)
 	assert.Contains(t, string(content), "Authorization: '********'", "the stored value is not written to the file")
+}
+
+// An exported file left as it is has nothing to apply, masked secret and all, as
+// `apply -d` finds; changed, it needs the secret put in.
+func TestApplySkipsAnUnchangedFileWithAMaskedSecret(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/integrations/webhook/"+id, platformtest.Reply{Body: `{"id":"` + id + `","version":2,"name":"Notify","url":"https://example.com","secret":"****************","headers":{"Authorization":"Bearer abc"}}`})
+	file := filepath.Join(t.TempDir(), "webhook.yml")
+	require.NoError(t, os.WriteFile(file, []byte("id: "+id+"\nname: Notify\nurl: https://example.com\nsecret: '********'\nheaders:\n  Authorization: '********'\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error {
+		return integration.Apply(ctx, p.Client, integration.Webhook, integration.ApplyOptions{Files: []string{file}})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Webhook integration Notify ("+id+") unchanged.\n", out)
+	assert.Empty(t, p.Requests("POST /api/integrations/webhook"))
+	assert.Len(t, p.Requests("GET /api/integrations/webhook/"+id), 1, "the platform's version is read once")
+
+	require.NoError(t, os.WriteFile(file, []byte("id: "+id+"\nname: Notify\nurl: https://example.org\nsecret: '********'\nheaders:\n  Authorization: '********'\n"), 0o644))
+	err = integration.Apply(ctx, p.Client, integration.Webhook, integration.ApplyOptions{Files: []string{file}})
+	assert.EqualError(t, err, "Webhook integration file '"+file+"' holds the masked secret `get` and `export` write. Put the secret in, or remove it for none.")
+	assert.Empty(t, p.Requests("POST /api/integrations/webhook"))
 }
 
 func TestDelete(t *testing.T) {

@@ -17,7 +17,8 @@
   A masked value matches whatever the platform holds, so that an exported tenant shows no
   drift and applies again: integrations that match are not applied, as the platform keeps
   no secret it is not sent, and `integration ... apply` sends the stored header values and
-  Slack URLs in place of their masks.
+  Slack URLs in place of their masks, and leaves out a file with a masked secret that
+  matches the platform.
 - Experiment templates, environments, teams, property definitions, hubs and integrations
   have a `diff`, and their `apply` a `--dry-run`. The actions a team is given when sent
   none, and the target attributes a webhook reports when sent none, are not differences.
