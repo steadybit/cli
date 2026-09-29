@@ -22,7 +22,10 @@ type RunResult struct {
 	Started    time.Time `json:"started"`
 	Ended      time.Time `json:"ended"`
 	UILocation string    `json:"uiLocation,omitempty"`
-	Steps      []Step    `json:"steps"`
+	// APILocation is where the platform's API serves the run, as run-experiment's
+	// executionUrl output names it.
+	APILocation string `json:"apiLocation,omitempty"`
+	Steps       []Step `json:"steps"`
 }
 
 type Step struct {
@@ -45,14 +48,16 @@ func duration(from, to time.Time) time.Duration {
 
 func parseRun(body []byte) (*RunResult, error) {
 	var raw struct {
-		ID      int64     `json:"id"`
-		Key     string    `json:"key"`
-		Name    string    `json:"name"`
-		State   string    `json:"state"`
-		Reason  string    `json:"reason"`
-		Started time.Time `json:"started"`
-		Ended   time.Time `json:"ended"`
-		Steps   []struct {
+		ID     int64  `json:"id"`
+		Key    string `json:"key"`
+		Name   string `json:"name"`
+		State  string `json:"state"`
+		Reason string `json:"reason"`
+		// Older platforms named it so; run-experiment read it first.
+		FailureReason string    `json:"failureReason"`
+		Started       time.Time `json:"started"`
+		Ended         time.Time `json:"ended"`
+		Steps         []struct {
 			StepType    string         `json:"stepType"`
 			ActionID    string         `json:"actionId"`
 			CustomLabel string         `json:"customLabel"`
@@ -66,7 +71,11 @@ func parseRun(body []byte) (*RunResult, error) {
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, err
 	}
-	run := &RunResult{ID: raw.ID, Key: raw.Key, Name: raw.Name, State: raw.State, Reason: raw.Reason, Started: raw.Started, Ended: raw.Ended}
+	reason := raw.FailureReason
+	if reason == "" {
+		reason = raw.Reason
+	}
+	run := &RunResult{ID: raw.ID, Key: raw.Key, Name: raw.Name, State: raw.State, Reason: reason, Started: raw.Started, Ended: raw.Ended}
 	for _, s := range raw.Steps {
 		name := s.CustomLabel
 		switch {

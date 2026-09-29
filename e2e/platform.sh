@@ -56,6 +56,7 @@ experiment() { # file name duration
   cat >"$1" <<EOF
 # Written by e2e/platform.sh; only waits.
 name: $MARK-$RUN-$2
+externalId: $MARK-$RUN-$2
 team: $TEAM
 environment: $ENVIRONMENT
 lanes:
@@ -148,6 +149,27 @@ until_run_is "$LONG" RUNNING
 check "--no-wait fails on a run the platform refused" exits_with 1 steadybit experiment run -k "$A" --yes --no-wait
 check "execution list --fail-on-match gates on that canceled run" exits_with 1 \
   steadybit execution list --key "$A" --state CANCELED --ended-from "$(date -u +%F)" --limit 1 --fail-on-match
+# What the run-experiment action relies on: the experiment found by its external id, an
+# expected state reached before the end, and waiting while another experiment runs.
+check "the experiment is found by its external id and passes at the expected state" exits_with 0 \
+  steadybit experiment run --external-id "$MARK-$RUN-a" --yes --allowParallel --expect-state RUNNING --report expect.json
+check "the report has the state reached and the run's API location" sh -c '
+  grep -Eq "\"state\": *\"RUNNING\"" expect.json && grep -q "\"apiLocation\"" expect.json || { cat expect.json; exit 1; }
+'
+until_run_is "$A" COMPLETED CANCELED
+check "a run that ends otherwise than expected fails" sh -c "
+  steadybit experiment run -k $A --yes --allowParallel --expect-state FAILED >otherwise.log 2>&1
+  status=\$?
+  grep -q 'but failed was expected' otherwise.log && [ \$status -eq 1 ] || { tail -n 5 otherwise.log; exit 1; }
+"
+# The long run still goes, so both tries are refused: what is checked is that the CLI tries
+# again instead of failing at once or, as --yes would otherwise do, running in parallel.
+# Waiting for the platform to be free would depend on what other suites run at the time.
+check "--busy-retries tries again while another experiment runs" sh -c "
+  steadybit experiment run -k $A --yes --busy-retries 1 --busy-retry-interval 5s >busy.log 2>&1
+  status=\$?
+  grep -q 'trying again in 5s (1/1)' busy.log && [ \$status -eq 1 ]
+"
 check "execution list prints the platform's runs as JSON" sh -c "
   [ \"\$(steadybit execution list --team $TEAM --limit 2 --jq length 2>/dev/null)\" -ge 1 ]
 "
