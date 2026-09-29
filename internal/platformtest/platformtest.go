@@ -171,7 +171,7 @@ func Stdout(t *testing.T, fn func() error) (string, error) {
 	return capture(t, &os.Stdout, fn)
 }
 
-// Stderr captures what fn prints to STDERR.
+// Stderr captures what fn prints to standard error.
 func Stderr(t *testing.T, fn func() error) (string, error) {
 	t.Helper()
 	return capture(t, &os.Stderr, fn)

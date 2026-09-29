@@ -274,15 +274,17 @@ are not reported as differences.
 
 ## In CI
 
-`experiment run --wait` fails the job when a run fails, and a few options make it fit
-pipelines:
+`experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
+still watches the run until it started, for up to 15 seconds, and fails when the platform
+canceled or errored it before it ran. A few options make it fit pipelines:
 
-| Option                        | Does                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
-| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
-| `--show-steps`                | Prints each step's state as it changes                                  |
+| Option                        | Does                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                 |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                  |
+| `--show-steps`                | Prints each step's state as it changes                                   |
 | `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                |
 
 In GitHub Actions a summary of every run is added to the job summary.
 

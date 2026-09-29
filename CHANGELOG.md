@@ -2,14 +2,22 @@
 
 ## v6.1.0
 
+- `experiment run --parallel N` runs up to N of the experiments given with `-f` at once,
+  telling the platform they run in parallel on purpose. Each run's lines start with its key,
+  a failed run does not stop the others, and the report and job summary cover all of them.
+- `experiment run --no-wait` watches the run until it started, for up to 15 seconds, and
+  fails when the platform canceled or errored it before it ran. The platform accepts a run
+  and then cancels it when another experiment is running, so a pipeline used to pass on a
+  run that never ran. A run that fails on its own steps still passes, as it did.
 - `execution list` searches the runs of all experiments, most recent first, with every
   filter the API has: teams (and `--exclude-team`), experiment keys, states, environments,
   services, name, and the times a run was created (`--from`/`--to`), requested
   (`--requested-from`/`--requested-to`) and ended (`--ended-from`/`--ended-to`); a date as
   the end of a range takes the whole day, UTC. It prints a table or, with `-t json|yaml`,
-  the platform's items, and `--jq` applies. It lists the 20 most recent by default, and says on STDERR when `-t` or `--jq`
-  output was cut; `--limit 0` lists all. `--fail-on-match` exits with 1 when any run matches, so a
-  pipeline can stop on a failed run: `execution list --team ADM --state FAILED ERRORED
+  the platform's items, and `--jq` applies. It lists the 20 most recent by default, and
+  says on STDERR when `-t` or `--jq` output was cut; `--limit 0` lists all.
+  `--fail-on-match` exits with 1 when any run matches, so a pipeline can stop on a failed
+  run: `execution list --team ADM --state FAILED ERRORED
   --from 2026-09-28 --fail-on-match`.
 - Shell completion completes environment names for `--environment`.
 
