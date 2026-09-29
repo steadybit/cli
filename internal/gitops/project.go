@@ -15,26 +15,87 @@ import (
 	"strings"
 
 	"github.com/steadybit/cli/v6/api"
+	"github.com/steadybit/cli/v6/internal/environment"
 	"github.com/steadybit/cli/v6/internal/experiment"
+	"github.com/steadybit/cli/v6/internal/hub"
+	"github.com/steadybit/cli/v6/internal/integration"
 	"github.com/steadybit/cli/v6/internal/jsyaml"
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/property"
 	"github.com/steadybit/cli/v6/internal/schedule"
 	"github.com/steadybit/cli/v6/internal/service"
 	"github.com/steadybit/cli/v6/internal/serviceprofile"
+	"github.com/steadybit/cli/v6/internal/team"
+	"github.com/steadybit/cli/v6/internal/template"
 )
 
-// A project is a directory holding what a team keeps in Git, one kind per directory,
-// in the order applying them has to follow: services name their profile, schedules
-// their experiment.
+// A project is a directory holding what a team or the tenant keeps in Git, one kind per
+// directory, in the order applying them has to follow. Templates and experiments carry
+// the properties definitions define; teams name their environments, integrations their
+// team, service profiles their templates, services their profile, experiments their
+// team and environment, schedules their experiment. Hubs depend on nothing.
 var projectKinds = []struct {
-	dir  string
-	kind Kind
+	dir   string
+	kind  Kind
+	apply func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error
 }{
-	{"service-profiles", ServiceProfile},
-	{"services", Service},
-	{"experiments", Experiment},
-	{"schedules", Schedule},
+	{"property-definitions", PropertyDefinition, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return property.ApplyDefinitions(ctx, c, property.ApplyDefinitionOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"environments", Environment, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return environment.Apply(ctx, c, environment.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"teams", Team, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return team.Apply(ctx, c, team.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"hubs", Hub, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return hub.Apply(ctx, c, hub.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"templates", Template, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return template.Apply(ctx, c, template.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"integrations/webhook", Integrations[integration.Webhook.Name], applyIntegrations(integration.Webhook)},
+	{"integrations/slack", Integrations[integration.Slack.Name], applyIntegrations(integration.Slack)},
+	{"integrations/preflight", Integrations[integration.Preflight.Name], applyIntegrations(integration.Preflight)},
+	{"integrations/preflight-action", Integrations[integration.PreflightAction.Name], applyIntegrations(integration.PreflightAction)},
+	{"service-profiles", ServiceProfile, func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error {
+		return serviceprofile.Apply(ctx, c, serviceprofile.ApplyOptions{Files: []string{path}, Recursive: true, DeleteExperiments: o.DeleteExperiments})
+	}},
+	{"services", Service, func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error {
+		return service.Apply(ctx, c, service.ApplyOptions{Files: []string{path}, Recursive: true, DeleteExperiments: o.DeleteExperiments})
+	}},
+	{"experiments", Experiment, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return experiment.Apply(ctx, c, experiment.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+	{"schedules", Schedule, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		return schedule.Apply(ctx, c, schedule.ApplyOptions{Files: []string{path}, Recursive: true})
+	}},
+}
+
+// applyIntegrations leaves out the files that match the platform. Those holding a masked
+// secret could not be applied, the platform keeping no secret it is not sent, and the
+// others need not be.
+func applyIntegrations(k integration.Kind) func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error {
+	return func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
+		gk := Integrations[k.Name]
+		results, err := compareAll(ctx, c, gk, []string{path}, true)
+		if err != nil {
+			return err
+		}
+		var changed []string
+		for _, r := range results {
+			if r.State == Unchanged {
+				fmt.Println(r.Describe(gk))
+			} else {
+				changed = append(changed, r.File)
+			}
+		}
+		if len(changed) == 0 {
+			return nil
+		}
+		return integration.Apply(ctx, c, k, integration.ApplyOptions{Files: changed})
+	}
 }
 
 var unsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
@@ -63,12 +124,17 @@ func writeDocument(file string, doc *jsyaml.Map, readOnly []string) error {
 type ExportOptions struct {
 	Directory string
 	Team      string
+	Tenant    bool
 }
 
 // Export writes a team's experiments, schedules and services, and the custom service
-// profiles those services use, as a project. Files are only written, never removed, so
-// something deleted on the platform keeps its file until it is removed by hand.
+// profiles those services use, as a project; or the tenant's configuration. Files are
+// only written, never removed, so something deleted on the platform keeps its file until
+// it is removed by hand.
 func Export(ctx context.Context, c *platform.Client, o ExportOptions) error {
+	if o.Tenant {
+		return exportTenant(ctx, c, o)
+	}
 	taken := map[string]bool{}
 	counts := map[string]int{}
 	team := []string{o.Team}
@@ -169,14 +235,16 @@ func mapWith(key, value string) *jsyaml.Map {
 // projectDirs are the kinds a project directory holds, in the order to apply them.
 func projectDirs(dir string) (map[string]string, error) {
 	found := map[string]string{}
+	var names []string
 	for _, pk := range projectKinds {
-		path := filepath.Join(dir, pk.dir)
+		names = append(names, pk.dir+"/")
+		path := filepath.Join(dir, filepath.FromSlash(pk.dir))
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			found[pk.dir] = path
 		}
 	}
 	if len(found) == 0 {
-		return nil, fmt.Errorf("'%s' holds none of experiments/, schedules/, services/ or service-profiles/.", dir)
+		return nil, fmt.Errorf("'%s' holds none of %s or %s.", dir, strings.Join(names[:len(names)-1], ", "), names[len(names)-1])
 	}
 	return found, nil
 }
@@ -187,7 +255,7 @@ type ApplyOptions struct {
 	DryRun            bool
 }
 
-// ApplyProject applies every kind in a project, profiles first and schedules last.
+// ApplyProject applies every kind in a project, in the order of projectKinds.
 func ApplyProject(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 	dirs, err := projectDirs(o.Directory)
 	if err != nil {
@@ -201,16 +269,7 @@ func ApplyProject(ctx context.Context, c *platform.Client, o ApplyOptions) error
 		if o.DryRun {
 			err = DryRun(ctx, c, pk.kind, []string{path}, true)
 		} else {
-			switch pk.dir {
-			case "service-profiles":
-				err = serviceprofile.Apply(ctx, c, serviceprofile.ApplyOptions{Files: []string{path}, Recursive: true, DeleteExperiments: o.DeleteExperiments})
-			case "services":
-				err = service.Apply(ctx, c, service.ApplyOptions{Files: []string{path}, Recursive: true, DeleteExperiments: o.DeleteExperiments})
-			case "experiments":
-				err = experiment.Apply(ctx, c, experiment.ApplyOptions{Files: []string{path}, Recursive: true})
-			case "schedules":
-				err = schedule.Apply(ctx, c, schedule.ApplyOptions{Files: []string{path}, Recursive: true})
-			}
+			err = pk.apply(ctx, c, path, o)
 		}
 		if err != nil {
 			return err

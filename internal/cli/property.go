@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/property"
 	"github.com/steadybit/cli/v6/internal/resource"
@@ -65,6 +66,7 @@ func newPropertyDefinition() *cobra.Command {
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "property definition")
 	apply.Flags().BoolVar(&a.DeleteValues, "delete-values", false, "Allow removing enum values still in use, deleting them where they are used.")
+	dryRun(apply, gitops.PropertyDefinition, &a.Files, &a.Recursive)
 
 	var d property.DeleteDefinitionOptions
 	del := &cobra.Command{
@@ -80,7 +82,7 @@ func newPropertyDefinition() *cobra.Command {
 	del.Flags().BoolVar(&d.Associations, "delete-associations", false, "Also delete the associations of the property.")
 	del.Flags().BoolVar(&d.Yes, "yes", false, yesHelp)
 
-	cmd.AddCommand(list, get, apply, del)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.PropertyDefinition, "property definition", "result-color.yml", "property-definitions"), del)
 	return cmd
 }
 

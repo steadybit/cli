@@ -21,7 +21,7 @@ import (
 
 // The version is dropped as `service get` drops it: kept in a file, it turns every apply
 // after an edit in the UI into a conflict.
-var readOnly = []string{"version"}
+var ReadOnly = []string{"version"}
 
 func definitionNotFoundOr(err error, key, format string) error {
 	if platform.IsStatus(err, http.StatusNotFound) {
@@ -84,7 +84,7 @@ func GetDefinition(ctx context.Context, c *platform.Client, o GetDefinitionOptio
 	if err != nil {
 		return definitionNotFoundOr(err, o.Key, "Failed to get property definition %s")
 	}
-	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
@@ -107,7 +107,7 @@ func ApplyDefinitions(ctx context.Context, c *platform.Client, o ApplyDefinition
 			return resource.Applied{}, fmt.Errorf("Property definition file '%s' does not name the key.", file)
 		}
 		resp, err := c.UpsertPropertyDefinitionWithBody(ctx, &api.UpsertPropertyDefinitionParams{DeleteValues: &o.DeleteValues}, "application/json",
-			resource.Body(resource.Strip(doc, readOnly...).Value()))
+			resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		_, resp, err = platform.Read(resp, err)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save property definition %s", key)
@@ -245,7 +245,7 @@ func GetAssociation(ctx context.Context, c *platform.Client, o GetAssociationOpt
 	if err != nil {
 		return associationNotFoundOr(err, o.ID, "Failed to get property association %s")
 	}
-	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
@@ -266,7 +266,7 @@ func ApplyAssociations(ctx context.Context, c *platform.Client, o ApplyAssociati
 			return resource.Applied{}, fmt.Errorf("Property association file '%s' does not name the property key.", file)
 		}
 		var saved struct{ ID, Key string }
-		resp, err := c.UpsertPropertyAssociationWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err := c.UpsertPropertyAssociationWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		resp, err = platform.Decode(resp, err, &saved)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save the property association of %s", key)

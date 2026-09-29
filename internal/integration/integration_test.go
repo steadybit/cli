@@ -87,8 +87,34 @@ func TestApplyCreatesAndRefusesAMaskedSecret(t *testing.T) {
 	content, _ := os.ReadFile(file)
 	assert.Equal(t, "id: "+id+"\nname: Notify\nscope: GLOBAL\nurl: https://example.com\nsecret: s3cret\n", string(content))
 	err = integration.Apply(ctx, p.Client, integration.Webhook, integration.ApplyOptions{Files: []string{masked}})
-	assert.EqualError(t, err, "Webhook integration file '"+masked+"' holds the masked secret `get` writes. Put the secret in, or remove it for none.")
+	assert.EqualError(t, err, "Webhook integration file '"+masked+"' holds the masked secret `get` and `export` write. Put the secret in, or remove it for none.")
 	assert.Len(t, p.Requests("POST /api/integrations/webhook"), 1)
+}
+
+// A header masked by `export` is sent as the platform holds it; one the platform does not
+// have cannot be.
+func TestApplyKeepsTheStoredValueOfAMaskedHeader(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/integrations/webhook/"+id, platformtest.Reply{Body: `{"id":"` + id + `","name":"Notify","headers":{"Authorization":"Bearer abc"}}`})
+	p.Reply("POST /api/integrations/webhook", platformtest.Reply{JSON: map[string]any{"id": id, "name": "Notify"}})
+	dir := t.TempDir()
+	file := filepath.Join(dir, "webhook.yml")
+	require.NoError(t, os.WriteFile(file, []byte("id: "+id+"\nname: Notify\nheaders:\n  Authorization: '********'\n  X-Team: '********'\n"), 0o644))
+
+	err := integration.Apply(ctx, p.Client, integration.Webhook, integration.ApplyOptions{Files: []string{file}})
+	assert.EqualError(t, err, "Webhook integration file '"+file+"' holds a masked headers.X-Team, and the platform has none to keep. Put the value in.")
+
+	require.NoError(t, os.WriteFile(file, []byte("id: "+id+"\nname: Notify\nheaders:\n  Authorization: '********'\n  X-Team: chaos\n"), 0o644))
+	_, err = platformtest.Stdout(t, func() error {
+		return integration.Apply(ctx, p.Client, integration.Webhook, integration.ApplyOptions{Files: []string{file}})
+	})
+
+	require.NoError(t, err)
+	sent := p.Requests("POST /api/integrations/webhook")
+	require.Len(t, sent, 1)
+	assert.Equal(t, map[string]any{"Authorization": "Bearer abc", "X-Team": "chaos"}, sent[0].JSON(t).(map[string]any)["headers"])
+	content, _ := os.ReadFile(file)
+	assert.Contains(t, string(content), "Authorization: '********'", "the stored value is not written to the file")
 }
 
 func TestDelete(t *testing.T) {

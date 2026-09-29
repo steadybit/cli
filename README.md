@@ -265,9 +265,33 @@ steadybit apply -d ./chaos --dry-run      # what an apply would create or update
 steadybit apply -d ./chaos                # profiles, services, experiments, then schedules
 ```
 
+Keep the tenant's configuration in Git the same way: experiment templates, environments,
+teams, property definitions, hubs, integrations and custom service profiles, one directory
+each (`templates/`, `environments/`, `teams/`, `property-definitions/`, `hubs/`,
+`integrations/<kind>/`, `service-profiles/`):
+
+```bash
+steadybit export --tenant -d ./platform   # needs an admin access token
+steadybit diff -d ./platform
+steadybit apply -d ./platform --dry-run
+steadybit apply -d ./platform             # definitions, environments, teams, hubs, templates, integrations, profiles
+```
+
+What the platform provides is left out: the hubs it connects, the templates imported from
+a hub (`template import` brings them back) and Steadybit's service profiles.
+
+Credentials of integrations (secrets, header values, Slack webhook URLs) are written as
+`'********'`. A mask stands for what the platform holds: `diff` does not report it, and
+`apply` leaves out the integrations that match the platform and sends the stored header
+values and URLs in place of their masks. The platform never reads a secret back, so to
+change an integration that has one, put the secret in, e.g. from a CI secret, before
+applying. As the platform cannot say whether that is the secret it holds, such a file is
+always a difference. `diff` never prints credentials.
+
 Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
-`steadybit experiment diff -f ./experiments -R`. Fields the platform fills in with defaults
-are not reported as differences.
+`steadybit experiment diff -f ./experiments -R` or
+`steadybit integration webhook diff -f ./platform/integrations/webhook -R`. Fields the
+platform fills in with defaults are not reported as differences.
 
 ## In CI
 

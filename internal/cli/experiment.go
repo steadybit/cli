@@ -19,7 +19,7 @@ import (
 func newExperiment() *cobra.Command {
 	cmd := &cobra.Command{Use: "experiment", Short: "Check and run experiments."}
 	cmd.AddCommand(newExperimentRun(), newExperimentGet(), newExperimentApply(), newExperimentDelete(), newExperimentDump(), newExperimentInit(),
-		newDiff(gitops.Experiment, "experiment", "experiment.yml"))
+		newDiff(gitops.Experiment, "experiment", "experiment.yml", "experiments"))
 	return cmd
 }
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## v6.1.0 (unreleased)
+
+- `export --tenant -d dir` writes the tenant's configuration, to keep in Git: experiment
+  templates, environments, teams, property definitions, hubs, webhook, Slack and preflight
+  integrations and custom service profiles. `diff -d dir` and `apply -d dir [--dry-run]`
+  take such a directory as they take a team's, and apply property definitions,
+  environments, teams, hubs, templates, integrations and profiles in that order, before
+  services, experiments and schedules. Hubs the platform connects itself, templates
+  imported from a hub and Steadybit's service profiles are left out, as every platform
+  has them.
+- Credentials of integrations are masked in exported files, and never printed by `diff`.
+  A masked value matches whatever the platform holds, so that an exported tenant shows no
+  drift and applies again: integrations that match are not applied, as the platform keeps
+  no secret it is not sent, and `integration ... apply` sends the stored header values and
+  Slack URLs in place of their masks.
+- Experiment templates, environments, teams, property definitions, hubs and integrations
+  have a `diff`, and their `apply` a `--dry-run`. The actions a team is given when sent
+  none, and the target attributes a webhook reports when sent none, are not differences.
+
 ## v6.0.1
 
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The

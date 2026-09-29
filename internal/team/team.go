@@ -22,8 +22,8 @@ import (
 // The version is dropped as `service get` drops it. Members are sent back as the platform
 // takes them, by username, email and role; the rest describes the user.
 var (
-	readOnly       = []string{"version"}
-	memberReadOnly = []string{"name", "pictureUrl", "managedBy"}
+	ReadOnly       = []string{"version"}
+	MemberReadOnly = []string{"name", "pictureUrl", "managedBy"}
 )
 
 func notFoundOr(err error, key, format string) error {
@@ -85,12 +85,12 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return notFoundOr(err, o.Key, "Failed to get team %s")
 	}
-	resource.Strip(doc, readOnly...)
+	resource.Strip(doc, ReadOnly...)
 	if members, ok := doc.Value().Get("members"); ok {
 		list, _ := members.([]any)
 		for _, m := range list {
 			if member, ok := m.(*jsyaml.Map); ok {
-				for _, field := range memberReadOnly {
+				for _, field := range MemberReadOnly {
 					member.Delete(field)
 				}
 			}
@@ -117,7 +117,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		if key == "" {
 			return resource.Applied{}, fmt.Errorf("Team file '%s' does not name the team key.", file)
 		}
-		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		_, resp, err = platform.Read(resp, err)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save team %s", key)

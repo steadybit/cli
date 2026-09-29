@@ -20,7 +20,7 @@ import (
 
 // What the last synchronisation found and who edited the hub is the platform's. The
 // version is dropped as `service get` drops it.
-var readOnly = []string{"version", "templates", "lastSync", "lastRepositoryChange", "syncError", "created", "createdBy", "edited", "editedBy"}
+var ReadOnly = []string{"version", "templates", "lastSync", "lastRepositoryChange", "syncError", "created", "createdBy", "edited", "editedBy"}
 
 func uuid(id string) (openapi_types.UUID, error) {
 	u, ok := resource.UUID(id)
@@ -77,7 +77,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return notFoundOr(err, o.ID, "Failed to get hub %s")
 	}
-	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
@@ -107,7 +107,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 			Templates []any  `json:"templates"`
 			SyncError string `json:"syncError"`
 		}
-		resp, err := c.UpsertHubWithBody(ctx, &api.UpsertHubParams{Synchronize: &o.Synchronize}, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err := c.UpsertHubWithBody(ctx, &api.UpsertHubParams{Synchronize: &o.Synchronize}, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		resp, err = platform.Decode(resp, err, &saved)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save hub %s", name)
