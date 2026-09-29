@@ -99,6 +99,18 @@ func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {
 	return c.http.Do(req)
 }
 
+// GetAnonymously fetches a path without the access token, as a README showing a badge
+// does: with the token, the platform takes the tenant from it and ignores a wrong one
+// in the URL.
+func (c *Client) GetAnonymously(ctx context.Context, path string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "steadybit@"+CurrentVersion())
+	return c.http.Do(req)
+}
+
 var Verbose bool
 
 func New() (*Client, error) {

@@ -153,6 +153,13 @@ steadybit execution artifact list -i 1234
 steadybit execution artifact download -i 1234 -d ./artifacts
 ```
 
+Show the state of an experiment's latest run in a README with a status badge. The badge
+URL carries the tenant key, never the access token:
+
+```bash
+steadybit experiment badge -k ADM-1              # Markdown; --format html or url
+```
+
 ### Experiment schedules
 
 ```bash

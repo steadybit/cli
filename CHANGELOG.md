@@ -2,6 +2,13 @@
 
 ## v6.1.0
 
+- `experiment badge -k ADM-1` prints the Markdown that embeds the experiment's status
+  badge in a README, `--format html` the HTML and `--format url` the image URL;
+  `--tag` prints the badge of a tag instead, which invites to create the experiment
+  while there is none. The URLs carry the tenant key, never the access token. The
+  tenant key is read from the license, which needs an admin access token; `--tenant`
+  gives it otherwise. The badge is fetched once without the token, so a wrong tenant
+  key fails the command rather than showing as a broken image.
 - `target stats` counts the targets of each type in the tenant, optionally only those
   matching a target query (`-q`), as a table or with `-t json|yaml` as the platform
   sends it.
