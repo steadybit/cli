@@ -39,8 +39,13 @@ type Document = *output.Document
 
 const anotherExperimentRunning = "https://steadybit.com/problems/another-experiment-running-exception"
 
-func jsonBody(document any) (io.Reader, error) {
-	b, err := json.Marshal(document)
+// jsonBody is an experiment as it is sent. A version in the file, as the UI's download
+// writes one, is left out: the platform rejects a stale one with 409, and the file, not
+// what was edited since it was downloaded, is what an apply means to save.
+func jsonBody(document Document) (io.Reader, error) {
+	sent := output.NewDocument(jsyaml.Clone(document.Value()).(*jsyaml.Map))
+	sent.Delete("version")
+	b, err := json.Marshal(sent)
 	return bytes.NewReader(b), err
 }
 
@@ -56,7 +61,7 @@ func Fetch(ctx context.Context, c *platform.Client, key string) (Document, error
 	if err != nil {
 		return nil, err
 	}
-	// Removed because it makes files awkward to reapply; the API will drop it too.
+	// Left out of files: kept, it would make every apply after an edit in the UI a 409.
 	document.Delete("version")
 	return document, nil
 }

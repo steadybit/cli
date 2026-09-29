@@ -649,3 +649,25 @@ func TestRunWithAKeyUpdatesItFromTheFile(t *testing.T) {
 	content, _ := os.ReadFile(file)
 	assert.Equal(t, "name: from file\n", string(content))
 }
+
+// A file downloaded from the UI carries a version. It is not sent: the platform would
+// reject it with 409 once the experiment was edited, and the file is what is meant.
+func TestAVersionInTheFileIsNotSent(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments", platformtest.Reply{Status: http.StatusCreated, Headers: map[string]string{"Location": p.URL + "/api/experiments/NEW-1"}})
+	p.Reply("POST /api/experiments/NEW-1", platformtest.Reply{})
+	file := filepath.Join(t.TempDir(), "e.yml")
+	original := "# from the UI\nname: new\nversion: 3\n"
+	require.NoError(t, os.WriteFile(file, []byte(original), 0o644))
+	apply := func() error { return experiment.Apply(ctx, p.Client, experiment.ApplyOptions{Files: []string{file}}) }
+
+	_, err := platformtest.Stdout(t, apply)
+	require.NoError(t, err)
+	_, err = platformtest.Stdout(t, apply)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]any{"name": "new"}, p.Requests("POST /api/experiments")[0].JSON(t))
+	assert.Equal(t, map[string]any{"key": "NEW-1", "name": "new"}, p.Requests("POST /api/experiments/NEW-1")[0].JSON(t))
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "key: NEW-1\n"+original, string(content))
+}
