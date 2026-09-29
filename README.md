@@ -25,28 +25,13 @@ completions:
 brew install steadybit/tap/steadybit
 ```
 
-<!-- Available once packages are published to packages.steadybit.com (see CONTRIBUTING). -->
-On Debian or Ubuntu, from the package repository the Steadybit agent comes from, so that
-`apt upgrade` updates the CLI too:
+On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release, which also
+installs the shell completions:
 
 ```sh
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://europe-west1-apt.pkg.dev/doc/repo-signing-key.gpg | sudo tee /etc/apt/keyrings/steadybit.asc >/dev/null
-printf 'Types: deb\nURIs: https://packages.steadybit.com\nSuites: deb-public\nComponents: main\nSigned-By: /etc/apt/keyrings/steadybit.asc\n' \
-  | sudo tee /etc/apt/sources.list.d/steadybit.sources >/dev/null
-sudo apt-get update && sudo apt-get install steadybit-cli
+curl -sLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.deb
+sudo apt-get install ./steadybit-cli_amd64.deb   # or: sudo dnf install ./steadybit-cli_amd64.rpm
 ```
-
-On Fedora, RHEL or Amazon Linux, the same way with `dnf` (or `yum`):
-
-```sh
-printf '[steadybit]\nname=steadybit\nbaseurl=https://packages.steadybit.com/yum-public\nenabled=1\ngpgcheck=0\n' \
-  | sudo tee /etc/yum.repos.d/steadybit.repo >/dev/null
-sudo dnf install steadybit-cli
-```
-
-The `.deb` and `.rpm` files are also attached to every release, as
-`steadybit-cli_amd64.deb` and so on.
 
 Or download the archive for your platform from the
 [releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
