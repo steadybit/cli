@@ -70,10 +70,10 @@ nfpms:
     # local snapshot builds them unsigned.
     deb:
       signature:
-        key_file: '{{ if index .Env "NFPM_KEY_FILE" }}{{ .Env.NFPM_KEY_FILE }}{{ end }}'
+        key_file: '{{ envOrDefault "NFPM_KEY_FILE" "" }}'
     rpm:
       signature:
-        key_file: '{{ if index .Env "NFPM_KEY_FILE" }}{{ .Env.NFPM_KEY_FILE }}{{ end }}'
+        key_file: '{{ envOrDefault "NFPM_KEY_FILE" "" }}'
 
 checksum:
   name_template: checksums.txt
