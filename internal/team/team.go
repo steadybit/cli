@@ -111,13 +111,15 @@ type ApplyOptions struct {
 }
 
 // Apply upserts teams by their key, which is what names a team; there is no id to write back.
+// The id `get` writes is not sent: the platform goes by the key alone, and another
+// platform's id in the file would only contradict it.
 func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 	return resource.ApplyFiles(o.Files, o.Recursive, "team", func(file string, doc *output.Document) (resource.Applied, error) {
 		key, _ := doc.Get("key")
 		if key == "" {
 			return resource.Applied{}, fmt.Errorf("Team file '%s' does not name the team key.", file)
 		}
-		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
+		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, append([]string{"id"}, ReadOnly...)...).Value()))
 		_, resp, err = platform.Read(resp, err)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save team %s", key)

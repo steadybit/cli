@@ -71,7 +71,7 @@ func TestExportTenantLeavesOutWhatThePlatformProvides(t *testing.T) {
 	for file, content := range map[string]string{
 		"property-definitions/tribe.yaml": "key: tribe\nlabel: Tribe\ndataType: STRING\n",
 		"environments/prod.yaml":          "id: " + environmentID + "\nname: Prod\npredicate:\n  operator: AND\n  predicates: []\n",
-		"teams/adm.yaml": "id: " + teamID + "\nkey: ADM\nname: Admins\nallowedActions:\n  - wait\n  - service-validation\nallowedEnvironments:\n  - Prod\nmanagedBy: MANUAL\n" +
+		"teams/adm.yaml": "key: ADM\nname: Admins\nallowedActions:\n  - wait\n  - service-validation\nallowedEnvironments:\n  - Prod\nmanagedBy: MANUAL\n" +
 			"members:\n  - username: u1\n    email: jane@example.com\n    role: OWNER\n",
 		"hubs/own-hub.yaml": "hubName: Own Hub\nrepositoryUrl: https://example.com/index.json\nid: " + hubID + "\n",
 		"templates/pod-crash.yaml": "id: " + templateID + "\ntemplateTitle: Pod Crash\ntemplateDescription: d\nplaceholders: []\ntags: []\nlanes:\n  - steps:\n      - type: wait\n        ignoreFailure: false\n" +
@@ -202,6 +202,26 @@ func TestAHandWrittenTeamAndWebhookMatchRightAfterApply(t *testing.T) {
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{team}, false) })
 	assert.ErrorIs(t, err, gitops.ErrDifferent)
 	assert.Contains(t, out, "-allowedActions:\n-  - wait\n+allowedActions: []\n")
+}
+
+// On another platform the team has another id. It is the same team by its key, and
+// applying the file sends no id to contradict it.
+func TestATeamMatchesByKeyOnAnotherPlatform(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/ADM", platformtest.Reply{Body: `{"id":"` + environmentID + `","key":"ADM","name":"Admins","allowedActions":["wait","service-validation"],"allowedEnvironments":["Prod"],"managedBy":"MANUAL","version":0,"members":[]}`})
+	p.Reply("POST /api/teams", platformtest.Reply{JSON: map[string]any{}})
+	dir := t.TempDir()
+	file := filepath.Join(dir, "teams", "adm.yaml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+	require.NoError(t, os.WriteFile(file, []byte("id: "+teamID+"\nkey: ADM\nname: Admins\nallowedActions:\n  - wait\n  - service-validation\nallowedEnvironments:\n  - Prod\nmembers: []\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DryRun(ctx, p.Client, gitops.Team, []string{file}, false) })
+	require.NoError(t, err)
+	assert.Equal(t, file+" matches team ADM.\n", out)
+
+	_, err = platformtest.Stdout(t, func() error { return gitops.ApplyProject(ctx, p.Client, gitops.ApplyOptions{Directory: dir}) })
+	require.NoError(t, err)
+	assert.NotContains(t, p.Requests("POST /api/teams")[0].JSON(t), "id")
 }
 
 func TestEnvironmentsAreFoundByName(t *testing.T) {

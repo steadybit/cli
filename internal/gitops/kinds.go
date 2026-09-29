@@ -230,14 +230,15 @@ var Environment = Kind{
 	},
 }
 
-// Team is matched by its key; the id `get` writes is not needed, so a file without one
-// is not a difference.
+// Team is matched by its key, as the platform upserts it. The id differs from one platform
+// to the next, so it is neither exported nor compared: a team kept in Git matches its
+// namesake anywhere.
 var Team = Kind{
 	Name:     "team",
-	ReadOnly: append(append([]string{}, team.ReadOnly...), prefixed("members.", team.MemberReadOnly)...),
+	ReadOnly: append(append([]string{"id"}, team.ReadOnly...), prefixed("members.", team.MemberReadOnly)...),
 	// Sent none, a team may still wait and validate services.
 	Defaults: map[string]any{"allowedActions": []any{"wait", "service-validation"}, "managedBy": "MANUAL"},
-	Identity: "id",
+	Identity: "key",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		key := str(local, "key")
 		if key == "" {

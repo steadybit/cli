@@ -9,7 +9,8 @@
   environments, teams, hubs, templates, integrations and profiles in that order, before
   services, experiments and schedules. Hubs the platform connects itself, templates
   imported from a hub and Steadybit's service profiles are left out, as every platform
-  has them.
+  has them. Teams are kept without their id, which differs between platforms, and
+  matched by their key; `team apply` no longer sends the id, which the platform ignores.
 - Credentials of integrations are masked in exported files, and never printed by `diff`.
   A masked value matches whatever the platform holds, so that an exported tenant shows no
   drift and applies again: integrations that match are not applied, as the platform keeps
