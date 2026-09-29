@@ -25,15 +25,15 @@ completions:
 brew install steadybit/tap/steadybit
 ```
 
-On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release, which also
-installs the shell completions:
+On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release from
+v6.1.0 on, which also installs the shell completions:
 
 ```sh
 # Debian, Ubuntu
-curl -sLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.deb
+curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.deb
 sudo apt-get install ./steadybit-cli_amd64.deb
 # Fedora, RHEL, Amazon Linux
-curl -sLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.rpm
+curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.rpm
 sudo dnf install ./steadybit-cli_amd64.rpm
 ```
 
