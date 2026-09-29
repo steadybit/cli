@@ -440,19 +440,23 @@ func hideSecrets(local, remote *jsyaml.Map, secrets []string) {
 	}
 }
 
+// hideSecret masks any value a secret field holds, whatever its type: an unquoted number
+// in a file is as much a credential as a string.
 func hideSecret(local, remote *jsyaml.Map, key string) {
 	lv, lok := local.Get(key)
 	rv, rok := remote.Get(key)
-	rs, _ := rv.(string)
-	ls, _ := lv.(string)
-	if rok && rs != "" {
+	if rok && !blank(rv) {
 		remote.Set(key, integration.Mask)
 	}
 	switch {
-	case !lok || ls == "" || ls == integration.Mask:
-	case integration.Masked(ls) || (rok && ls == rs):
+	case !lok || blank(lv) || lv == integration.Mask:
+	case integration.Masked(lv) || (rok && jsyaml.CompactJSON(lv) == jsyaml.CompactJSON(rv)):
 		local.Set(key, integration.Mask)
 	default:
 		local.Set(key, integration.Mask+" (from the file)")
 	}
+}
+
+func blank(v any) bool {
+	return v == nil || v == ""
 }

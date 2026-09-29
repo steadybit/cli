@@ -168,6 +168,18 @@ func TestCredentialsAreNeverPrinted(t *testing.T) {
 	assert.Contains(t, out, "-  Authorization: '********'\n+  Authorization: '******** (from the file)'\n")
 	assert.NotContains(t, out, "s3cret")
 	assert.NotContains(t, out, "Bearer")
+
+	// An unquoted number in the file is a credential all the same.
+	file = write(t, "n.yml", "id: "+webhookID+"\nscope: GLOBAL\nname: Notify\nurl: https://example.com/hook\nsecret: '********'\nevents:\n  - '*'\n"+
+		"targetAttributeIncludes:\n  - '*'\nheaders:\n  Authorization: Bearer abc\n  X-Api-Key: 8675309\n")
+
+	out, err = platformtest.Stdout(t, func() error {
+		return gitops.DiffFiles(ctx, p.Client, gitops.Integrations["webhook"], []string{file}, false)
+	})
+
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Contains(t, out, "+  X-Api-Key: '******** (from the file)'\n")
+	assert.NotContains(t, out, "8675309")
 }
 
 // A team sent no actions may still wait and validate services, and a webhook sent no
