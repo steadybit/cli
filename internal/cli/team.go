@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
 	"github.com/steadybit/cli/v6/internal/team"
@@ -51,6 +52,7 @@ func newTeam() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return team.Apply(ctx, c, a) }),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "team")
+	dryRun(apply, gitops.Team, &a.Files, &a.Recursive)
 
 	var d team.DeleteOptions
 	del := &cobra.Command{
@@ -64,7 +66,7 @@ func newTeam() *cobra.Command {
 	del.Flags().BoolVar(&d.Experiments, "purge-experiments", false, "Also delete the team's experiments and their runs.")
 	del.Flags().BoolVar(&d.Yes, "yes", false, yesHelp)
 
-	cmd.AddCommand(list, get, apply, del, newTeamMember(), newTeamEnvironment())
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Team, "team", "team.yml", "teams"), del, newTeamMember(), newTeamEnvironment())
 	return cmd
 }
 

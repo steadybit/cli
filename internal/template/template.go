@@ -23,7 +23,7 @@ import (
 // Who created and edited a template cannot be sent back. The version is dropped as
 // `service get` drops it, so that an edit in the UI does not turn the next apply into a
 // conflict.
-var readOnly = []string{"created", "createdBy", "edited", "editedBy", "version"}
+var ReadOnly = []string{"created", "createdBy", "edited", "editedBy", "version"}
 
 func notFoundOr(err error, id, format string) error {
 	if platform.IsStatus(err, http.StatusNotFound) {
@@ -118,7 +118,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 		}
 		doc = output.NewDocument(values)
 	}
-	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
@@ -139,7 +139,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 			return resource.Applied{}, fmt.Errorf("Template file '%s' does not name a templateTitle.", file)
 		}
 		var saved struct{ ID, TemplateTitle string }
-		resp, err := c.UpsertExperimentTemplateWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err := c.UpsertExperimentTemplateWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		resp, err = platform.Decode(resp, err, &saved)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save experiment template %s", title)

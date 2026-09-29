@@ -55,6 +55,8 @@ func TestGetAndApplyRoundTripByKey(t *testing.T) {
 	sent := p.Requests("POST /api/teams")[0].JSON(t).(map[string]any)
 	assert.Equal(t, []any{map[string]any{"username": "u-1", "email": "jane@example.com", "role": "OWNER"}}, sent["members"])
 	assert.Equal(t, "MANUAL", sent["managedBy"])
+	assert.Contains(t, string(before), "id: 0190d7b2-0000-7000-8000-000000000001")
+	assert.NotContains(t, sent, "id", "the platform goes by the key")
 }
 
 func TestApplyWritesNothingBack(t *testing.T) {

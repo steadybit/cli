@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/hub"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
@@ -45,6 +46,7 @@ func newHub() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return hub.Apply(ctx, c, a) }),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "hub")
+	dryRun(apply, gitops.Hub, &a.Files, &a.Recursive)
 	apply.Flags().BoolVar(&a.Synchronize, "synchronize", false, "Fetch the hub's templates from its repository, waiting until it is done.")
 
 	var d hub.DeleteOptions
@@ -69,6 +71,6 @@ func newHub() *cobra.Command {
 	}
 	idFlag(resync, &resyncID, "The hub id.")
 
-	cmd.AddCommand(list, get, apply, del, resync)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Hub, "hub", "hub.yml", "hubs"), del, resync)
 	return cmd
 }

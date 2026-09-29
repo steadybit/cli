@@ -19,7 +19,7 @@ import (
 
 // The state is the platform's, and the version is dropped as `service get` drops it: kept
 // in a file, it turns every apply after an edit in the UI into a conflict.
-var readOnly = []string{"version", "state"}
+var ReadOnly = []string{"version", "state"}
 
 func uuid(id string) (openapi_types.UUID, error) {
 	u, ok := resource.UUID(id)
@@ -88,7 +88,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return notFoundOr(err, o.ID, "Failed to get environment %s")
 	}
-	if err := resource.Output(resource.Strip(doc, readOnly...), o.File, o.Type); err != nil {
+	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}
 	if o.File != "" {
@@ -109,7 +109,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 			return resource.Applied{}, fmt.Errorf("Environment file '%s' does not name the environment.", file)
 		}
 		var saved struct{ ID, Name string }
-		resp, err := c.UpsertEnvironmentWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, readOnly...).Value()))
+		resp, err := c.UpsertEnvironmentWithBody(ctx, "application/json", resource.Body(resource.Strip(doc, ReadOnly...).Value()))
 		resp, err = platform.Decode(resp, err, &saved)
 		if err != nil {
 			return resource.Applied{}, platform.Failed(err, "Failed to save environment %s", name)

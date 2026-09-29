@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/steadybit/cli/v6/internal/gitops"
 	"github.com/steadybit/cli/v6/internal/integration"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
@@ -67,6 +68,7 @@ func newIntegrationKind(k integration.Kind) *cobra.Command {
 		}),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, lower)
+	dryRun(apply, gitops.Integrations[k.Name], &a.Files, &a.Recursive)
 
 	var d integration.DeleteOptions
 	del := &cobra.Command{
@@ -81,6 +83,6 @@ func newIntegrationKind(k integration.Kind) *cobra.Command {
 	idFlag(del, &d.ID, "The "+lower+" id.")
 	del.Flags().BoolVar(&d.Yes, "yes", false, yesHelp)
 
-	cmd.AddCommand(list, get, apply, del)
+	cmd.AddCommand(list, get, apply, newDiff(gitops.Integrations[k.Name], "integration "+k.Name, k.Name+".yml", "integrations/"+k.Name), del)
 	return cmd
 }
