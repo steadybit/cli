@@ -84,7 +84,7 @@ func newExperimentRun() *cobra.Command {
 	f.StringVarP(&o.Key, "key", "k", "", "The experiment key.")
 	f.StringArrayVarP(&o.Files, "file", "f", nil, "The path to the experiment file or a directory containing multiple files.")
 	f.BoolVarP(&o.Recursive, "recursive", "R", false, "Process the directory used in -f, --file recursively.")
-	f.BoolVar(&noWait, "no-wait", false, "Do not wait for experiment run to finish.")
+	f.BoolVar(&noWait, "no-wait", false, "Do not wait for experiment run to finish. The run is still checked once, 2 seconds after it started, and a run the platform ended right away fails.")
 	f.BoolVar(&o.Yes, "yes", false, "Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.")
 	f.BoolVar(&o.AllowParallel, "allowParallel", false, "Skip the prompt warning about another experiment running and allow always parallel execution.")
 	f.IntVar(&o.Retries, "retries", 0, "Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.")

@@ -271,8 +271,9 @@ are not reported as differences.
 
 ## In CI
 
-`experiment run --wait` fails the job when a run fails, and a few options make it fit
-pipelines:
+`experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
+still looks at the run once, 2 seconds after starting it, and fails when the platform ended
+it right away. A few options make it fit pipelines:
 
 | Option                        | Does                                                                    |
 | ----------------------------- | ----------------------------------------------------------------------- |

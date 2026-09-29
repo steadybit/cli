@@ -362,6 +362,10 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			if err != nil {
 				return errors.Join(err, report())
 			}
+		} else if result.APILocation != "" {
+			if err := checkStarted(ctx, c, result.APILocation); err != nil {
+				return errors.Join(err, report())
+			}
 		}
 	}
 	return report()
@@ -556,10 +560,7 @@ var ErrTimedOut = errors.New("timed out")
 // wait polls the run until it ends. A run that did not complete is an error, which is
 // what lets a pipeline fail on it. The finished run is returned for reports.
 func wait(ctx context.Context, c *platform.Client, location string, o WaitOptions) (*RunResult, error) {
-	path := location
-	if i := strings.Index(location, "/api/"); i >= 0 {
-		path = location[i:]
-	}
+	path := runPath(location)
 	if o.Steps || o.ShowSteps {
 		separator := "?"
 		if strings.Contains(path, "?") {
@@ -629,12 +630,49 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 			continue
 		}
 		if run.State != "COMPLETED" {
-			reason := ""
-			if run.Reason != "" {
-				reason = ", reason: " + run.Reason
-			}
-			return run, fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
+			return run, notCompleted(run)
 		}
 		return run, nil
 	}
+}
+
+func notCompleted(run *RunResult) error {
+	reason := ""
+	if run.Reason != "" {
+		reason = ", reason: " + run.Reason
+	}
+	return fmt.Errorf("Experiment %s (#%d) %s%s", run.Key, run.ID, strings.ToLower(run.State), reason)
+}
+
+// StartCheckDelay is how long --no-wait gives a run before looking at it once. The
+// platform accepts a run and may cancel it moments later, when its validation finds
+// another experiment running; unchecked, a pipeline would pass on a run that never ran.
+var StartCheckDelay = 2 * time.Second
+
+// checkStarted fails when the run already ended without completing. The check is a
+// courtesy: when the platform cannot be asked, the run was still started, so it warns.
+func checkStarted(ctx context.Context, c *platform.Client, location string) error {
+	time.Sleep(StartCheckDelay)
+	body, _, err := platform.Read(c.Get(ctx, runPath(location)))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not check that the experiment run started: %s\n", err)
+		return nil
+	}
+	run, err := parseRun(body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not check that the experiment run started: %s\n", err)
+		return nil
+	}
+	if terminal[run.State] && run.State != "COMPLETED" {
+		return notCompleted(run)
+	}
+	return nil
+}
+
+// runPath is a run's location relative to the API, which the client sends to its host.
+func runPath(location string) string {
+	if i := strings.Index(location, "/api/"); i >= 0 {
+		return location[i:]
+	}
+	return location
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.1.0
+
+- `experiment run --no-wait` looks at the run once, 2 seconds after starting it, and fails
+  when the platform already ended it. The platform accepts a run and then cancels it when
+  another experiment is running, so a pipeline used to pass on a run that never ran.
+
 ## v6.0.1
 
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The

@@ -27,6 +27,12 @@ import (
 func init() {
 	platform.RetryUnit = time.Millisecond
 	experiment.PollInterval = time.Millisecond
+	experiment.StartCheckDelay = time.Millisecond
+}
+
+// stillRunning answers the look --no-wait takes at the run it started.
+func stillRunning(p *platformtest.Platform) {
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "RUNNING"}})
 }
 
 var ctx = context.Background()
@@ -184,6 +190,7 @@ func TestAFailedRunFailsTheCommand(t *testing.T) {
 
 func TestRunRetriesValidationErrorsWithoutPersistingThem(t *testing.T) {
 	p := platformtest.New(t)
+	stillRunning(p)
 	var calls atomic.Int32
 	p.Handle("POST /api/experiments/TST-1/execute", func(platformtest.Request) platformtest.Reply {
 		if calls.Add(1) <= 2 {
@@ -217,6 +224,7 @@ func TestRunGivesUpAfterTheLastRetry(t *testing.T) {
 
 func TestRunsInParallelWithYesWhenAnotherIsRunning(t *testing.T) {
 	p := platformtest.New(t)
+	stillRunning(p)
 	p.Handle("POST /api/experiments/TST-1/execute", func(r platformtest.Request) platformtest.Reply {
 		if r.Query["allowParallel"][0] == "true" {
 			return started(p, "TST-1", 1)
@@ -234,6 +242,7 @@ func TestRunsInParallelWithYesWhenAnotherIsRunning(t *testing.T) {
 
 func TestRunByFileWithoutKeyUpsertsAndWritesTheKey(t *testing.T) {
 	p := platformtest.New(t)
+	stillRunning(p)
 	p.Reply("POST /api/experiments/execute", started(p, "NEW-1", 1))
 	file := filepath.Join(t.TempDir(), "experiment.yml")
 	require.NoError(t, os.WriteFile(file, []byte("name: new\n"), 0o644))
@@ -261,6 +270,7 @@ func templateOptions() experiment.TemplateOptions {
 
 func TestRunFromATemplate(t *testing.T) {
 	p := platformtest.New(t)
+	stillRunning(p)
 	p.Reply("POST /api/experiments/templates/"+templateID+"/experiment-execute", started(p, "ADM-12", 7))
 	o := experiment.RunOptions{Yes: true, TemplateOptions: templateOptions()}
 	o.Placeholder.Set("CLUSTER", "prod")
@@ -605,6 +615,7 @@ func TestAsksBeforeRunningInParallel(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := platformtest.New(t)
+			stillRunning(p)
 			p.Handle("POST /api/experiments/TST-1/execute", func(r platformtest.Request) platformtest.Reply {
 				if q := r.Query["allowParallel"]; len(q) == 1 && q[0] == "true" {
 					return started(p, "TST-1", 1)
@@ -634,6 +645,7 @@ func TestAsksBeforeRunningInParallel(t *testing.T) {
 // With --key, a file updates that experiment before it runs, whatever key the file has.
 func TestRunWithAKeyUpdatesItFromTheFile(t *testing.T) {
 	p := platformtest.New(t)
+	stillRunning(p)
 	p.Reply("POST /api/experiments/TST-7", platformtest.Reply{})
 	p.Reply("POST /api/experiments/TST-7/execute", started(p, "TST-7", 1))
 	file := filepath.Join(t.TempDir(), "e.yml")
@@ -670,4 +682,32 @@ func TestAVersionInTheFileIsNotSent(t *testing.T) {
 	assert.Equal(t, map[string]any{"key": "NEW-1", "name": "new"}, p.Requests("POST /api/experiments/NEW-1")[0].JSON(t))
 	content, _ := os.ReadFile(file)
 	assert.Equal(t, "key: NEW-1\n"+original, string(content))
+}
+
+// The platform accepts a run and may cancel it right after; --no-wait must not pass then.
+func TestNoWaitFailsWhenTheRunEndsRightAway(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": "CANCELED",
+		"reason": "The run was started via CLI, but another experiment was running in parallel."}})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-1 (#1) canceled, reason: The run was started via CLI, but another experiment was running in parallel.")
+}
+
+// The run was started either way; only being unable to look at it is no reason to fail.
+func TestNoWaitOnlyWarnsWhenTheRunCannotBeChecked(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{Status: http.StatusBadGateway})
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Executing experiment: TST-1\n")
 }
