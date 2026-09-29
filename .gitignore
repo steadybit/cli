@@ -36,3 +36,6 @@ node_modules
 .env.local
 .env.*.local
 /completions
+
+# The package signing key, should a job ever write it into the checkout.
+/gpg.key
