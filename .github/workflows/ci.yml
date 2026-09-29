@@ -151,6 +151,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Uploading the Linux packages authenticates to Google Cloud as the workflow.
+      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -158,7 +160,12 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Binaries, archives, the GitHub release and the Homebrew cask
+      # The key the agent's packages are signed with, so apt and yum trust the CLI's too.
+      - name: Export the package signing key
+        env:
+          SECRET: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        run: echo -n "$SECRET" > gpg.key
+      - name: Binaries, archives, Linux packages, the GitHub release and the Homebrew cask
         uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
@@ -167,6 +174,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pushes the cask to steadybit/homebrew-tap, which GITHUB_TOKEN cannot write to.
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          NFPM_KEY_FILE: gpg.key
+          NFPM_DEFAULT_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+      - name: Publish the Linux packages to packages.steadybit.com
+        if: ${{ !contains(github.ref_name, '-') }}
+        uses: steadybit/.github/actions/gar-upload-linux-packages@main
+        with:
+          workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_SA }}
+          project_id: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_ID }}
+          location: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_LOCATION }}
+          deb_repository: deb-public
+          yum_repository: yum-public
+          packages_dir: ./dist
       # `uses: steadybit/cli@v6` resolves through the major tag, so each stable release
       # moves it. A push with GITHUB_TOKEN triggers no workflow, so the tag does not start
       # another release.
@@ -182,6 +202,59 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
+
+  # The packages of every build, installed and run on the distributions they are for. On
+  # main, and when started by hand, they also go to the dev repositories, which is how the
+  # upload is checked before a release depends on it. Pull requests build them unsigned.
+  linux-packages:
+    if: github.event_name != 'schedule' && !startsWith(github.ref, 'refs/tags/')
+    needs: [verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Export the package signing key
+        if: github.event_name != 'pull_request'
+        env:
+          SECRET: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        run: |
+          echo -n "$SECRET" > gpg.key
+          echo "NFPM_KEY_FILE=gpg.key" >> "$GITHUB_ENV"
+      - name: Build the packages
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: release --snapshot --clean
+        env:
+          HOMEBREW_TAP_TOKEN: unused
+          NFPM_DEFAULT_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+      - name: Install the .deb and run it
+        run: |
+          sudo apt-get install -y ./dist/steadybit-cli_amd64.deb
+          steadybit -V
+          test -f /usr/share/bash-completion/completions/steadybit
+      - name: Install the .rpm and run it
+        run: |
+          docker run --rm -v "$PWD/dist:/dist" fedora:latest \
+            sh -c 'dnf install -y -q /dist/steadybit-cli_amd64.rpm && steadybit -V'
+      - name: Publish to the dev repositories
+        if: github.event_name != 'pull_request'
+        uses: steadybit/.github/actions/gar-upload-linux-packages@main
+        with:
+          workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_SA }}
+          project_id: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_ID }}
+          location: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_LOCATION }}
+          deb_repository: deb-dev
+          yum_repository: yum-dev
+          packages_dir: ./dist
 
   # The action downloads from the release, so it can only be checked once one exists.
   verify-action:

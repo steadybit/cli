@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.1.0
+
+- Linux packages: `steadybit-cli` is published to the apt and yum repositories at
+  packages.steadybit.com, next to the agent, so `apt-get install steadybit-cli` or
+  `dnf install steadybit-cli` installs it and the system's updates keep it current. The
+  signed `.deb` and `.rpm` files, with shell completions, are attached to every release.
 ## v6.0.1
 
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The
