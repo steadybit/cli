@@ -149,6 +149,8 @@ steadybit experiment run --template <template-id> --team ADM --placeholders valu
 ### Experiment runs
 
 ```bash
+steadybit execution list --team ADM --state FAILED --from 2026-09-28
+steadybit execution list --team ADM --state FAILED ERRORED --from 2026-09-28 --fail-on-match   # fail a pipeline
 steadybit execution get -i 1234 -t json
 steadybit execution cancel -i 1234
 steadybit execution property set -i 1234 -k approvedBy --value "Jane Doe"
@@ -254,8 +256,9 @@ steadybit execution watch -k ADM-1            # follow the latest run of an expe
 steadybit experiment get -k ADM-1 --profile prod   # use another configured profile for one command
 ```
 
-Shell completion (`steadybit completion --help`) completes experiment keys, team keys and
-the ids of templates, schedules, services and service profiles from the platform.
+Shell completion (`steadybit completion --help`) completes experiment keys, team keys,
+environment names, and the ids of templates, schedules, services and service profiles
+from the platform.
 
 ## GitOps
 
@@ -274,15 +277,17 @@ are not reported as differences.
 
 ## In CI
 
-`experiment run --wait` fails the job when a run fails, and a few options make it fit
-pipelines:
+`experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
+still watches the run until it started, for up to 15 seconds, and fails when the platform
+canceled or errored it before it ran. A few options make it fit pipelines:
 
-| Option                        | Does                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
-| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
-| `--show-steps`                | Prints each step's state as it changes                                  |
+| Option                        | Does                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                 |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                  |
+| `--show-steps`                | Prints each step's state as it changes                                   |
 | `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                |
 
 In GitHub Actions a summary of every run is added to the job summary.
 
