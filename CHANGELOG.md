@@ -2,6 +2,9 @@
 
 ## v6.1.0
 
+- `experiment run --parallel N` runs up to N of the experiments given with `-f` at once,
+  telling the platform they run in parallel on purpose. Each run's lines start with its key,
+  a failed run does not stop the others, and the report and job summary cover all of them.
 - `experiment run --no-wait` watches the run until it started, for up to 15 seconds, and
   fails when the platform canceled or errored it before it ran. The platform accepts a run
   and then cancels it when another experiment is running, so a pipeline used to pass on a

@@ -73,6 +73,7 @@ func newExperimentRun() *cobra.Command {
 			"steadybit experiment run -k ADM-1",
 			"steadybit experiment run -f experiment.yml --no-wait",
 			"steadybit experiment run -f ./experiments -R --yes --timeout 30m --report steadybit.xml",
+			"steadybit experiment run -f ./experiments -R --yes --parallel 3 --report steadybit.xml",
 			"steadybit experiment run --template d7e65100-1d20-4980-be87-c351704910b8 --team ADM -p CLUSTER=prod",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
@@ -89,6 +90,7 @@ func newExperimentRun() *cobra.Command {
 	f.BoolVar(&o.AllowParallel, "allowParallel", false, "Skip the prompt warning about another experiment running and allow always parallel execution.")
 	f.IntVar(&o.Retries, "retries", 0, "Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.")
 	f.IntVar(&o.RetryInterval, "retryInterval", 10, "Interval in seconds between retries.")
+	f.IntVar(&o.Parallel, "parallel", 1, "How many of the experiments given with -f to run at once. Each waits for its own run; the command fails if any fails.")
 	f.DurationVar(&o.Timeout, "timeout", 0, `With waiting: cancel the run and fail when it has not ended after this long, e.g. "15m".`)
 	f.BoolVar(&o.KeepRunningOnInterrupt, "keep-running-on-interrupt", false, "With waiting: leave the run going when the CLI is interrupted, instead of cancelling it.")
 	f.BoolVar(&o.ShowSteps, "show-steps", false, "With waiting: print each step's state as it changes.")

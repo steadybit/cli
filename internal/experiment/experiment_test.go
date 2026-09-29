@@ -5,10 +5,13 @@ package experiment_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -462,6 +465,7 @@ func TestAReportNeedsWaiting(t *testing.T) {
 
 // An aborted pipeline must not leave the attack it started running on its own.
 func TestAnInterruptCancelsTheRunItWaitsFor(t *testing.T) {
+	t.Cleanup(interrupt.Reset)
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
 	var canceled, interrupted atomic.Bool
@@ -489,6 +493,7 @@ func TestAnInterruptCancelsTheRunItWaitsFor(t *testing.T) {
 }
 
 func TestKeepRunningOnInterruptLeavesTheRunAlone(t *testing.T) {
+	t.Cleanup(interrupt.Reset)
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
 	var polls atomic.Int32
@@ -776,4 +781,271 @@ func TestNoWaitGivesUpCheckingAfterTheTimeout(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "Could not check that the experiment run started: the run was still created after 50ms\n", stderr)
+}
+
+// Three experiment files, two at a time: the platform is told they run in parallel on
+// purpose, a failed run does not stop the others, and the report has all three in order.
+func TestRunsFilesInParallel(t *testing.T) {
+	p := platformtest.New(t)
+	var mu sync.Mutex
+	inFlight, most := 0, 0
+	polls := map[string]int{}
+	for id, n := range map[int]string{1: "1", 2: "2", 3: "3"} {
+		key := "TST-" + n
+		p.Reply("POST /api/experiments/"+key, platformtest.Reply{})
+		p.Handle("POST /api/experiments/"+key+"/execute", func(r platformtest.Request) platformtest.Reply {
+			assert.Equal(t, []string{"true"}, r.Query["allowParallel"], key)
+			mu.Lock()
+			inFlight++
+			most = max(most, inFlight)
+			mu.Unlock()
+			return platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": key, "executionId": id,
+				"apiLocation": p.URL + "/api/experiments/executions/" + n, "uiLocation": "https://ui/" + key}}
+		})
+		p.Handle("GET /api/experiments/executions/"+n, func(platformtest.Request) platformtest.Reply {
+			mu.Lock()
+			defer mu.Unlock()
+			polls[key]++
+			state := "RUNNING"
+			if polls[key] > 20 {
+				state = "COMPLETED"
+				if key == "TST-2" {
+					state = "FAILED"
+				}
+				inFlight--
+			}
+			return platformtest.Reply{JSON: map[string]any{"id": id, "key": key, "name": key, "state": state}}
+		})
+	}
+	dir := t.TempDir()
+	var files []string
+	for _, n := range []string{"1", "2", "3"} {
+		file := filepath.Join(dir, "e"+n+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: TST-"+n+"\nname: TST-"+n+"\n"), 0o644))
+		files = append(files, file)
+	}
+	report := filepath.Join(dir, "report.json")
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2, Report: report})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-2 (#2) failed")
+	assert.Equal(t, 2, most, "at most two runs at a time")
+	assert.Contains(t, out, "[TST-1] Current run state: completed\n")
+	assert.Contains(t, out, "[TST-3] Current run state: completed\n")
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	var runs []map[string]any
+	require.NoError(t, json.Unmarshal(content, &runs))
+	var keys []any
+	for _, run := range runs {
+		keys = append(keys, run["key"])
+	}
+	assert.Equal(t, []any{"TST-1", "TST-2", "TST-3"}, keys)
+}
+
+// Interrupted, every run still going is canceled, not only the last one started.
+func TestAnInterruptCancelsEveryParallelRun(t *testing.T) {
+	t.Cleanup(interrupt.Reset)
+	p := platformtest.New(t)
+	var mu sync.Mutex
+	canceled := map[int]bool{}
+	var polled atomic.Int32
+	var once sync.Once
+	dir := t.TempDir()
+	var files []string
+	for _, id := range []int{1, 2} {
+		key := fmt.Sprintf("TST-%d", id)
+		p.Reply("POST /api/experiments/"+key, platformtest.Reply{})
+		p.Reply("POST /api/experiments/"+key+"/execute", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": key, "executionId": id,
+			"apiLocation": fmt.Sprintf("%s/api/experiments/executions/%d", p.URL, id), "uiLocation": "https://ui/" + key}})
+		p.Handle(fmt.Sprintf("GET /api/experiments/executions/%d", id), func(platformtest.Request) platformtest.Reply {
+			// Once both runs have been polled, both waits have their handler in place.
+			if polled.Add(1) >= 2 {
+				once.Do(func() { go interrupt.RunHandlers(os.Interrupt) })
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			state := "RUNNING"
+			if canceled[id] {
+				state = "CANCELED"
+			}
+			return platformtest.Reply{JSON: map[string]any{"id": id, "key": key, "state": state}}
+		})
+		p.Handle(fmt.Sprintf("POST /api/experiments/executions/%d/cancel", id), func(platformtest.Request) platformtest.Reply {
+			mu.Lock()
+			defer mu.Unlock()
+			canceled[id] = true
+			return platformtest.Reply{Status: http.StatusAccepted}
+		})
+		file := filepath.Join(dir, key+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: "+key+"\n"), 0o644))
+		files = append(files, file)
+	}
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2})
+	})
+
+	assert.Error(t, err)
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+	assert.Len(t, p.Requests("POST /api/experiments/executions/2/cancel"), 1)
+}
+
+// Interrupted while two runs go, the third waiting for a slot is not started: the
+// handlers that cancel runs were already collected and would leave it running.
+func TestAnInterruptStartsNoFurtherParallelRun(t *testing.T) {
+	t.Cleanup(interrupt.Reset)
+	p := platformtest.New(t)
+	var mu sync.Mutex
+	canceled, polls := map[int]bool{}, map[int]int{}
+	var polled atomic.Int32
+	var once sync.Once
+	dir := t.TempDir()
+	var files []string
+	for _, id := range []int{1, 2, 3} {
+		key := fmt.Sprintf("TST-%d", id)
+		p.Reply("POST /api/experiments/"+key, platformtest.Reply{})
+		p.Reply("POST /api/experiments/"+key+"/execute", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": key, "executionId": id,
+			"apiLocation": fmt.Sprintf("%s/api/experiments/executions/%d", p.URL, id), "uiLocation": "https://ui/" + key}})
+		p.Handle(fmt.Sprintf("GET /api/experiments/executions/%d", id), func(platformtest.Request) platformtest.Reply {
+			if polled.Add(1) >= 2 {
+				once.Do(func() { go interrupt.RunHandlers(os.Interrupt) })
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			polls[id]++
+			// A run nobody cancels ends on its own, so that a regression fails, not hangs.
+			state := "RUNNING"
+			if canceled[id] {
+				state = "CANCELED"
+			} else if polls[id] > 50 {
+				state = "COMPLETED"
+			}
+			return platformtest.Reply{JSON: map[string]any{"id": id, "key": key, "state": state}}
+		})
+		p.Handle(fmt.Sprintf("POST /api/experiments/executions/%d/cancel", id), func(platformtest.Request) platformtest.Reply {
+			mu.Lock()
+			defer mu.Unlock()
+			canceled[id] = true
+			return platformtest.Reply{Status: http.StatusAccepted}
+		})
+		file := filepath.Join(dir, key+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: "+key+"\n"), 0o644))
+		files = append(files, file)
+	}
+	report := filepath.Join(dir, "report.json")
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2, Report: report})
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TST-3: not started, the command was interrupted")
+	assert.Empty(t, p.Requests("POST /api/experiments/TST-3/execute"))
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+	assert.Len(t, p.Requests("POST /api/experiments/executions/2/cancel"), 1)
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	var runs []map[string]any
+	require.NoError(t, json.Unmarshal(content, &runs))
+	var states []any
+	for _, run := range runs {
+		states = append(states, run["key"].(string)+" "+run["state"].(string))
+	}
+	assert.Equal(t, []any{"TST-1 CANCELED", "TST-2 CANCELED", "TST-3 CANCELED"}, states)
+}
+
+// A run whose start the interrupt overtook has no handler yet when the handlers run; it
+// is canceled as soon as its wait begins.
+func TestARunStartedDuringAnInterruptIsCanceled(t *testing.T) {
+	t.Cleanup(interrupt.Reset)
+	p := platformtest.New(t)
+	var canceled atomic.Bool
+	var polls atomic.Int32
+	p.Handle("POST /api/experiments/TST-1/execute", func(platformtest.Request) platformtest.Reply {
+		interrupt.RunHandlers(os.Interrupt)
+		return started(p, "TST-1", 1)
+	})
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		// Left alone, the run ends on its own, so that a regression fails, not hangs.
+		state := "RUNNING"
+		if canceled.Load() {
+			state = "CANCELED"
+		} else if polls.Add(1) > 50 {
+			state = "COMPLETED"
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state}}
+	})
+	p.Handle("POST /api/experiments/executions/1/cancel", func(platformtest.Request) platformtest.Reply {
+		canceled.Store(true)
+		return platformtest.Reply{Status: http.StatusAccepted}
+	})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-1 (#1) canceled")
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+}
+
+func TestParallelNeedsWaiting(t *testing.T) {
+	err := experiment.Run(ctx, nil, experiment.RunOptions{Key: "TST-1", Yes: true, Parallel: 2})
+
+	assert.EqualError(t, err, "--parallel needs to wait for the runs; remove --no-wait.")
+}
+
+// A single run has nothing to run in parallel with: it keeps the platform's check for
+// another experiment running.
+func TestParallelWithASingleRunDoesNotAllowParallelRuns(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	p.Reply("GET /api/experiments/executions/1", finished("COMPLETED", ""))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, Parallel: 2})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"false"}, p.Requests("POST /api/experiments/TST-1/execute")[0].Query["allowParallel"])
+}
+
+// A run that could not start is named in the error, its retries are told apart from the
+// other runs', and it is in the report, in file order.
+func TestAParallelRunThatCannotStartIsReported(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1", platformtest.Reply{})
+	p.Reply("POST /api/experiments/TST-1/execute", platformtest.Reply{Status: http.StatusUnprocessableEntity, JSON: map[string]any{"title": "No targets"}})
+	p.Reply("POST /api/experiments/TST-2", platformtest.Reply{})
+	p.Reply("POST /api/experiments/TST-2/execute", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": "TST-2", "executionId": 2,
+		"apiLocation": p.URL + "/api/experiments/executions/2", "uiLocation": "https://ui/TST-2"}})
+	p.Reply("GET /api/experiments/executions/2", platformtest.Reply{JSON: map[string]any{"id": 2, "key": "TST-2", "state": "COMPLETED"}})
+	dir := t.TempDir()
+	var files []string
+	for _, key := range []string{"TST-1", "TST-2"} {
+		file := filepath.Join(dir, key+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: "+key+"\n"), 0o644))
+		files = append(files, file)
+	}
+	report := filepath.Join(dir, "report.json")
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2, Retries: 1, Report: report})
+	})
+
+	require.Error(t, err)
+	assert.True(t, strings.HasPrefix(err.Error(), "TST-1: Failed to execute experiment: "), err.Error())
+	assert.Contains(t, out, "[TST-1] Experiment has validation errors (attempt 1/2). Retrying in 0s...\n")
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	var runs []map[string]any
+	require.NoError(t, json.Unmarshal(content, &runs))
+	require.Len(t, runs, 2)
+	assert.Equal(t, "TST-1", runs[0]["key"])
+	assert.Equal(t, "ERRORED", runs[0]["state"])
+	assert.Contains(t, runs[0]["reason"], "Failed to execute experiment")
+	assert.Equal(t, "TST-2", runs[1]["key"])
+	assert.Equal(t, "COMPLETED", runs[1]["state"])
 }
