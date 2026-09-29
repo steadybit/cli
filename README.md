@@ -240,6 +240,7 @@ Commands that cannot be undone, such as `killswitch activate`, `access-token del
 ```bash
 steadybit target query -e Global --target-type com.steadybit.extension_container.container --attribute k8s.namespace
 steadybit target attribute values -e Global --target-type com.steadybit.extension_container.container -k k8s.namespace
+steadybit target stats -q 'k8s.namespace="shop"'
 steadybit action list --kind ATTACK
 ```
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.1.0
+
+- `target stats` counts the targets of each type in the tenant, optionally only those
+  matching a target query (`-q`), as a table or with `-t json|yaml` as the platform
+  sends it.
+
 ## v6.0.1
 
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The
