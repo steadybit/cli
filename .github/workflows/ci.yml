@@ -70,6 +70,28 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # Nightly, a quick look that the CLI still talks to the real platform: the test team's
+  # token works and the answers still decode. The whole flow runs weekly, in
+  # platform-e2e.yml.
+  platform-smoke:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: [verify]
+    runs-on: ubuntu-latest
+    env:
+      STEADYBIT_URL: https://platform.dev.steadybit.com
+      STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_E2E_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go build -o steadybit ./cmd/steadybit
+      - name: Read the test team and its latest runs
+        run: |
+          test "$(./steadybit team get -k CLI --jq .key)" = CLI
+          ./steadybit execution list --team CLI --limit 1 -t json >/dev/null
+          ./steadybit environment list -t json --jq 'length' >/dev/null
+
   docker-build:
     if: github.event_name != 'schedule'
     # Images are pushed from here, so a tag whose tests fail must not publish one.
@@ -311,3 +333,10 @@ jobs:
           steadybit --version
           test "$(steadybit --version)" = "${GITHUB_REF_NAME#v}"
           test "${{ steps.setup.outputs.version }}" = "${GITHUB_REF_NAME#v}"
+
+  # A stable release is used against the platform right away, as installed by the action.
+  platform-e2e:
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    needs: verify-action
+    uses: ./.github/workflows/platform-e2e.yml
+    secrets: inherit

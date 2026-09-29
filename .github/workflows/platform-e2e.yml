@@ -1,0 +1,51 @@
+name: Platform E2E
+
+# Uses the CLI against the dev platform the way a pipeline does (e2e/platform.sh), with
+# the team token of the test team CLI-E2E. Only wait steps, and everything it creates is
+# deleted afterwards.
+on:
+  # Weekly, Tuesday evening, so a change on the platform side shows within a week.
+  schedule:
+    - cron: '0 20 * * 2'
+  workflow_dispatch:
+    inputs:
+      from-source:
+        description: Build the CLI from this branch instead of installing the latest release
+        type: boolean
+        default: false
+  # After each stable release, from ci.yml, on the binary users now get.
+  workflow_call:
+  # A change to the test itself is run before it is merged. Pull requests from forks get
+  # no secrets, so it only runs for this repository's own branches.
+  pull_request:
+    paths:
+      - e2e/platform.sh
+      - .github/workflows/platform-e2e.yml
+
+# The runs of one team get in each other's way, so one at a time.
+concurrency:
+  group: platform-e2e
+
+jobs:
+  platform-e2e:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      STEADYBIT_URL: https://platform.dev.steadybit.com
+      STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_E2E_TOKEN }}
+      STEADYBIT_E2E_TEAM: CLI
+      STEADYBIT_E2E_ENVIRONMENT: Global
+    steps:
+      - uses: actions/checkout@v7
+      # The latest release through the action, as a pipeline installs it.
+      - if: ${{ !inputs.from-source }}
+        uses: ./
+      - if: ${{ inputs.from-source }}
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - if: ${{ inputs.from-source }}
+        run: |
+          go build -o "$RUNNER_TEMP/bin/steadybit" ./cmd/steadybit
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: e2e/platform.sh

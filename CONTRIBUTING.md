@@ -38,7 +38,7 @@ go test ./...
 
 ## Tests
 
-Tests sit at three levels. Put a test at the lowest one that can hold it; the levels get
+Tests sit at four levels. Put a test at the lowest one that can hold it; the levels get
 slower and harder to debug as you go down this list.
 
 | Level     | Tool                               | Covers                                                  |
@@ -46,6 +46,7 @@ slower and harder to debug as you go down this list.
 | Unit      | `go test`                          | A single function, no I/O                               |
 | Command   | `go test` + `internal/platformtest` | A command end to end against a fake platform           |
 | Container | `e2e/run.sh` + expect              | Only what needs a real process                          |
+| Platform  | `e2e/platform.sh`                  | A pipeline's use of the CLI against the dev platform    |
 
 `internal/platformtest` starts an `httptest` server whose endpoints a test declares,
 records every request, and points the configuration at it:
@@ -63,6 +64,18 @@ and a line of output, never content.
 ```sh
 docker build -t steadybit/cli:under-test .
 docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh steadybit/cli:under-test /e2e/run.sh
+```
+
+The platform test uses the released CLI the way a pipeline does, against the dev
+platform with the team token of the test team CLI-E2E (key `CLI`): experiments applied
+from files, run in parallel with a report, checked for drift, canceled by SIGTERM,
+refused while another runs, and found by an `execution list` gate. It only uses wait
+steps and deletes what it creates. CI runs it weekly, after each stable release, and on
+pull requests that change it; a nightly job only checks that the token and the API
+still work. To run it by hand, with `steadybit` on the `PATH`:
+
+```sh
+STEADYBIT_URL=https://platform.dev.steadybit.com STEADYBIT_TOKEN=<token of team CLI> e2e/platform.sh
 ```
 
 ### Output compatibility
