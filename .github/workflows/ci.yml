@@ -158,7 +158,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Binaries, archives, the GitHub release and the Homebrew cask
+      # The key the agent's packages are signed with, so apt and yum trust the CLI's too.
+      # Outside the checkout: goreleaser refuses to release from a tree with untracked files.
+      - name: Export the package signing key
+        env:
+          SECRET: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        run: echo -n "$SECRET" > "$RUNNER_TEMP/gpg.key"
+      - name: Binaries, archives, Linux packages, the GitHub release and the Homebrew cask
         uses: goreleaser/goreleaser-action@v7
         with:
           version: '~> v2'
@@ -167,6 +173,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pushes the cask to steadybit/homebrew-tap, which GITHUB_TOKEN cannot write to.
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          NFPM_KEY_FILE: ${{ runner.temp }}/gpg.key
+          NFPM_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+      - name: Remove the package signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/gpg.key"
       # `uses: steadybit/cli@v6` resolves through the major tag, so each stable release
       # moves it. A push with GITHUB_TOKEN triggers no workflow, so the tag does not start
       # another release.
@@ -182,6 +193,103 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
+
+  # The signed packages of a release, installed before they are published to the apt and yum
+  # repositories. A job of its own, so that a failing upload leaves the release, the cask and
+  # the major tag in place and does not skip verify-action.
+  release-linux-packages:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploading authenticates to Google Cloud as the workflow.
+      id-token: write
+    steps:
+      - name: Download the packages from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --dir packages --pattern 'steadybit-cli_*.deb' --pattern 'steadybit-cli_*.rpm'
+          ls -l packages
+      - name: Install the .deb and run it
+        run: |
+          sudo apt-get install -y ./packages/steadybit-cli_amd64.deb
+          steadybit -V
+          test "$(steadybit -V)" = "${GITHUB_REF_NAME#v}"
+      # Off until Google Cloud lets this repository upload: the workload identity provider
+      # has to trust steadybit/cli first. The repository variable turns it on. Prereleases
+      # stay off the repositories, as they stay off releases/latest.
+      - name: Publish the Linux packages to packages.steadybit.com
+        if: ${{ !contains(github.ref_name, '-') && vars.PUBLISH_LINUX_PACKAGES == 'true' }}
+        uses: steadybit/.github/actions/gar-upload-linux-packages@main
+        with:
+          workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_SA }}
+          project_id: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_ID }}
+          location: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_LOCATION }}
+          deb_repository: deb-public
+          yum_repository: yum-public
+          packages_dir: ./packages
+
+  # The packages of every build, installed and run on the distributions they are for. On
+  # main they are also signed and go to the dev repositories, which is how the upload is
+  # checked before a release depends on it. Other refs, pull requests and branches started
+  # by hand, build them unsigned and upload nothing, so the production key signs only main.
+  linux-packages:
+    if: github.event_name != 'schedule' && !startsWith(github.ref, 'refs/tags/')
+    # As docker-build: nothing reaches the dev repositories from a build whose checks fail.
+    needs: [verify, api-compatibility]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Export the package signing key
+        if: github.ref == 'refs/heads/main'
+        env:
+          SECRET: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+        run: |
+          echo -n "$SECRET" > "$RUNNER_TEMP/gpg.key"
+          echo "NFPM_KEY_FILE=$RUNNER_TEMP/gpg.key" >> "$GITHUB_ENV"
+      - name: Build the packages
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: release --snapshot --clean
+        env:
+          HOMEBREW_TAP_TOKEN: unused
+          NFPM_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+      - name: Remove the package signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/gpg.key"
+      - name: Install the .deb and run it
+        run: |
+          sudo apt-get install -y ./dist/steadybit-cli_amd64.deb
+          steadybit -V
+          test -f /usr/share/bash-completion/completions/steadybit
+      - name: Install the .rpm and run it
+        run: |
+          docker run --rm -v "$PWD/dist:/dist" fedora:latest \
+            sh -c 'dnf install -y -q /dist/steadybit-cli_amd64.rpm && steadybit -V'
+      - name: Publish to the dev repositories
+        if: github.ref == 'refs/heads/main' && vars.PUBLISH_LINUX_PACKAGES == 'true'
+        uses: steadybit/.github/actions/gar-upload-linux-packages@main
+        with:
+          workload_identity_provider: ${{ secrets.GCP_ARTIFACT_REGISTRY_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_SA }}
+          project_id: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_ID }}
+          location: ${{ vars.GCP_ARTIFACT_REGISTRY_PROJECT_LOCATION }}
+          deb_repository: deb-dev
+          yum_repository: yum-dev
+          packages_dir: ./dist
 
   # The action downloads from the release, so it can only be checked once one exists.
   verify-action:

@@ -25,6 +25,18 @@ completions:
 brew install steadybit/tap/steadybit
 ```
 
+On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release from
+v6.1.0 on, which also installs the shell completions:
+
+```sh
+# Debian, Ubuntu
+curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.deb
+sudo apt-get install ./steadybit-cli_amd64.deb
+# Fedora, RHEL, Amazon Linux
+curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-cli_amd64.rpm
+sudo dnf install ./steadybit-cli_amd64.rpm
+```
+
 Or download the archive for your platform from the
 [releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
 and put `steadybit` on your `PATH`:

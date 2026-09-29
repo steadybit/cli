@@ -61,6 +61,8 @@
 - Experiment templates, environments, teams, property definitions, hubs and integrations
   have a `diff`, and their `apply` a `--dry-run`. The actions a team is given when sent
   none, and the target attributes a webhook reports when sent none, are not differences.
+- Linux packages: a signed `steadybit-cli` `.deb` and `.rpm`, with shell completions, are
+  attached to every release (`steadybit-cli_amd64.deb`, `steadybit-cli_arm64.rpm`, …).
 
 ## v6.0.1
 

@@ -38,11 +38,48 @@ archives:
         formats: [zip]
     files: [LICENSE, README.md, CHANGELOG.md, completions/*]
 
+# .deb and .rpm packages for Linux, attached to the release and published to the apt and
+# yum repositories at packages.steadybit.com, next to steadybit-agent. Without the version
+# in the file name, as the archives, so that releases/latest/download/<name> is stable.
+nfpms:
+  - id: steadybit
+    package_name: steadybit-cli
+    file_name_template: '{{ .PackageName }}_{{ .Arch }}'
+    formats: [deb, rpm]
+    vendor: Steadybit GmbH
+    homepage: https://github.com/steadybit/cli
+    maintainer: Steadybit <support@steadybit.com>
+    description: Command-line interface for the Steadybit chaos engineering platform
+    license: MIT
+    contents:
+      - src: completions/steadybit.bash
+        dst: /usr/share/bash-completion/completions/steadybit
+      # Debian and Ubuntu read zsh completions from vendor-completions; Fedora, RHEL and
+      # Amazon Linux only from site-functions.
+      - src: completions/_steadybit
+        dst: /usr/share/zsh/vendor-completions/_steadybit
+        packager: deb
+      - src: completions/_steadybit
+        dst: /usr/share/zsh/site-functions/_steadybit
+        packager: rpm
+      - src: completions/steadybit.fish
+        dst: /usr/share/fish/vendor_completions.d/steadybit.fish
+      - src: LICENSE
+        dst: /usr/share/doc/steadybit-cli/copyright
+    # Signed with the key the agent's packages are signed with, when CI provides it; a
+    # local snapshot builds them unsigned.
+    deb:
+      signature:
+        key_file: '{{ envOrDefault "NFPM_KEY_FILE" "" }}'
+    rpm:
+      signature:
+        key_file: '{{ envOrDefault "NFPM_KEY_FILE" "" }}'
+
 checksum:
   name_template: checksums.txt
 
 snapshot:
-  version_template: '{{ incpatch .Version }}-next'
+  version_template: '{{ incpatch .Version }}-{{ .CommitTimestamp }}-next'
 
 release:
   # The changelog is written by hand in CHANGELOG.md.
