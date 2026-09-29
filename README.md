@@ -229,6 +229,7 @@ steadybit access-token create --name ci --type TEAM --team ADM --expires-at 2026
 steadybit user invite --email jane@example.com --team ADM
 steadybit killswitch status
 steadybit audit-log --from 2026-09-01 -t json
+steadybit license show
 steadybit report experiments-executed --group-by STATE --rollup MONTHLY
 ```
 
