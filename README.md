@@ -275,12 +275,13 @@ are not reported as differences.
 still looks at the run once, 2 seconds after starting it, and fails when the platform ended
 it right away. A few options make it fit pipelines:
 
-| Option                        | Does                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
-| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
-| `--show-steps`                | Prints each step's state as it changes                                  |
+| Option                        | Does                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                 |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                  |
+| `--show-steps`                | Prints each step's state as it changes                                   |
 | `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                |
 
 In GitHub Actions a summary of every run is added to the job summary.
 

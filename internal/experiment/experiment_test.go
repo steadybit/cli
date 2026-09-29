@@ -5,10 +5,13 @@ package experiment_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -710,4 +713,113 @@ func TestNoWaitOnlyWarnsWhenTheRunCannotBeChecked(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "Executing experiment: TST-1\n")
+}
+
+// Three experiment files, two at a time: the platform is told they run in parallel on
+// purpose, a failed run does not stop the others, and the report has all three in order.
+func TestRunsFilesInParallel(t *testing.T) {
+	p := platformtest.New(t)
+	var mu sync.Mutex
+	inFlight, most := 0, 0
+	polls := map[string]int{}
+	for id, n := range map[int]string{1: "1", 2: "2", 3: "3"} {
+		key := "TST-" + n
+		p.Reply("POST /api/experiments/"+key, platformtest.Reply{})
+		p.Handle("POST /api/experiments/"+key+"/execute", func(r platformtest.Request) platformtest.Reply {
+			assert.Equal(t, []string{"true"}, r.Query["allowParallel"], key)
+			mu.Lock()
+			inFlight++
+			most = max(most, inFlight)
+			mu.Unlock()
+			return platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": key, "executionId": id,
+				"apiLocation": p.URL + "/api/experiments/executions/" + n, "uiLocation": "https://ui/" + key}}
+		})
+		p.Handle("GET /api/experiments/executions/"+n, func(platformtest.Request) platformtest.Reply {
+			mu.Lock()
+			defer mu.Unlock()
+			polls[key]++
+			state := "RUNNING"
+			if polls[key] > 20 {
+				state = "COMPLETED"
+				if key == "TST-2" {
+					state = "FAILED"
+				}
+				inFlight--
+			}
+			return platformtest.Reply{JSON: map[string]any{"id": id, "key": key, "name": key, "state": state}}
+		})
+	}
+	dir := t.TempDir()
+	var files []string
+	for _, n := range []string{"1", "2", "3"} {
+		file := filepath.Join(dir, "e"+n+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: TST-"+n+"\nname: TST-"+n+"\n"), 0o644))
+		files = append(files, file)
+	}
+	report := filepath.Join(dir, "report.json")
+
+	out, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2, Report: report})
+	})
+
+	assert.EqualError(t, err, "Experiment TST-2 (#2) failed")
+	assert.Equal(t, 2, most, "at most two runs at a time")
+	assert.Contains(t, out, "[TST-1] Current run state: completed\n")
+	assert.Contains(t, out, "[TST-3] Current run state: completed\n")
+	content, err := os.ReadFile(report)
+	require.NoError(t, err)
+	var runs []map[string]any
+	require.NoError(t, json.Unmarshal(content, &runs))
+	var keys []any
+	for _, run := range runs {
+		keys = append(keys, run["key"])
+	}
+	assert.Equal(t, []any{"TST-1", "TST-2", "TST-3"}, keys)
+}
+
+// Interrupted, every run still going is canceled, not only the last one started.
+func TestAnInterruptCancelsEveryParallelRun(t *testing.T) {
+	p := platformtest.New(t)
+	var mu sync.Mutex
+	canceled := map[int]bool{}
+	var polled atomic.Int32
+	var once sync.Once
+	dir := t.TempDir()
+	var files []string
+	for _, id := range []int{1, 2} {
+		key := fmt.Sprintf("TST-%d", id)
+		p.Reply("POST /api/experiments/"+key, platformtest.Reply{})
+		p.Reply("POST /api/experiments/"+key+"/execute", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"key": key, "executionId": id,
+			"apiLocation": fmt.Sprintf("%s/api/experiments/executions/%d", p.URL, id), "uiLocation": "https://ui/" + key}})
+		p.Handle(fmt.Sprintf("GET /api/experiments/executions/%d", id), func(platformtest.Request) platformtest.Reply {
+			// Once both runs have been polled, both waits have their handler in place.
+			if polled.Add(1) >= 2 {
+				once.Do(func() { go interrupt.RunHandlers(os.Interrupt) })
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			state := "RUNNING"
+			if canceled[id] {
+				state = "CANCELED"
+			}
+			return platformtest.Reply{JSON: map[string]any{"id": id, "key": key, "state": state}}
+		})
+		p.Handle(fmt.Sprintf("POST /api/experiments/executions/%d/cancel", id), func(platformtest.Request) platformtest.Reply {
+			mu.Lock()
+			defer mu.Unlock()
+			canceled[id] = true
+			return platformtest.Reply{Status: http.StatusAccepted}
+		})
+		file := filepath.Join(dir, key+".yml")
+		require.NoError(t, os.WriteFile(file, []byte("key: "+key+"\n"), 0o644))
+		files = append(files, file)
+	}
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: files, Yes: true, Wait: true, Parallel: 2})
+	})
+
+	assert.Error(t, err)
+	assert.Len(t, p.Requests("POST /api/experiments/executions/1/cancel"), 1)
+	assert.Len(t, p.Requests("POST /api/experiments/executions/2/cancel"), 1)
 }
