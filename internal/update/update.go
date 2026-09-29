@@ -32,21 +32,36 @@ var Now = time.Now
 // Interactive reports whether a notice would be seen, and not end up in a CI log or in
 // output a script reads. Tests replace it.
 var Interactive = func() bool {
-	if os.Getenv("STEADYBIT_NO_UPDATE_CHECK") != "" {
-		return false
+	return !turnedOff(os.Getenv) && term.IsTerminal(int(os.Stderr.Fd()))
+}
+
+// turnedOff is whether the environment rules the check out: asked to, or in CI.
+func turnedOff(getenv func(string) string) bool {
+	switch strings.ToLower(getenv("STEADYBIT_NO_UPDATE_CHECK")) {
+	case "", "0", "false":
+	default:
+		return true
 	}
 	for _, ci := range []string{"CI", "JENKINS_URL", "TF_BUILD", "BUILDKITE"} {
-		if os.Getenv(ci) != "" {
-			return false
+		if getenv(ci) != "" {
+			return true
 		}
 	}
-	return term.IsTerminal(int(os.Stderr.Fd()))
+	return false
 }
 
 const every = 24 * time.Hour
 
 // How long a command waits, once a day, for the check before it ends without it.
 const patience = time.Second
+
+// The request gives up earlier than the command waits, so that even a request that runs
+// out of time leaves room to record the check before the command ends.
+const fetchTimeout = 800 * time.Millisecond
+
+// fetch asks where the latest release is. Tests replace it, so that none depends on how
+// fast a refused connection fails, which differs between systems.
+var fetch = fetchLatest
 
 var release = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
 
@@ -64,12 +79,16 @@ func Start(current, cacheFile string) (notice func(io.Writer)) {
 	}
 	known := read(cacheFile)
 	done := make(chan state, 1)
-	if Now().Sub(known.CheckedAt) < every {
+	// A check dated in the future, from a wrong clock or a copied cache, is due: without
+	// that it would not be repeated until the clock caught up.
+	if since := Now().Sub(known.CheckedAt); since >= 0 && since < every {
 		done <- known
 	} else {
 		go func() {
 			checked := state{CheckedAt: Now(), Latest: known.Latest}
-			if latest, err := fetchLatest(); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
+			defer cancel()
+			if latest, err := fetch(ctx); err == nil {
 				checked.Latest = latest
 			}
 			// Written even when offline, so an unreachable GitHub is not asked again
@@ -89,9 +108,7 @@ func Start(current, cacheFile string) (notice func(io.Writer)) {
 	}
 }
 
-func fetchLatest() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), patience)
-	defer cancel()
+func fetchLatest(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, LatestURL, nil)
 	if err != nil {
 		return "", err
@@ -147,9 +164,26 @@ func read(file string) state {
 	return s
 }
 
+// write replaces the cache in one step, through a file renamed over it, so that a command
+// ending mid-write, or two running at once, never leave half a file behind.
 func write(file string, s state) {
-	if content, err := json.Marshal(s); err == nil {
-		_ = os.MkdirAll(filepath.Dir(file), 0o755)
-		_ = os.WriteFile(file, content, 0o644)
+	content, err := json.Marshal(s)
+	if err != nil {
+		return
+	}
+	dir := filepath.Dir(file)
+	if os.MkdirAll(dir, 0o755) != nil {
+		return
+	}
+	tmp, err := os.CreateTemp(dir, filepath.Base(file)+".*")
+	if err != nil {
+		return
+	}
+	_, err = tmp.Write(content)
+	if closeErr := tmp.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil || os.Rename(tmp.Name(), file) != nil {
+		_ = os.Remove(tmp.Name())
 	}
 }

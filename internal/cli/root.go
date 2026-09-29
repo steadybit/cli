@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -135,14 +134,24 @@ func Execute() int {
 }
 
 // updateNotice starts the daily look for a newer release. Completion runs on every Tab and
-// writes a script, so it neither waits for the look nor prints a notice.
+// writes a script, so it neither waits for the look nor prints a notice, wherever global
+// flags put its command in the arguments.
 func updateNotice(args []string) func(io.Writer) {
-	if len(args) > 0 && (strings.HasPrefix(args[0], "__complete") || args[0] == "completion") {
+	if completing(args) {
 		return func(io.Writer) {}
 	}
-	home, err := os.UserHomeDir()
+	cache, err := config.Path("update-check.json")
 	if err != nil {
 		return func(io.Writer) {}
 	}
-	return update.Start(platform.CurrentVersion(), filepath.Join(home, ".steadybit", "update-check.json"))
+	return update.Start(platform.CurrentVersion(), cache)
+}
+
+func completing(args []string) bool {
+	for _, arg := range args {
+		if arg == "completion" || strings.HasPrefix(arg, "__complete") {
+			return true
+		}
+	}
+	return false
 }

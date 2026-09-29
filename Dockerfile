@@ -22,4 +22,8 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
 FROM alpine:3
 RUN apk upgrade --no-cache
 COPY --from=builder /steadybit /usr/local/bin/steadybit
+# A container is started fresh for each run, often in a pipeline whose CI variables are
+# not passed in, and is updated by pulling a newer image, so the daily release check
+# would only ask GitHub every time and give the wrong advice.
+ENV STEADYBIT_NO_UPDATE_CHECK=1
 ENTRYPOINT ["steadybit"]

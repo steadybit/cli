@@ -5,6 +5,8 @@ package update
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -24,9 +26,9 @@ func github(t *testing.T, tag string) *atomic.Int32 {
 		w.WriteHeader(http.StatusFound)
 	}))
 	t.Cleanup(server.Close)
-	original, originalInteractive, originalNow := LatestURL, Interactive, Now
+	original, originalInteractive, originalNow, originalFetch := LatestURL, Interactive, Now, fetch
 	LatestURL, Interactive = server.URL, func() bool { return true }
-	t.Cleanup(func() { LatestURL, Interactive, Now = original, originalInteractive, originalNow })
+	t.Cleanup(func() { LatestURL, Interactive, Now, fetch = original, originalInteractive, originalNow, originalFetch })
 	return &asked
 }
 
@@ -87,13 +89,47 @@ func TestStaysQuietWhereNobodyWouldSeeIt(t *testing.T) {
 // Offline, the check is not retried on every command until the next day.
 func TestAnUnreachableGitHubIsNotAskedAgainThatDay(t *testing.T) {
 	github(t, "v6.1.0")
-	LatestURL = "http://127.0.0.1:1/releases/latest"
+	fetch = func(context.Context) (string, error) { return "", errors.New("offline") }
 	cache := filepath.Join(t.TempDir(), "update-check.json")
 
 	assert.Empty(t, notice("6.0.1", cache))
 	checked := read(cache)
 	assert.False(t, checked.CheckedAt.IsZero())
 	assert.Empty(t, checked.Latest)
+}
+
+// Behind a firewall that drops the request, it runs out of time; the check is still
+// recorded before the command ends, or every command would wait again.
+func TestARequestThatTimesOutIsStillRecorded(t *testing.T) {
+	github(t, "v6.1.0")
+	fetch = func(ctx context.Context) (string, error) {
+		<-ctx.Done()
+		return "", ctx.Err()
+	}
+	cache := filepath.Join(t.TempDir(), "update-check.json")
+
+	notice("6.0.1", cache)
+
+	assert.False(t, read(cache).CheckedAt.IsZero())
+}
+
+// A check dated in the future comes from a wrong clock; it is repeated, not trusted.
+func TestAFutureCheckIsDue(t *testing.T) {
+	asked := github(t, "v6.1.0")
+	cache := filepath.Join(t.TempDir(), "update-check.json")
+	write(cache, state{CheckedAt: time.Now().Add(365 * 24 * time.Hour), Latest: "6.0.1"})
+
+	assert.Contains(t, notice("6.0.1", cache), "6.0.1 → 6.1.0")
+	assert.EqualValues(t, 1, asked.Load())
+}
+
+func TestTheVariableTurnsTheCheckOffUnlessItSaysNo(t *testing.T) {
+	for value, off := range map[string]bool{"": false, "0": false, "false": false, "FALSE": false, "1": true, "true": true, "yes": true} {
+		env := map[string]string{"STEADYBIT_NO_UPDATE_CHECK": value}
+		assert.Equal(t, off, turnedOff(func(k string) string { return env[k] }), value)
+	}
+	ci := map[string]string{"GITHUB_ACTIONS": "true", "CI": "true"}
+	assert.True(t, turnedOff(func(k string) string { return ci[k] }))
 }
 
 func TestComparesVersionsByNumber(t *testing.T) {
