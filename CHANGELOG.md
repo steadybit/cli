@@ -5,6 +5,8 @@
 - Linux packages: a signed `steadybit-cli` `.deb` and `.rpm`, with shell completions, are
   attached to every release (`steadybit-cli_amd64.deb`, `steadybit-cli_arm64.rpm`, …).
 
+## v6.0.1
+
 - `experiment apply` and `experiment run` no longer send a `version` from the file. The
   platform now rejects a stale one with `409 Conflict`, so a file downloaded from the UI,
   which carries one, failed to apply once the experiment was edited after the download.
