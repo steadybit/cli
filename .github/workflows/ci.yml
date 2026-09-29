@@ -175,7 +175,7 @@ jobs:
           # Pushes the cask to steadybit/homebrew-tap, which GITHUB_TOKEN cannot write to.
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           NFPM_KEY_FILE: gpg.key
-          NFPM_DEFAULT_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+          NFPM_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
       - name: Publish the Linux packages to packages.steadybit.com
         if: ${{ !contains(github.ref_name, '-') }}
         uses: steadybit/.github/actions/gar-upload-linux-packages@main
@@ -234,7 +234,7 @@ jobs:
           args: release --snapshot --clean
         env:
           HOMEBREW_TAP_TOKEN: unused
-          NFPM_DEFAULT_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
+          NFPM_PASSPHRASE: ${{ secrets.MAVEN_GPG_PRIVATE_KEY_PASSWORD }}
       - name: Install the .deb and run it
         run: |
           sudo apt-get install -y ./dist/steadybit-cli_amd64.deb
