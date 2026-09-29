@@ -75,7 +75,21 @@ func newTarget() *cobra.Command {
 	_ = values.MarkFlagRequired("key")
 	attribute.AddCommand(keys, values)
 
-	cmd.AddCommand(query, attribute)
+	var s target.StatsOptions
+	stats := &cobra.Command{
+		Use:   "stats",
+		Short: "Count the targets of each type in the tenant, optionally only those matching a query.",
+		Args:  cobra.NoArgs,
+		Example: examples(
+			"steadybit target stats",
+			`steadybit target stats -q 'k8s.namespace="shop"' -t json`,
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return target.Stats(ctx, c, s) }),
+	}
+	stats.Flags().StringVarP(&s.Query, "query", "q", "", "Only count targets matching this target query.")
+	stats.Flags().StringVarP(&s.Type, "type", "t", "", `Print the counts by target type as "json" or "yaml" instead of a table.`)
+
+	cmd.AddCommand(query, attribute, stats)
 	return cmd
 }
 

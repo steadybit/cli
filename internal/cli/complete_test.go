@@ -31,6 +31,21 @@ func TestCompletesTeamsBeforeExperimentKeys(t *testing.T) {
 	assert.Equal(t, []string{"ADM"}, p.Requests("GET /api/experiments")[0].Query["team"])
 }
 
+func TestCompletesEnvironmentNamesButNeverFiles(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/environments", platformtest.Reply{JSON: map[string]any{"environments": []any{
+		map[string]any{"id": "e1", "name": "Global"}, map[string]any{"id": "e2", "name": "Shop"},
+	}}})
+
+	names, directive := completeEnvironmentNames(context.Background(), p.Client, "sh")
+	assert.Equal(t, []string{"Shop"}, names)
+	assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+
+	none, directive := completeEnvironmentNames(context.Background(), p.Client, "nosuch")
+	assert.Empty(t, none)
+	assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+}
+
 // Every flag that names something on the platform completes it.
 func TestIdFlagsComplete(t *testing.T) {
 	root := newRoot()
@@ -38,6 +53,8 @@ func TestIdFlagsComplete(t *testing.T) {
 		{"experiment", "get", "--key"}, {"experiment", "run", "--template"}, {"schedule", "delete", "--id"},
 		{"service", "risk", "--id"}, {"service-profile", "get", "--id"}, {"template", "get", "--id"},
 		{"export", "--team"}, {"schedule", "create", "--experiment"},
+		{"execution", "list", "--key"}, {"execution", "list", "--team"}, {"execution", "list", "--environment"},
+		{"execution", "list", "--state"}, {"service", "list", "--environment"},
 	} {
 		cmd, _, err := root.Find(path[:len(path)-1])
 		require.NoError(t, err, strings.Join(path, " "))

@@ -49,6 +49,9 @@ Profiles in `~/.steadybit` keep working.
 
 Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
 
+At a terminal, the CLI tells you once a day when a newer release is out. Set
+`STEADYBIT_NO_UPDATE_CHECK=1` to turn that off; it is always off in CI.
+
 ## Authorization
 
 You need an API access token. You can grab one via our [platform](https://platform.steadybit.com/settings/api-tokens) through the `Settings -> API Access Tokens` page.
@@ -146,11 +149,20 @@ steadybit experiment run --template <template-id> --team ADM --placeholders valu
 ### Experiment runs
 
 ```bash
+steadybit execution list --team ADM --state FAILED --from 2026-09-28
+steadybit execution list --team ADM --state FAILED ERRORED --from 2026-09-28 --fail-on-match   # fail a pipeline
 steadybit execution get -i 1234 -t json
 steadybit execution cancel -i 1234
 steadybit execution property set -i 1234 -k approvedBy --value "Jane Doe"
 steadybit execution artifact list -i 1234
 steadybit execution artifact download -i 1234 -d ./artifacts
+```
+
+Show the state of an experiment's latest run in a README with a status badge. The badge
+URL carries the tenant key, never the access token:
+
+```bash
+steadybit experiment badge -k ADM-1              # Markdown; --format html or url
 ```
 
 ### Experiment schedules
@@ -229,6 +241,7 @@ steadybit access-token create --name ci --type TEAM --team ADM --expires-at 2026
 steadybit user invite --email jane@example.com --team ADM
 steadybit killswitch status
 steadybit audit-log --from 2026-09-01 -t json
+steadybit license show
 steadybit report experiments-executed --group-by STATE --rollup MONTHLY
 ```
 
@@ -240,6 +253,7 @@ Commands that cannot be undone, such as `killswitch activate`, `access-token del
 ```bash
 steadybit target query -e Global --target-type com.steadybit.extension_container.container --attribute k8s.namespace
 steadybit target attribute values -e Global --target-type com.steadybit.extension_container.container -k k8s.namespace
+steadybit target stats -q 'k8s.namespace="shop"'
 steadybit action list --kind ATTACK
 ```
 
@@ -251,8 +265,9 @@ steadybit execution watch -k ADM-1            # follow the latest run of an expe
 steadybit experiment get -k ADM-1 --profile prod   # use another configured profile for one command
 ```
 
-Shell completion (`steadybit completion --help`) completes experiment keys, team keys and
-the ids of templates, schedules, services and service profiles from the platform.
+Shell completion (`steadybit completion --help`) completes experiment keys, team keys,
+environment names, and the ids of templates, schedules, services and service profiles
+from the platform.
 
 ## GitOps
 
@@ -296,15 +311,17 @@ platform fills in with defaults are not reported as differences.
 
 ## In CI
 
-`experiment run --wait` fails the job when a run fails, and a few options make it fit
-pipelines:
+`experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
+still watches the run until it started, for up to 15 seconds, and fails when the platform
+canceled or errored it before it ran. A few options make it fit pipelines:
 
-| Option                        | Does                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                |
-| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                 |
-| `--show-steps`                | Prints each step's state as it changes                                  |
+| Option                        | Does                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `--report steadybit.xml`      | A JUnit report, one test case per step; `.json` for JSON                 |
+| `--timeout 30m`               | Cancels the run and fails when it has not ended in time                  |
+| `--show-steps`                | Prints each step's state as it changes                                   |
 | `--keep-running-on-interrupt` | Leaves the run going when the job is cancelled; by default it is stopped |
+| `--parallel 3`                | Runs up to 3 of the experiments at once; all are reported                |
 
 In GitHub Actions a summary of every run is added to the job summary.
 

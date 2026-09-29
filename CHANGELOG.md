@@ -2,6 +2,45 @@
 
 ## v6.1.0
 
+- `experiment run --parallel N` runs up to N of the experiments given with `-f` at once,
+  telling the platform they run in parallel on purpose. Each run's lines start with its key,
+  a failed run does not stop the others, and the report and job summary cover all of them.
+- `experiment run --no-wait` watches the run until it started, for up to 15 seconds, and
+  fails when the platform canceled or errored it before it ran. The platform accepts a run
+  and then cancels it when another experiment is running, so a pipeline used to pass on a
+  run that never ran. A run that fails on its own steps still passes, as it did.
+- `execution list` searches the runs of all experiments, most recent first, with every
+  filter the API has: teams (and `--exclude-team`), experiment keys, states, environments,
+  services, name, and the times a run was created (`--from`/`--to`), requested
+  (`--requested-from`/`--requested-to`) and ended (`--ended-from`/`--ended-to`); a date as
+  the end of a range takes the whole day, UTC. It prints a table or, with `-t json|yaml`,
+  the platform's items, and `--jq` applies. It lists the 20 most recent by default, and
+  says on STDERR when `-t` or `--jq` output was cut; `--limit 0` lists all.
+  `--fail-on-match` exits with 1 when any run matches, so a pipeline can stop on a failed
+  run: `execution list --team ADM --state FAILED ERRORED
+  --from 2026-09-28 --fail-on-match`.
+- Shell completion completes environment names for `--environment`.
+- At a terminal, the CLI tells you once a day when a newer release is out, on stderr, with
+  `brew upgrade steadybit` when it was installed with Homebrew. It stays quiet in CI, when
+  stderr is not a terminal, for builds that are not releases, and with
+  `STEADYBIT_NO_UPDATE_CHECK` set. The check asks GitHub where its latest release is and
+  waits for the answer at most a second, once a day.
+- `experiment badge -k ADM-1` prints the Markdown that embeds the experiment's status
+  badge in a README, `--format html` the HTML and `--format url` the image URL;
+  `--tag` prints the badge of a tag instead, which invites to create the experiment
+  while there is none. The URLs carry the tenant key, never the access token. The
+  tenant key is read from the license, which needs an admin access token; `--tenant`
+  gives it otherwise, and with an admin access token must be the token's own tenant.
+  The badge is fetched once without the token, so a wrong tenant key fails the command
+  rather than showing as a broken image. `-t json|yaml` prints every format at once and
+  does not combine with `--format`.
+- `target stats` counts the targets of each type in the tenant, optionally only those
+  matching a target query (`-q`), as a table or with `-t json|yaml` as the platform
+  sends it.
+- `license show` prints the tenant's license, when it expires, and how much of each
+  limit is used; `-t json|yaml` prints the platform's summary. `license report`
+  downloads the license usage report, a zip archive, under the platform's name without
+  overwriting a file, or to `-o`. Both need an admin access token.
 - `export --tenant -d dir` writes the tenant's configuration, to keep in Git: experiment
   templates, environments, teams, property definitions, hubs, webhook, Slack and preflight
   integrations and custom service profiles. `diff -d dir` and `apply -d dir [--dry-run]`

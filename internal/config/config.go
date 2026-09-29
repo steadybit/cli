@@ -35,6 +35,9 @@ func dir() (string, error) {
 	return filepath.Join(home, ".steadybit"), nil
 }
 
+// Path is where the CLI keeps a file of its own state, next to the profiles.
+func Path(name string) (string, error) { return file(name) }
+
 func file(name string) (string, error) {
 	d, err := dir()
 	if err != nil {
