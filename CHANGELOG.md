@@ -2,6 +2,8 @@
 
 ## v6.2.2
 
+- The README tells how to move a pipeline from the `steadybit/run-experiment` action,
+  which is being deprecated, to `experiment run`.
 - `execution property set` with a single `--value` sets a list property, such as a
   `STRING_LIST`, to a list of that one value; the platform refused it with "must be a
   list of strings". Found by the platform test, which now covers templates, run
@@ -18,7 +20,7 @@
 ## v6.2.0
 
 - `experiment run` can do what the `steadybit/run-experiment` GitHub Action does, so that
-  the action can run on the CLI:
+  pipelines using the action can move to the CLI:
   - `--expect-state` passes once the run reaches a state, which need not be its end, such
     as `FAILED` for an experiment expected to find a weakness, or `RUNNING`, and fails when
     it ends in another; `--expect-reason` also requires the run's reason.
