@@ -693,6 +693,23 @@ func keyByExternalID(ctx context.Context, c *platform.Client, externalID string)
 
 var terminal = map[string]bool{"FAILED": true, "ERRORED": true, "CANCELED": true, "COMPLETED": true}
 
+// passedThrough tells whether a run that ended went through the state expected on the
+// way: between two polls a short run can go from PREPARED to COMPLETED. A run refused
+// while another one ran has no start, and never reached PREPARED or RUNNING. A reason
+// belongs to the state it was seen with, so an expected one needs the state itself.
+func passedThrough(run *RunResult, o WaitOptions) bool {
+	if !terminal[run.State] || o.ExpectReason != "" {
+		return false
+	}
+	switch o.ExpectState {
+	case "CREATED":
+		return true
+	case "PREPARED", "RUNNING":
+		return !run.Started.IsZero()
+	}
+	return false
+}
+
 // WaitOptions shape what `run --wait` does besides waiting.
 type WaitOptions struct {
 	// Timeout cancels the run once it has taken this long; zero waits indefinitely.
@@ -706,7 +723,8 @@ type WaitOptions struct {
 	// Prefix starts each line about the run, telling runs apart when several go at once.
 	Prefix string
 	// ExpectState passes the run once it reaches this state, which need not be an end
-	// such as RUNNING, and fails it when it ends in another. Empty expects COMPLETED.
+	// such as RUNNING, and fails it when it ends in another. A run that ended passes a
+	// state it went through without a poll seeing it. Empty expects COMPLETED.
 	ExpectState string
 	// ExpectReason also requires the run's reason to be exactly this.
 	ExpectReason string
@@ -829,7 +847,7 @@ func wait(ctx context.Context, c *platform.Client, location string, o WaitOption
 				}
 			}
 		}
-		if o.ExpectState != "" && run.State == o.ExpectState {
+		if o.ExpectState != "" && (run.State == o.ExpectState || passedThrough(run, o)) {
 			if o.ExpectReason != "" && run.Reason != o.ExpectReason {
 				return run, unexpected(fmt.Sprintf("Experiment %s (#%d) %s with reason %q, but the reason %q was expected", run.Key, run.ID, strings.ToLower(run.State), run.Reason, o.ExpectReason))
 			}
