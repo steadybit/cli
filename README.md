@@ -426,8 +426,9 @@ steadybit service list --team ADM --jq '.[] | "\(.id) \(.name)"'
 
 ## Container Image
 
-You can also use the cli via our container image:
+You can also use the cli via our container image. `-e STEADYBIT_TOKEN` passes the token
+from your environment, so it stays out of the command and your shell history:
 
 ```sh
-docker run -e"STEADYBIT_TOKEN=****" steadybit/cli:latest experiment get -k ADM-1
+docker run --rm -e STEADYBIT_TOKEN steadybit/cli:6 experiment get -k ADM-1
 ```
