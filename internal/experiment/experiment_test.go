@@ -1055,8 +1055,12 @@ func TestAParallelRunThatCannotStartIsReported(t *testing.T) {
 }
 
 // run is one poll of a run, for the expectation tests.
-func runState(state, reason string) platformtest.Reply {
-	return platformtest.Reply{JSON: map[string]any{"id": 1, "key": "TST-1", "state": state, "reason": reason}}
+func runState(state, reason string, started bool) platformtest.Reply {
+	run := map[string]any{"id": 1, "key": "TST-1", "state": state, "reason": reason}
+	if started {
+		run["started"] = "2026-09-29T16:21:07.81269Z"
+	}
+	return platformtest.Reply{JSON: run}
 }
 
 func TestExpectedStatesAndReasons(t *testing.T) {
@@ -1066,12 +1070,20 @@ func TestExpectedStatesAndReasons(t *testing.T) {
 		expect     experiment.WaitOptions
 		err        string
 		lastPolled int
+		started    bool
 	}{
 		"a failure that was expected passes":       {states: []string{"RUNNING", "FAILED"}, reason: "Check failure.", expect: experiment.WaitOptions{ExpectState: "FAILED"}},
 		"RUNNING passes before the run ends":       {states: []string{"CREATED", "RUNNING", "COMPLETED"}, expect: experiment.WaitOptions{ExpectState: "RUNNING"}, lastPolled: 2},
 		"another end fails, naming both":           {states: []string{"COMPLETED"}, expect: experiment.WaitOptions{ExpectState: "FAILED"}, err: "Experiment TST-1 (#1) completed, but failed was expected"},
 		"the reason has to match exactly":          {states: []string{"FAILED"}, reason: "Check failure.", expect: experiment.WaitOptions{ExpectState: "FAILED", ExpectReason: "Timeout."}, err: `Experiment TST-1 (#1) failed with reason "Check failure.", but the reason "Timeout." was expected`},
 		"without an expectation, as it always was": {states: []string{"FAILED"}, reason: "Check failure.", err: "Experiment TST-1 (#1) failed, reason: Check failure."},
+		// Polls a few seconds apart can miss a state a short run went through.
+		"RUNNING passes when the run ended after it started":  {states: []string{"COMPLETED"}, started: true, expect: experiment.WaitOptions{ExpectState: "RUNNING"}},
+		"RUNNING passes when a started run failed":            {states: []string{"FAILED"}, started: true, expect: experiment.WaitOptions{ExpectState: "RUNNING"}},
+		"PREPARED passes when a started run was canceled":     {states: []string{"CANCELED"}, started: true, expect: experiment.WaitOptions{ExpectState: "PREPARED"}},
+		"RUNNING fails for a run that never started":          {states: []string{"CANCELED"}, reason: "Another experiment was running.", expect: experiment.WaitOptions{ExpectState: "RUNNING"}, err: "Experiment TST-1 (#1) canceled, reason: Another experiment was running., but running was expected"},
+		"a reason expected with RUNNING needs RUNNING itself": {states: []string{"COMPLETED"}, started: true, expect: experiment.WaitOptions{ExpectState: "RUNNING", ExpectReason: "x"}, err: "Experiment TST-1 (#1) completed, but running was expected"},
+		"an end expected is not passed through":               {states: []string{"COMPLETED"}, started: true, expect: experiment.WaitOptions{ExpectState: "FAILED"}, err: "Experiment TST-1 (#1) completed, but failed was expected"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := platformtest.New(t)
@@ -1082,7 +1094,7 @@ func TestExpectedStatesAndReasons(t *testing.T) {
 				if i >= len(tc.states) {
 					i = len(tc.states) - 1
 				}
-				return runState(tc.states[i], tc.reason)
+				return runState(tc.states[i], tc.reason, tc.started)
 			})
 
 			_, err := platformtest.Stdout(t, func() error {
@@ -1122,7 +1134,7 @@ func TestBusyRetriesWaitInsteadOfRunningInParallel(t *testing.T) {
 				}
 				return started(p, "TST-1", 1)
 			})
-			p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", ""))
+			p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", "", false))
 
 			out, err := platformtest.Stdout(t, func() error {
 				return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, BusyRetries: 3})
@@ -1146,9 +1158,9 @@ func TestBusyRetriesAlsoCoverARunCanceledForAnother(t *testing.T) {
 	var polls atomic.Int32
 	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
 		if polls.Add(1) == 1 {
-			return runState("CANCELED", "The run was started via CLI, but another experiment was running in parallel.")
+			return runState("CANCELED", "The run was started via CLI, but another experiment was running in parallel.", false)
 		}
-		return runState("COMPLETED", "")
+		return runState("COMPLETED", "", false)
 	})
 
 	_, err := platformtest.Stdout(t, func() error {
@@ -1165,9 +1177,9 @@ func TestExpectationRetriesRunTheExperimentAgain(t *testing.T) {
 	var polls atomic.Int32
 	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
 		if polls.Add(1) <= 2 {
-			return runState("FAILED", "flaky")
+			return runState("FAILED", "flaky", false)
 		}
-		return runState("COMPLETED", "")
+		return runState("COMPLETED", "", false)
 	})
 	report := filepath.Join(t.TempDir(), "run.json")
 
@@ -1200,7 +1212,7 @@ func TestRunByExternalID(t *testing.T) {
 		return platformtest.Reply{JSON: map[string]any{"experiments": []any{}}}
 	})
 	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
-	p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", ""))
+	p.Reply("GET /api/experiments/executions/1", runState("COMPLETED", "", false))
 	run := func(o experiment.RunOptions) error {
 		o.Yes, o.Wait = true, true
 		_, err := platformtest.Stdout(t, func() error { return experiment.Run(ctx, p.Client, o) })

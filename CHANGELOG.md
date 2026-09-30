@@ -1,5 +1,12 @@
 # Changelog
 
+## v6.2.1
+
+- `--expect-state RUNNING` (or `PREPARED`, `CREATED`) passes for a run that ended after it
+  started. The CLI checks a run every 5 seconds, and a short run can go from being
+  prepared to its end between two checks; it failed with "completed, but running was
+  expected". A run the platform refused, which never started, still fails.
+
 ## v6.2.0
 
 - `experiment run` can do what the `steadybit/run-experiment` GitHub Action does, so that

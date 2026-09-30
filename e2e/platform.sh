@@ -105,7 +105,8 @@ trap cleanup EXIT
 
 echo "steadybit $(steadybit --version) against ${STEADYBIT_URL:-https://platform.steadybit.com}, team $TEAM"
 
-experiment experiments/a.yml a 5s
+# a runs long enough for a poll to see it running, which one check expects.
+experiment experiments/a.yml a 15s
 experiment experiments/b.yml b 8s
 experiment long.yml long 90s
 
