@@ -74,6 +74,7 @@ func TestPropertyValues(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/executions/42/properties/*/set", platformtest.Reply{})
 	p.Reply("POST /api/experiments/executions/42/properties/*/add", platformtest.Reply{})
+	p.Reply("GET /api/properties/definitions/k", platformtest.Reply{JSON: map[string]any{"key": "k", "dataType": "STRING"}})
 	set := func(values []string, asJSON bool) string {
 		_, err := platformtest.Stdout(t, func() error {
 			return execution.SetProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "k", Values: values, JSON: asJSON})
@@ -90,7 +91,15 @@ func TestPropertyValues(t *testing.T) {
 	assert.Equal(t, `false`, set([]string{"false"}, true))
 	assert.Equal(t, `""`, set([]string{""}, false))
 
-	err := execution.SetProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "k", Values: []string{"seven"}, JSON: true})
+	p.Reply("GET /api/properties/definitions/tickets", platformtest.Reply{JSON: map[string]any{"key": "tickets", "dataType": "STRING_LIST"}})
+	_, err := platformtest.Stdout(t, func() error {
+		return execution.SetProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "tickets", Values: []string{"SHOP-1"}})
+	})
+	require.NoError(t, err)
+	requests := p.Requests("POST /api/experiments/executions/42/properties/tickets/set")
+	assert.Equal(t, `["SHOP-1"]`, string(requests[0].Body), "a single value of a list property is sent as a list")
+
+	err = execution.SetProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "k", Values: []string{"seven"}, JSON: true})
 	assert.ErrorContains(t, err, "'seven' is not valid JSON")
 	assert.EqualError(t, execution.AddProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "k", Values: []string{"a", "b"}}),
 		"Adding to a list property takes exactly one --value.")
@@ -99,6 +108,8 @@ func TestPropertyValues(t *testing.T) {
 func TestPropertyErrorsNameTheProperty(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/experiments/executions/42/properties/locked/set", platformtest.Reply{Status: 422, JSON: map[string]any{"title": "not editable"}})
+	// A definition the token may not read leaves the value as given.
+	p.Reply("GET /api/properties/definitions/locked", platformtest.Reply{Status: 403})
 
 	err := execution.SetProperty(ctx, p.Client, execution.PropertyOptions{ID: 42, Key: "locked", Values: []string{"x"}})
 
