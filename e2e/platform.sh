@@ -428,9 +428,10 @@ hubName: $MARK-$RUN-hub
 hubLink: https://hub.steadybit.com
 repositoryUrl: https://raw.githubusercontent.com/steadybit/reliability-hub-db/main/index.json
 EOF
-  check "hub apply --synchronize adds the hub and fetches its templates" prints "synchronized" admin hub apply -f hub.yml --synchronize
+  # The platform limits how often a hub's repository is fetched, so it is fetched once.
+  check "hub apply adds the hub" applied_with_id hub.yml admin hub apply
   check "hub diff finds no drift" exits_with 0 admin hub diff -f hub.yml
-  check "hub resync fetches it again" prints "synchronized" admin hub resync -i "$(id_of hub.yml)"
+  check "hub resync fetches its templates" prints "synchronized" admin hub resync -i "$(id_of hub.yml)"
   check "hub delete deletes it" exits_with 0 admin hub delete -i "$(id_of hub.yml)" --yes
 
   # For the new team only, which runs nothing, so none is ever called.
