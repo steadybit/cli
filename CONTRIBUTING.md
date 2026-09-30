@@ -69,13 +69,18 @@ docker run --rm -v "$PWD/e2e:/e2e" --entrypoint sh steadybit/cli:under-test /e2e
 The platform test uses the released CLI the way a pipeline does, against the dev
 platform with the team token of the test team CLI-E2E (key `CLI`): experiments applied
 from files, run in parallel with a report, checked for drift, canceled by SIGTERM,
-refused while another runs, and found by an `execution list` gate. It only uses wait
-steps and deletes what it creates. CI runs it weekly, after each stable release, and on
-pull requests that change it; a nightly job only checks that the token and the API
-still work. To run it by hand, with `steadybit` on the `PATH`:
+refused while another runs, and found by an `execution list` gate. Then the rest of
+the platform the CLI covers: templates, run properties, schedules, services and service
+profiles with the team token, and environments, teams, access tokens, hubs,
+integrations and the audit log with an admin token. It only uses wait steps, and deletes
+what it creates, which is named `cli-e2e-ci-*`. It only reads the kill switch and sends
+no invitation. CI runs it weekly, after each stable release, and on pull requests that
+change it; a nightly job only checks that the token and the API still work. To run it by
+hand, with `steadybit` on the `PATH` (without the admin token, those checks are skipped):
 
 ```sh
-STEADYBIT_URL=https://platform.dev.steadybit.com STEADYBIT_TOKEN=<token of team CLI> e2e/platform.sh
+STEADYBIT_URL=https://platform.dev.steadybit.com STEADYBIT_TOKEN=<token of team CLI> \
+  STEADYBIT_E2E_ADMIN_TOKEN=<admin token> e2e/platform.sh
 ```
 
 ### Output compatibility

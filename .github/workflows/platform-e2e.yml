@@ -1,8 +1,8 @@
 name: Platform E2E
 
 # Uses the CLI against the dev platform the way a pipeline does (e2e/platform.sh), with
-# the team token of the test team CLI-E2E. Only wait steps, and everything it creates is
-# deleted afterwards.
+# the team token of the test team CLI-E2E, then the rest of what the CLI covers, partly
+# with an admin token. Only wait steps, and everything it creates is deleted afterwards.
 on:
   # Weekly, Tuesday evening, so a change on the platform side shows within a week. Cron
   # is UTC: 19:00 in Berlin in summer, 18:00 in winter.
@@ -34,6 +34,7 @@ jobs:
     env:
       STEADYBIT_URL: https://platform.dev.steadybit.com
       STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_E2E_TOKEN }}
+      STEADYBIT_E2E_ADMIN_TOKEN: ${{ secrets.STEADYBIT_E2E_ADMIN_TOKEN }}
       STEADYBIT_E2E_TEAM: CLI
       STEADYBIT_E2E_ENVIRONMENT: Global
     steps:

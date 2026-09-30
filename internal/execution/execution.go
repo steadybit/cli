@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/steadybit/cli/v6/api"
@@ -111,15 +112,29 @@ func SetProperty(ctx context.Context, c *platform.Client, o PropertyOptions) err
 		}
 		values[i] = parsed
 	}
-	// Several values set a list property; a single one stays a scalar.
+	// Several values set a list property. A single one stays a scalar, unless the property
+	// holds a list: the platform refuses a scalar for it.
 	var body json.RawMessage
-	if len(values) == 1 {
+	if len(values) == 1 && !isList(ctx, c, o.Key) {
 		body = values[0]
 	} else {
 		body, _ = json.Marshal(values)
 	}
 	_, _, err := platform.Read(c.SetExecutionPropertyValueWithBody(ctx, o.ID, o.Key, "application/json", bytes.NewReader(body)))
 	return reportProperty(err, "set", o)
+}
+
+// isList tells whether the property's definition holds a list, such as STRING_LIST. When
+// the definition cannot be read, the value is sent as given and the platform judges it.
+func isList(ctx context.Context, c *platform.Client, key string) bool {
+	body, _, err := platform.Read(c.GetPropertyDefinition(ctx, key))
+	if err != nil {
+		return false
+	}
+	var definition struct {
+		DataType string `json:"dataType"`
+	}
+	return json.Unmarshal(body, &definition) == nil && strings.HasSuffix(definition.DataType, "_LIST")
 }
 
 func AddProperty(ctx context.Context, c *platform.Client, o PropertyOptions) error {

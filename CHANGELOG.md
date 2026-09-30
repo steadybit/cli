@@ -1,5 +1,13 @@
 # Changelog
 
+## v6.2.2
+
+- `execution property set` with a single `--value` sets a list property, such as a
+  `STRING_LIST`, to a list of that one value; the platform refused it with "must be a
+  list of strings". Found by the platform test, which now covers templates, run
+  properties, schedules, services, environments, teams, access tokens, hubs and
+  integrations.
+
 ## v6.2.1
 
 - `--expect-state RUNNING` (or `PREPARED`, `CREATED`) passes for a run that ended after it
