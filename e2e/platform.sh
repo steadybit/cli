@@ -198,8 +198,9 @@ until_run_is "$LONG" RUNNING
 check "--no-wait fails on a run the platform refused" exits_with 1 steadybit experiment run -k "$A" --yes --no-wait
 check "execution list --fail-on-match gates on that canceled run" exits_with 1 \
   steadybit execution list --key "$A" --state CANCELED --ended-from "$(date -u +%F)" --limit 1 --fail-on-match
-# What the run-experiment action relies on: the experiment found by its external id, an
-# expected state reached before the end, and waiting while another experiment runs.
+# What pipelines moving from the run-experiment action rely on: the experiment found by
+# its external id, an expected state reached before the end, and waiting while another
+# experiment runs.
 check "the experiment is found by its external id and passes at the expected state" exits_with 0 \
   steadybit experiment run --external-id "$MARK-$RUN-a" --yes --allowParallel --expect-state RUNNING --report expect.json
 check "the report has the state reached and the run's API location" sh -c '

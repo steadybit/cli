@@ -355,6 +355,53 @@ In GitHub Actions a summary of every run is added to the job summary.
     report_paths: steadybit.xml
 ```
 
+### Moving from `steadybit/run-experiment`
+
+The `steadybit/run-experiment` action is being deprecated in favor of this CLI, which
+does what it does and more: it cancels the attack when the job is canceled, runs several
+experiments at once, writes a JUnit report, and works the same in any CI. A step using
+the action becomes:
+
+```yaml
+# Before
+- uses: steadybit/run-experiment@v1
+  with:
+    apiAccessToken: ${{ secrets.STEADYBIT_TOKEN }}
+    experimentKey: ADM-1
+    expectedState: FAILED
+
+# After
+- uses: steadybit/cli@v6
+- run: steadybit experiment run -k ADM-1 --yes --busy-retries 3 --expect-state FAILED
+  env:
+    STEADYBIT_TOKEN: ${{ secrets.STEADYBIT_TOKEN }}
+```
+
+| Action input                              | `experiment run`                                            |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `apiAccessToken`                          | the `STEADYBIT_TOKEN` variable                              |
+| `baseURL`                                 | the `STEADYBIT_URL` variable, for an on-premise platform    |
+| `experimentKey`                           | `-k ADM-1`                                                  |
+| `externalId`                              | `--external-id shop-latency`                                |
+| `expectedState`                           | `--expect-state FAILED`                                     |
+| `expectedReason`, `expectedFailureReason` | `--expect-reason "..."`                                     |
+| `parallel: true`                          | `--allowParallel`                                           |
+| `maxRetries` (3 by default)               | `--busy-retries 3`; the CLI does not retry unless asked     |
+| `maxRetriesOnExpectationFailure`          | `--expectation-retries 2`                                   |
+| `delayBetweenRetriesOnExpectationFailure` | `--expectation-retry-interval 1m` (a duration, not ms)      |
+| `maxRetriesOnValidationFailure`           | `--retries 2`                                               |
+| `delayBetweenRetriesOnValidationFailure`  | `--retryInterval 15` (seconds)                              |
+
+The action's outputs are in the JSON report: `--report run.json` writes each run's `id`,
+`state`, `reason` and `apiLocation` (the action's `executionUrl`).
+
+```yaml
+- id: chaos
+  run: |
+    steadybit experiment run -k ADM-1 --yes --report run.json
+    echo "state=$(jq -r '.[0].state' run.json)" >> "$GITHUB_OUTPUT"
+```
+
 ### GitLab CI
 
 ```yaml
