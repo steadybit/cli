@@ -6,8 +6,10 @@
 // client, so a breaking change in the platform fails the build instead of a customer's
 // pipeline.
 //
-//	go run ./internal/tools/spec fetch   download the live spec into openapi/platform-api.json
-//	go generate ./api                    regenerate api/platform.gen.go from the committed spec
+//	go run ./internal/tools/spec fetch              download the live spec into openapi/platform-api.json
+//	go generate ./api                               regenerate api/platform.gen.go from the committed spec
+//	go run ./internal/tools/spec coverage [spec]    list the operations no command calls (a file or URL;
+//	                                                the committed spec by default)
 package main
 
 import (
@@ -29,11 +31,19 @@ const specFile = "openapi/platform-api.json"
 var slackWebhook = regexp.MustCompile(`https://hooks\.slack\.com/services/[^"\s\\]+`)
 
 func main() {
-	if len(os.Args) != 2 || os.Args[1] != "fetch" {
-		fmt.Fprintln(os.Stderr, "usage: go run ./internal/tools/spec fetch")
+	var err error
+	switch {
+	case len(os.Args) == 2 && os.Args[1] == "fetch":
+		err = fetch()
+	case len(os.Args) == 2 && os.Args[1] == "coverage":
+		err = coverage(specFile)
+	case len(os.Args) == 3 && os.Args[1] == "coverage":
+		err = coverage(os.Args[2])
+	default:
+		fmt.Fprintln(os.Stderr, "usage: go run ./internal/tools/spec fetch | coverage [spec file or URL]")
 		os.Exit(2)
 	}
-	if err := fetch(); err != nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
