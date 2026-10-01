@@ -1,0 +1,26 @@
+name: Check Open API Spec (platform vs cli / PROD)
+
+# The CLI against the API of https://platform.steadybit.com/api/spec,
+# what customers run. Shown on the development dashboard; see spec-check.yml.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+  # A change to the check is run before it is merged.
+  pull_request:
+    paths:
+      - .github/workflows/spec-*.yml
+      - internal/tools/spec/**
+  schedule:
+    - cron: '0 7 * * 1-5'
+
+jobs:
+  check:
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/spec-check.yml
+    with:
+      spec-url: https://platform.steadybit.com/api/spec
+      issue: true
