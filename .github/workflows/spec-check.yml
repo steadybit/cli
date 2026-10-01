@@ -1,0 +1,70 @@
+name: Check Open API Spec
+
+# Checks the CLI against one platform's live API, for spec-diff-platform-prod.yml and
+# spec-diff-platform-dev.yml, whose results the development dashboard shows. It fails
+# when the API changed in a way the CLI no longer builds against, or has an operation no
+# command calls and internal/tools/spec/coverage.go does not list with a reason.
+on:
+  workflow_call:
+    inputs:
+      spec-url:
+        required: true
+        type: string
+      # Keeps one issue open while operations are uncovered, and closes it after. Only
+      # one of the callers does, so the two do not overwrite each other's issue.
+      issue:
+        type: boolean
+        default: false
+
+jobs:
+  check:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Fetch the platform's spec
+        run: go run ./internal/tools/spec fetch
+        env:
+          STEADYBIT_SPEC_URL: ${{ inputs.spec-url }}
+      - run: go generate ./api
+      - name: The CLI builds against this API
+        run: go build ./... && go vet ./...
+      - name: Every operation is called by a command or listed
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPEC_URL: ${{ inputs.spec-url }}
+          OPEN_ISSUE: ${{ inputs.issue && github.event_name == 'schedule' }}
+        run: |
+          go build -o "$RUNNER_TEMP/spec" ./internal/tools/spec
+          status=0
+          "$RUNNER_TEMP/spec" coverage openapi/platform-api.json >result.md 2>&1 || status=1
+          {
+            echo "Every operation of $SPEC_URL is called by a command, deprecated, or listed with a reason in"
+            echo "[\`internal/tools/spec/coverage.go\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/internal/tools/spec/coverage.go)."
+            echo "Those that are not need a command, or a line there saying why not."
+            echo
+            cat result.md
+          } >coverage.md
+          cat coverage.md >>"$GITHUB_STEP_SUMMARY"
+          if [ "$OPEN_ISSUE" = true ]; then
+            title="Platform API operations no CLI command covers"
+            issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+            if [ "$status" -ne 0 ]; then
+              printf '\nUpdated by %s/%s/actions/runs/%s.\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >>coverage.md
+              if [ -n "$issue" ]; then
+                gh issue edit "$issue" --body-file coverage.md
+              else
+                gh issue create --title "$title" --body-file coverage.md
+              fi
+            elif [ -n "$issue" ]; then
+              gh issue close "$issue" --comment "Every platform operation is covered or listed again, as of $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            fi
+          fi
+          exit "$status"
