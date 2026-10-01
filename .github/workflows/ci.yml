@@ -43,6 +43,10 @@ jobs:
   # job, which also blocks a release. Changes the CLI does not depend on only warn.
   api-compatibility:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The nightly run opens an issue for operations no command covers.
+      issues: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -68,6 +72,48 @@ jobs:
               git diff --stat -- api/platform.gen.go
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      # Every operation is called by a command, deprecated, or listed with a reason in
+      # internal/tools/spec/coverage.go. Production is the live spec fetched above; dev
+      # shows what is coming. A pull request only reports it; the nightly run keeps one
+      # issue open while anything is uncovered, and closes it once nothing is.
+      - name: Operations no command covers
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          go build -o "$RUNNER_TEMP/spec" ./internal/tools/spec
+          status=0
+          "$RUNNER_TEMP/spec" coverage openapi/platform-api.json >production.md 2>&1 || status=1
+          "$RUNNER_TEMP/spec" coverage https://platform.dev.steadybit.com/api/spec >dev.md 2>&1 || status=1
+          {
+            echo "Every platform operation is called by a command, deprecated, or listed with a reason in"
+            echo "[\`internal/tools/spec/coverage.go\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/internal/tools/spec/coverage.go)."
+            echo "Those that are not need a command, or a line there saying why not."
+            echo
+            echo "**Production** (platform.steadybit.com)"
+            echo
+            cat production.md
+            echo
+            echo "**Dev** (platform.dev.steadybit.com, what is coming)"
+            echo
+            cat dev.md
+          } >coverage.md
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+          [ "$status" -eq 0 ] || echo "::warning::The platform has operations no CLI command covers; see the job summary."
+          [ "$GITHUB_EVENT_NAME" = schedule ] || exit 0
+          title="Platform API operations no CLI command covers"
+          issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [ "$status" -ne 0 ]; then
+            echo >>coverage.md
+            echo "Updated by the nightly run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID." >>coverage.md
+            if [ -n "$issue" ]; then
+              gh issue edit "$issue" --body-file coverage.md
+            else
+              gh issue create --title "$title" --body-file coverage.md
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "Every platform operation is covered or listed again, as of $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           fi
 
   # Nightly, a quick look that the CLI still talks to the real platform: the test team's

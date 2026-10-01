@@ -106,7 +106,18 @@ go build ./...                       # a breaking change fails here
 ```
 
 CI fails when the generated client does not match the committed spec, and builds against
-the live spec daily and before each release. When the API is versioned, use the latest
+the live spec daily and before each release.
+
+Every operation of the spec is called by a command, deprecated, or listed with a reason in
+`internal/tools/spec/coverage.go`; a test fails otherwise, so a spec refresh that brings a
+new endpoint asks for a command or a line saying why there is none. CI runs the same check
+against the live production and dev specs, and the nightly run keeps an issue open while
+the platform has operations no command covers:
+
+```sh
+go run ./internal/tools/spec coverage                                          # the committed spec
+go run ./internal/tools/spec coverage https://platform.dev.steadybit.com/api/spec
+``` When the API is versioned, use the latest
 version only. Experiment designs and other files users keep pass through as documents,
 not generated structs, so that fields the spec does not know yet are never dropped.
 
