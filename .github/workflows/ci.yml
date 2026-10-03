@@ -11,7 +11,7 @@ on:
   # Daily, so a breaking change in the platform API is noticed within a day of it
   # reaching production rather than at the next release of the CLI.
   schedule:
-    - cron: '0 5 * * *'
+    - cron: '0 5 * * 1-5'
 
 jobs:
   verify:
