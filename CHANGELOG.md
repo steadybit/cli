@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.2.3
+
+- Built with Go 1.27.2, which fixes CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031
+  in the Go standard library. The release binaries and Linux packages were built with
+  Go 1.26.2, the container image with Go 1.26.8.
+
 ## v6.2.2
 
 - The README tells how to move a pipeline from the `steadybit/run-experiment` action,
