@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `user list` lists the users of the tenant, with their role, teams, what manages them
+  (SCIM, an LDAP sync, or Steadybit) and their last login; `--query` narrows it down.
+  `user delete` removes a user from the tenant. Both need an admin access token, and
+  the platform refuses to remove users that SCIM or an LDAP sync manages.
+
 ## v6.2.3
 
 - Built with Go 1.27.2, which fixes CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031

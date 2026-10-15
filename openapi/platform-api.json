@@ -8,7 +8,7 @@
       "url": "https://steadybit.com",
       "email": "support@steadybit.com"
     },
-    "version": "2.8.7"
+    "version": "1.0.0-SNAPSHOT"
   },
   "externalDocs": {
     "description": "Steadybit Docs - Integrate via API",
@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "https://platform.steadybit.com",
+      "url": "https://platform.dev.steadybit.com",
       "description": "Generated server url"
     }
   ],
@@ -442,11 +442,11 @@
               }
             }
           },
-          "400": {
-            "description": "The given `id` is not a uuid."
-          },
           "404": {
             "description": "Saved view with given `id` was not found."
+          },
+          "400": {
+            "description": "The given `id` is not a uuid."
           }
         }
       },
@@ -3954,11 +3954,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Experiment execution was already canceled, errored or completed."
-          },
           "202": {
             "description": "Request to cancel the experiment was accepted and will be performed by communicating to the experiment's agents."
+          },
+          "200": {
+            "description": "Experiment execution was already canceled, errored or completed."
           },
           "404": {
             "description": "Experiment execution not found."
@@ -4555,6 +4555,57 @@
           },
           "422": {
             "description": "Validation error, schedule was not updated"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List the users of the tenant",
+        "description": "Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.",
+        "operationId": "getUsers",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Only users whose username, name or email contains this text",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "The number of the page and its size (at most 100, default 50)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PageRequestAO"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResponseAOUserAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResponseAOUserAO"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only admins can list users"
           }
         }
       }
@@ -6406,11 +6457,11 @@
               }
             }
           },
-          "400": {
-            "description": "The given `id` is not a uuid"
-          },
           "404": {
             "description": "Environment with given `id` was not found"
+          },
+          "400": {
+            "description": "The given `id` is not a uuid"
           }
         }
       },
@@ -6739,6 +6790,42 @@
         }
       }
     },
+    "/api/users/{username}": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Remove a user from the tenant",
+        "description": "Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.",
+        "operationId": "removeUser",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "The username of the user to remove",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane.doe"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The user was removed from the tenant"
+          },
+          "400": {
+            "description": "Admins cannot remove themselves"
+          },
+          "403": {
+            "description": "Only admins can remove users, and not users managed via SCIM or an LDAP sync"
+          },
+          "404": {
+            "description": "The user is not a member of the tenant"
+          }
+        }
+      }
+    },
     "/api/access-tokens/{id}": {
       "delete": {
         "tags": [
@@ -6926,7 +7013,8 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
           }
         },
@@ -7449,6 +7537,14 @@
               "$ref": "#/components/schemas/MemberUpdateAO"
             }
           },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -7473,14 +7569,6 @@
             "minLength": 0,
             "type": "string",
             "description": "An optional description of a team"
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "logoId": {
             "maxLength": 255,
@@ -7537,7 +7625,8 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
           }
         },
@@ -7577,7 +7666,8 @@
           "allowedEnvironments",
           "key",
           "members",
-          "name"
+          "name",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -7605,14 +7695,6 @@
             "minLength": 0,
             "type": "string",
             "description": "An optional description of a team"
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "logoId": {
             "maxLength": 255,
@@ -7669,8 +7751,16 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "example": 1
           },
           "members": {
             "maxItems": 512,
@@ -8485,7 +8575,8 @@
           "query",
           "serviceProfile",
           "team",
-          "validations"
+          "validations",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -8580,7 +8671,7 @@
           "version": {
             "minimum": 0,
             "type": "integer",
-            "description": "Version for optimistic locking",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -8895,7 +8986,7 @@
           "version": {
             "minimum": 0,
             "type": "integer",
-            "description": "Version for optimistic locking",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -10683,6 +10774,14 @@
             "example": {
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Create or update the experiment with the given experiment design.",
@@ -10992,6 +11091,14 @@
             "example": {
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Update the experiment with the given experiment design.",
@@ -11158,14 +11265,6 @@
             "format": "uuid",
             "nullable": true
           },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
-          },
           "templateTitle": {
             "maxLength": 255,
             "minLength": 0,
@@ -11280,6 +11379,14 @@
             "type": "boolean",
             "description": "Should the experiment template be hidden",
             "example": false
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Insert or update the experiment template in Steadybit. The `id` will be used to identify whether the template already exists and should be updated or newly inserted.",
@@ -11442,7 +11549,8 @@
           "editedBy",
           "lanes",
           "templateDescription",
-          "templateTitle"
+          "templateTitle",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -11450,14 +11558,6 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "templateTitle": {
             "maxLength": 255,
@@ -11573,6 +11673,13 @@
             "type": "boolean",
             "description": "Should the experiment template be hidden",
             "example": false
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "example": 1
           },
           "created": {
             "type": "string",
@@ -11765,6 +11872,14 @@
       "UpdateExperimentFromTemplateAO": {
         "type": "object",
         "properties": {
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "placeholders": {
             "type": "array",
             "description": "List of template placeholder values",
@@ -12623,6 +12738,14 @@
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
           },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "executionVariables": {
             "type": "object",
             "additionalProperties": {
@@ -12698,6 +12821,7 @@
             "type": "integer",
             "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
+            "nullable": true,
             "example": 1
           },
           "predicate": {
@@ -12724,7 +12848,8 @@
         "required": [
           "name",
           "predicate",
-          "state"
+          "state",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -13181,6 +13306,115 @@
           "enabled": false
         }
       },
+      "PageRequestAO": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResponseAOUserAO": {
+        "type": "object",
+        "properties": {
+          "totalItems": {
+            "type": "integer",
+            "description": "Total amount of runs matching your query",
+            "format": "int64",
+            "example": 241
+          },
+          "nextPage": {
+            "type": "integer",
+            "description": "Next page to query for next page of runs or null if there are none.",
+            "format": "int32",
+            "nullable": true,
+            "example": 4
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAO"
+            }
+          }
+        }
+      },
+      "UserAO": {
+        "required": [
+          "role",
+          "teams",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Username of the user, internal identifier of Steadybit",
+            "example": "13av2737-b318-4048-a79d-4789d645bc31"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the user",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the user",
+            "nullable": true,
+            "example": "jane.doe@example.com"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of the user in the tenant",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          },
+          "managedBy": {
+            "type": "string",
+            "description": "What manages a user's membership in the tenant",
+            "nullable": true,
+            "enum": [
+              "SCIM"
+            ]
+          },
+          "teams": {
+            "type": "array",
+            "description": "Keys of the teams the user is a member of; empty if the user is in no team",
+            "example": [
+              "ADM",
+              "PAYMENTS"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Keys of the teams the user is a member of; empty if the user is in no team",
+              "example": "[\"ADM\",\"PAYMENTS\"]"
+            }
+          },
+          "created": {
+            "type": "string",
+            "description": "When the user was created in Steadybit",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-01-15T09:30:00Z"
+          },
+          "lastLogin": {
+            "type": "string",
+            "description": "When the user last signed in; empty if the user never signed in",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-10-13T08:12:00Z"
+          }
+        }
+      },
       "TeamSummariesAO": {
         "type": "object",
         "properties": {
@@ -13330,21 +13564,6 @@
             "items": {
               "type": "string"
             }
-          }
-        }
-      },
-      "PageRequestAO": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "size": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
@@ -13971,11 +14190,21 @@
             "example": [
               {
                 "key": "ADM-1",
-                "name": "Shop survives unavailability of hot-deals products"
+                "name": "Shop survives unavailability of hot-deals products",
+                "externalId": "1234567",
+                "tags": [
+                  "myTag",
+                  "myOtherTag"
+                ]
               },
               {
                 "key": "SHOP-2",
-                "name": "Network latency of Message Broker doesn't interfere with Online shop"
+                "name": "Network latency of Message Broker doesn't interfere with Online shop",
+                "externalId": "test-id",
+                "tags": [
+                  "yourTag",
+                  "yourOtherTag"
+                ]
               }
             ],
             "items": {
@@ -13988,11 +14217,21 @@
           "experiments": [
             {
               "key": "ADM-1",
-              "name": "Shop survives unavailability of hot-deals products"
+              "name": "Shop survives unavailability of hot-deals products",
+              "externalId": "1234567",
+              "tags": [
+                "myTag",
+                "myOtherTag"
+              ]
             },
             {
               "key": "SHOP-2",
-              "name": "Network latency of Message Broker doesn't interfere with Online shop"
+              "name": "Network latency of Message Broker doesn't interfere with Online shop",
+              "externalId": "test-id",
+              "tags": [
+                "yourTag",
+                "yourOtherTag"
+              ]
             }
           ]
         }
@@ -14009,12 +14248,36 @@
             "type": "string",
             "description": "Name of the experiment to easily identify the experiment",
             "example": "Shop survives unavailability of hot-deals products"
+          },
+          "externalId": {
+            "type": "string",
+            "description": "An optional external identifier used for create-or-update semantics.",
+            "example": "1234567"
+          },
+          "tags": {
+            "uniqueItems": true,
+            "type": "array",
+            "description": "An optional set of tags you can use to search for.",
+            "example": [
+              "myTag",
+              "myOtherTag"
+            ],
+            "items": {
+              "type": "string",
+              "description": "An optional set of tags you can use to search for.",
+              "example": "[\"myTag\",\"myOtherTag\"]"
+            }
           }
         },
         "description": "Summary of a single experiment.",
         "example": {
           "key": "ADM-1",
-          "name": "Shop survives unavailability of hot-deals products"
+          "name": "Shop survives unavailability of hot-deals products",
+          "externalId": "1234567",
+          "tags": [
+            "myTag",
+            "myOtherTag"
+          ]
         }
       },
       "ExperimentAO": {
@@ -14026,7 +14289,8 @@
           "key",
           "lanes",
           "name",
-          "team"
+          "team",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -14174,8 +14438,9 @@
             "example": "ADM-2"
           },
           "version": {
+            "minimum": 0,
             "type": "integer",
-            "description": "Experiment database version.",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -15351,7 +15616,8 @@
             "enum": [
               "ADMIN",
               "TEAM",
-              "WILDCARD"
+              "WILDCARD",
+              "SCIM"
             ]
           },
           "principalType": {
@@ -17144,10 +17410,9 @@
     },
     "securitySchemes": {
       "AccessToken": {
-        "type": "apiKey",
-        "description": "Learn more about [API Access Token in our docs](https://docs.steadybit.com/integrate-with-steadybit/api#access-tokens).<br/>\nTo generate a new API Access Token, go to [Platform Settings / API Access Token](/settings/api-tokens).\nWhen using the API Access Token in the HTTP Header 'Authorization', use the following value format:<br/><br/>\n```\naccessToken <apiAccessToken>\n```\n\n",
-        "name": "Authorization",
-        "in": "header"
+        "type": "http",
+        "description": "Learn more about [API Access Token in our docs](https://docs.steadybit.com/integrate-with-steadybit/api#access-tokens).<br/>\nTo generate a new API Access Token, go to [Platform Settings / API Access Token](/settings/api-tokens).\nPaste the token as-is below, the `Bearer` prefix is added for you. Outside of this page, send it in the HTTP Header 'Authorization':<br/><br/>\n```\nBearer <apiAccessToken>\n```\nThe legacy format `accessToken <apiAccessToken>` is still supported.\n\n",
+        "scheme": "bearer"
       }
     }
   }
