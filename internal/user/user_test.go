@@ -54,3 +54,66 @@ func TestInviteRefusals(t *testing.T) {
 	assert.EqualError(t, user.Invite(ctx, p.Client, user.InviteOptions{}), "No one to invite. Pass --email.")
 	assert.Len(t, p.Requests("POST /api/users/invite"), 1)
 }
+
+var users = map[string]any{"items": []any{
+	map[string]any{"username": "u-1", "name": "Jane Doe", "email": "jane@example.com", "role": "ADMIN", "teams": []any{"ADM"}, "lastLogin": "2026-10-13T08:12:00Z"},
+	map[string]any{"username": "u-2", "name": "Joe", "email": "joe@example.com", "role": "USER", "teams": []any{}, "managedBy": "SCIM"},
+}}
+
+func TestList(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/users", platformtest.Reply{JSON: users})
+
+	out, err := platformtest.Stdout(t, func() error { return user.List(ctx, p.Client, user.ListOptions{Query: "jo"}) })
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Jane Doe")
+	assert.Contains(t, out, "2026-10-13T08:12:00Z")
+	assert.Contains(t, out, "Steadybit")
+	assert.Contains(t, out, "SCIM")
+	assert.Contains(t, out, "never")
+	assert.Equal(t, []string{"jo"}, p.Requests("GET /api/users")[0].Query["query"])
+}
+
+func TestListAsJSON(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/users", platformtest.Reply{JSON: users})
+
+	out, err := platformtest.Stdout(t, func() error { return user.List(ctx, p.Client, user.ListOptions{Type: "json"}) })
+
+	require.NoError(t, err)
+	assert.Contains(t, out, `"username": "u-2"`)
+	assert.Contains(t, out, `"managedBy": "SCIM"`)
+	assert.Empty(t, p.Requests("GET /api/users")[0].Query["query"])
+}
+
+func TestListNeedsAnAdminToken(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/users", platformtest.Reply{Status: http.StatusForbidden})
+
+	assert.EqualError(t, user.List(ctx, p.Client, user.ListOptions{}), "Listing users needs an admin access token.")
+}
+
+func TestDelete(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("DELETE /api/users/u-1", platformtest.Reply{Status: http.StatusNoContent})
+
+	out, err := platformtest.Stdout(t, func() error { return user.Delete(ctx, p.Client, user.DeleteOptions{Username: "u-1", Yes: true}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "User u-1 removed from the tenant.\n", out)
+	assert.Len(t, p.Requests("DELETE /api/users/u-1"), 1)
+}
+
+func TestDeleteRefusals(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("DELETE /api/users/nobody", platformtest.Reply{Status: http.StatusNotFound})
+	p.Reply("DELETE /api/users/u-2", platformtest.Reply{Status: http.StatusForbidden,
+		JSON: map[string]any{"title": "Forbidden", "detail": "The user is managed by SCIM"}})
+
+	assert.EqualError(t, user.Delete(ctx, p.Client, user.DeleteOptions{Username: "nobody", Yes: true}), "User nobody is not a member of the tenant.")
+	err := user.Delete(ctx, p.Client, user.DeleteOptions{Username: "u-2", Yes: true})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed to remove user u-2")
+	assert.Contains(t, err.Error(), "managed by SCIM")
+}
