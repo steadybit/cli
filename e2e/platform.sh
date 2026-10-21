@@ -408,6 +408,14 @@ EOF
   check "team member add skips an unknown user" prints "0 member(s)" admin team member add -k "$SCOPE_TEAM" --email nobody@cli-e2e.invalid
   check "team member add --validate fails on an unknown user" exits_with 1 admin team member add -k "$SCOPE_TEAM" --email nobody@cli-e2e.invalid --validate
 
+  # Users are only listed, and only a user no one has is deleted: the suite removes no one.
+  check "user list shows the users of the tenant" prints "Username" admin user list
+  check "user list -t json prints the platform's items" prints '"username"' admin user list -t json
+  check "user list --query finds no one for an unknown text" prints "No users found." admin user list --query "$MARK-$RUN-nobody"
+  check "user delete fails on a user who is not a member" exits_with 1 admin user delete --username "$MARK-$RUN-nobody" --yes
+  check "user delete says the user is not a member" grep -qF "is not a member of the tenant" out.log
+  check "user list needs an admin access token" exits_with 1 steadybit user list
+
   # A token of the new team, which expires tomorrow at the latest.
   tomorrow=$(date -u -d tomorrow +%F 2>/dev/null || date -u -v+1d +%F)
   admin access-token create --name "$MARK-$RUN-token" --type TEAM --team "$SCOPE_TEAM" --expires-at "$tomorrow" -t json >token.json 2>out.log

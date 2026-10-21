@@ -45,7 +45,7 @@ func newUser() *cobra.Command {
 		Use:     "delete",
 		Short:   "Remove a user from the tenant. Users managed by SCIM or an LDAP sync are removed there instead. Needs an admin access token.",
 		Args:    cobra.NoArgs,
-		Example: examples("steadybit user delete --username 13av2737-b318-4048-a79d-4789d645bc31"),
+		Example: examples("steadybit user delete --username 13a52737-b318-4048-a79d-4789d645bc31"),
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return user.Delete(ctx, c, d) }),
 	}
 	del.Flags().StringVarP(&d.Username, "username", "u", "", "The username, as user list shows it.")
