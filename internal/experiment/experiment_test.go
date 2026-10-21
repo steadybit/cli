@@ -229,6 +229,71 @@ func TestRunGivesUpAfterTheLastRetry(t *testing.T) {
 	assert.Len(t, p.Requests("POST /api/experiments/TST-1/execute"), 2)
 }
 
+func TestRunWithoutRunAgainSendsNeitherTheFlagNorAKey(t *testing.T) {
+	p := platformtest.New(t)
+	stillRunning(p)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true})
+	})
+
+	require.NoError(t, err)
+	request := p.Requests("POST /api/experiments/TST-1/execute")[0]
+	// A running experiment's run in progress comes back, as it always has.
+	assert.NotContains(t, request.Query, "allowRunningAgain")
+	assert.Empty(t, request.Header.Get("Idempotency-Key"))
+}
+
+func TestRunAgainKeepsItsKeyAcrossTheRetriesOfOneRun(t *testing.T) {
+	p := platformtest.New(t)
+	stillRunning(p)
+	var calls atomic.Int32
+	p.Handle("POST /api/experiments/TST-1/execute", func(platformtest.Request) platformtest.Reply {
+		if calls.Add(1) <= 2 {
+			return platformtest.Reply{Status: http.StatusUnprocessableEntity, JSON: map[string]any{"title": "no targets"}}
+		}
+		return started(p, "TST-1", 1)
+	})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Retries: 2, RunAgain: true})
+	})
+
+	require.NoError(t, err)
+	requests := p.Requests("POST /api/experiments/TST-1/execute")
+	require.Len(t, requests, 3)
+	// The platform requires a key to run again; one per run, so a retry never starts a second one.
+	key := requests[0].Header.Get("Idempotency-Key")
+	assert.NotEmpty(t, key)
+	for _, r := range requests {
+		assert.Equal(t, []string{"true"}, r.Query["allowRunningAgain"])
+		assert.Equal(t, key, r.Header.Get("Idempotency-Key"))
+	}
+}
+
+func TestRunAgainUsesANewKeyForEachRunItStarts(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/TST-1/execute", started(p, "TST-1", 1))
+	var polls atomic.Int32
+	p.Handle("GET /api/experiments/executions/1", func(platformtest.Request) platformtest.Reply {
+		if polls.Add(1) <= 1 {
+			return runState("FAILED", "flaky", false)
+		}
+		return runState("COMPLETED", "", false)
+	})
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Key: "TST-1", Yes: true, Wait: true, ExpectationRetries: 1, RunAgain: true})
+	})
+
+	require.NoError(t, err)
+	requests := p.Requests("POST /api/experiments/TST-1/execute")
+	require.Len(t, requests, 2)
+	// Running the experiment again is a new run, not a retry of the one before.
+	assert.NotEqual(t, requests[0].Header.Get("Idempotency-Key"), requests[1].Header.Get("Idempotency-Key"))
+}
+
 func TestRunsInParallelWithYesWhenAnotherIsRunning(t *testing.T) {
 	p := platformtest.New(t)
 	stillRunning(p)

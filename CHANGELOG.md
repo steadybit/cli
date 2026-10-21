@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `experiment run --run-again` starts another run of an experiment that is already
+  running; without it, the run in progress is followed, as before. Each run it starts
+  sends its own `Idempotency-Key`, kept across the retries of that run, so a retried
+  request never starts yet another one. Needs a platform that knows `allowRunningAgain`.
+
 ## v6.3.0
 
 - `user list` lists the users of the tenant, with their role, teams, what manages them

@@ -7,6 +7,7 @@ toolchain go1.27.3
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/itchyny/gojq v0.12.19
 	github.com/mattn/go-runewidth v0.0.30
 	github.com/oapi-codegen/runtime v1.7.0
@@ -25,7 +26,6 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/getkin/kin-openapi v0.149.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/itchyny/timefmt-go v0.1.8 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0 // indirect
