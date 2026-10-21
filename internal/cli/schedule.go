@@ -21,28 +21,39 @@ func scheduleIDFlag(cmd *cobra.Command, id *string) {
 }
 
 // scheduleFields adds the flags `create` and `update` share. --allow-parallel and
-// --no-allow-parallel stay unset unless one is given, so an update leaves it alone.
+// --no-allow-parallel, like --run-again and --no-run-again, stay unset unless one is given,
+// so an update leaves it alone.
 func scheduleFields(cmd *cobra.Command, f *schedule.Fields) {
 	vars := newKeyValues()
 	f.Variables = vars.values
-	var allow, noAllow bool
+	var allow, noAllow, again, noAgain bool
 	flags := cmd.Flags()
 	flags.StringVar(&f.Cron, "cron", "", `Run repeatedly on this Quartz cron expression (seconds first), e.g. "0 0 9 ? * MON-FRI".`)
 	flags.StringVar(&f.StartAt, "start-at", "", "Run once at this ISO 8601 time, e.g. 2026-10-01T09:00:00Z.")
 	flags.StringVar(&f.Timezone, "timezone", "", "The timezone of the cron expression, e.g. Europe/Berlin.")
 	flags.BoolVar(&allow, "allow-parallel", false, "Run even when another experiment is running.")
 	flags.BoolVar(&noAllow, "no-allow-parallel", false, "Skip the run when another experiment is running.")
+	flags.BoolVar(&again, "run-again", false, "Run even when this experiment is still running.")
+	flags.BoolVar(&noAgain, "no-run-again", false, "Skip the run when this experiment is still running.")
 	flags.Var(vars, "variable", "A variable for the scheduled runs, overriding experiment and environment variables. Repeat for more.")
 	cmd.MarkFlagsMutuallyExclusive("allow-parallel", "no-allow-parallel")
+	cmd.MarkFlagsMutuallyExclusive("run-again", "no-run-again")
 	cmd.PreRun = func(*cobra.Command, []string) {
-		switch {
-		case allow:
-			f.AllowParallel = &allow
-		case noAllow:
-			no := false
-			f.AllowParallel = &no
-		}
+		f.AllowParallel = eitherFlag(allow, noAllow)
+		f.AllowRunningAgain = eitherFlag(again, noAgain)
 	}
+}
+
+// eitherFlag is true for the flag, false for its --no- counterpart, and unset for neither.
+func eitherFlag(yes, no bool) *bool {
+	switch {
+	case yes:
+		return &yes
+	case no:
+		value := false
+		return &value
+	}
+	return nil
 }
 
 func newSchedule() *cobra.Command {

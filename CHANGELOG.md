@@ -6,6 +6,8 @@
   running; without it, the run in progress is followed, as before. Each run it starts
   sends its own `Idempotency-Key`, kept across the retries of that run, so a retried
   request never starts yet another one. Needs a platform that knows `allowRunningAgain`.
+- `schedule create` and `schedule update` take `--run-again` and `--no-run-again`, so a
+  schedule runs even when its experiment is still running, and `schedule list` shows it.
 
 ## v6.3.0
 
