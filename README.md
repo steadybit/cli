@@ -16,7 +16,8 @@ You need a Steadybit account. You can create a free account [via our website](ht
 
 ## Installation
 
-The CLI is a single binary for Linux, macOS and Windows, on amd64 and arm64.
+The CLI is a single binary for Linux, macOS and Windows, on amd64 (x86-64) and arm64.
+On Windows, download the archive for your platform, listed below.
 
 With [Homebrew](https://brew.sh), on macOS or Linux, which also installs the shell
 completions:
@@ -37,9 +38,20 @@ curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-
 sudo dnf install ./steadybit-cli_amd64.rpm
 ```
 
-Or download the archive for your platform from the
-[releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
-and put `steadybit` on your `PATH`:
+For arm64, use `steadybit-cli_arm64.deb` and `steadybit-cli_arm64.rpm`.
+
+Or download the archive for your platform from the latest release and put the binary on
+your `PATH`: `steadybit`, or `steadybit.exe` on Windows. `checksums.txt` lists the
+SHA-256 of every file, and [releases](https://github.com/steadybit/cli/releases) has
+the earlier versions.
+
+| Platform | amd64 (x86-64)                                                                                                           | arm64                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Windows  | [steadybit_windows_amd64.zip](https://github.com/steadybit/cli/releases/latest/download/steadybit_windows_amd64.zip)     | [steadybit_windows_arm64.zip](https://github.com/steadybit/cli/releases/latest/download/steadybit_windows_arm64.zip)     |
+| macOS    | [steadybit_darwin_amd64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_darwin_amd64.tar.gz) | [steadybit_darwin_arm64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_darwin_arm64.tar.gz) |
+| Linux    | [steadybit_linux_amd64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz)   | [steadybit_linux_arm64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_arm64.tar.gz)   |
+
+For example, on Linux:
 
 ```sh
 curl -sL https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz | tar -xz steadybit
