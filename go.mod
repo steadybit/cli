@@ -2,7 +2,7 @@ module github.com/steadybit/cli/v6
 
 go 1.26.2
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
