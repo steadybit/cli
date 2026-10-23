@@ -8,7 +8,7 @@
       "url": "https://steadybit.com",
       "email": "support@steadybit.com"
     },
-    "version": "1.0.0-SNAPSHOT"
+    "version": "2.8.10"
   },
   "externalDocs": {
     "description": "Steadybit Docs - Integrate via API",
@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "https://platform.dev.steadybit.com",
+      "url": "https://platform.steadybit.com",
       "description": "Generated server url"
     }
   ],
@@ -3120,7 +3120,7 @@
           "Experiment Executions"
         ],
         "summary": "Execute an experiment",
-        "description": "   Trigger execution of a single experiment specified by `key`. The body is optional and allows to specify overrides and custom properties for the experiment execution.\n\n   Examples:\n   - Override environment from the experiment for a single run:\n   ```\n   {\n       \"environment\":  \"Shop Stage\"\n   }\n   ```\n   - Override the variables for a single execution:\n   ```\n   {\n       \"variables\": {\n           \"httpEndpoint\": \"http://dev.shop.products.internal\"\n       }\n   }\n   ```\n",
+        "description": "   Trigger execution of a single experiment specified by `key`. The body is optional and allows to specify overrides and custom properties for the experiment execution.\n\n   Examples:\n   - Override environment from the experiment for a single run:\n   ```\n   {\n       \"environment\":  \"Shop Stage\"\n   }\n   ```\n   - Override the variables for a single execution:\n   ```\n   {\n       \"variables\": {\n           \"httpEndpoint\": \"http://dev.shop.products.internal\"\n       }\n   }\n   ```\n\n   While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.\n\n   While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):\n   ```\n   curl -X POST \"https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true\" \\\n        -H \"Authorization: Bearer <apiAccessToken>\" \\\n        -H \"Idempotency-Key: $(uuidgen)\"\n   ```\n   `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.\n\n   The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.\n\n   Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.\n",
         "operationId": "executeExperiment",
         "parameters": [
           {
@@ -3136,12 +3136,31 @@
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "By default an experiment is only executed when no other experiment is running. This can be overriden by starting the new experiment execution although another one is currently running",
+            "description": "By default an experiment is only executed when no other experiment is running. Set to `true` to start the execution anyway. Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
-            "example": true
+            "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -3165,7 +3184,22 @@
         },
         "responses": {
           "201": {
-            "description": "Experiment execution was started. The newly created object can be accessed via the HTTP header `location`",
+            "description": "Experiment execution was started, or a run of this experiment in progress was returned (see above). The object can be accessed via the HTTP header `location`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3181,6 +3215,21 @@
           },
           "404": {
             "description": "Experiment execution couldn't be started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Experiment execution was refused, e.g. because another experiment is running and `allowParallel` was not set - also when `allowRunningAgain` is set.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3420,7 +3469,7 @@
           "Experiment Templates"
         ],
         "summary": "Create an experiment based on an experiment template and run experiment",
-        "description": "Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.",
+        "description": "Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.",
         "operationId": "saveAndRunFromTemplate",
         "parameters": [
           {
@@ -3448,12 +3497,31 @@
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "Should this experiment also be executed when there is already another experiment running?",
+            "description": "Should this experiment also be executed when there is already another experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
             "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -3478,7 +3546,22 @@
         },
         "responses": {
           "200": {
-            "description": "Experiment started",
+            "description": "Experiment started, or a run of this experiment in progress was returned (see above)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3972,18 +4055,37 @@
           "Experiment Designs"
         ],
         "summary": "Save and run experiment",
-        "description": "Save the given experiment and immediately run it.",
+        "description": "Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.",
         "operationId": "saveAndRun",
         "parameters": [
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "Should this experiment also be executed when there is already at least one experiment running?",
+            "description": "Should this experiment also be executed when there is already at least one other experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
             "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -4008,7 +4110,22 @@
         },
         "responses": {
           "200": {
-            "description": "Experiment started",
+            "description": "Experiment started, or a run of this experiment in progress was returned (see above)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7187,16 +7304,16 @@
         }
       },
       "VariableExpressionAO": {
-        "description": "A variable value: a constant string (≤5000 chars), an array of constant strings, or a select expression object.",
+        "description": "A variable value: a constant string (≤10000 chars), an array of constant strings, or a select expression object.",
         "oneOf": [
           {
-            "maxLength": 5000,
+            "maxLength": 10000,
             "type": "string"
           },
           {
             "type": "array",
             "items": {
-              "maxLength": 5000,
+              "maxLength": 10000,
               "type": "string"
             }
           },
@@ -8792,7 +8909,7 @@
             "x-go-type": "interface{}"
           }
         },
-        "description": "List of template placeholder values"
+        "description": "List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it."
       },
       "UpsertProvidedExperimentRequestAO": {
         "required": [
@@ -8814,7 +8931,7 @@
           },
           "placeholders": {
             "type": "array",
-            "description": "List of template placeholder values",
+            "description": "List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.",
             "nullable": true,
             "items": {
               "$ref": "#/components/schemas/ExperimentTemplatePlaceholderValueAO"
@@ -12148,8 +12265,13 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running? Default is true.",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.",
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.",
+            "example": false
           },
           "timezone": {
             "type": "string",
@@ -12214,8 +12336,13 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running? Default is true.",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.",
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.",
+            "example": false
           },
           "timezone": {
             "type": "string",
@@ -12256,6 +12383,7 @@
           "cron": "30 * * * * ? *",
           "enabled": true,
           "allowParallel": true,
+          "allowRunningAgain": false,
           "timezone": "Europe/Berlin",
           "variables": {},
           "id": "01951394-727f-76a0-8675-c7519ebd0ff5",
@@ -13279,9 +13407,15 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running?",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "nullable": true,
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress?",
+            "nullable": true,
+            "example": false
           },
           "timezone": {
             "type": "string",

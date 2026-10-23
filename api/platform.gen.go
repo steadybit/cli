@@ -3166,12 +3166,17 @@ type ExperimentRiskAO struct {
 
 // ExperimentScheduleAO A schedule for an experiment.
 //
-// Example: {"allowParallel":true,"cron":"30 * * * * ? *","editedBy":{"email":"manuel@example.org","name":"Manuel","pictureUrl":"https://.../picture.png","username":"ag1hb7ap-d299-47ab-998f-c2a53b433820"},"enabled":true,"experimentKey":"ADM-8","id":"01951394-727f-76a0-8675-c7519ebd0ff5","lastUpdated":"2025-02-17T11:04:10.623486Z","nextExecution":"2025-02-20T05:54:30Z","timezone":"Europe/Berlin","variables":{}}
+// Example: {"allowParallel":true,"allowRunningAgain":false,"cron":"30 * * * * ? *","editedBy":{"email":"manuel@example.org","name":"Manuel","pictureUrl":"https://.../picture.png","username":"ag1hb7ap-d299-47ab-998f-c2a53b433820"},"enabled":true,"experimentKey":"ADM-8","id":"01951394-727f-76a0-8675-c7519ebd0ff5","lastUpdated":"2025-02-17T11:04:10.623486Z","nextExecution":"2025-02-20T05:54:30Z","timezone":"Europe/Berlin","variables":{}}
 type ExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running? Default is true.
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. Can't be used in combination with `startAt`.
 	//
@@ -3408,7 +3413,7 @@ type ExperimentTemplatePlaceholderAO struct {
 	Name        string `json:"name"`
 }
 
-// ExperimentTemplatePlaceholderValueAO List of template placeholder values
+// ExperimentTemplatePlaceholderValueAO List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.
 type ExperimentTemplatePlaceholderValueAO struct {
 	// Key The key of a template placeholder
 	//
@@ -4099,10 +4104,15 @@ type ParameterAO struct {
 //
 // Example: {"enabled":false}
 type PatchExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running?
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress?
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. If provided, startAt will be cleared.
 	//
@@ -5586,10 +5596,15 @@ type UpsertEnvironmentAO struct {
 //
 // Example: {"cron":"30 * * * * ? *","experimentKey":"ADM-8"}
 type UpsertExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running? Default is true.
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. Can't be used in combination with `startAt`.
 	//
@@ -5841,7 +5856,7 @@ type UpsertProvidedExperimentRequestAO struct {
 	// Example: ADM-18
 	ExperimentKey *string `json:"experimentKey,omitempty"`
 
-	// Placeholders List of template placeholder values
+	// Placeholders List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.
 	Placeholders *[]ExperimentTemplatePlaceholderValueAO `json:"placeholders,omitempty"`
 
 	// TemplateId The templateId that should be used for the provided experiment (needs to be included in the used service profile)
@@ -6102,7 +6117,7 @@ type UserSummaryAO struct {
 	Username string `json:"username"`
 }
 
-// VariableExpressionAO A variable value: a constant string (≤5000 chars), an array of constant strings, or a select expression object.
+// VariableExpressionAO A variable value: a constant string (≤10000 chars), an array of constant strings, or a select expression object.
 type VariableExpressionAO struct {
 	union json.RawMessage
 }
@@ -6251,11 +6266,17 @@ type GetExperimentsParamsKind string
 
 // SaveAndRunParams defines parameters for SaveAndRun.
 type SaveAndRunParams struct {
-	// AllowParallel Should this experiment also be executed when there is already at least one experiment running?
+	// AllowParallel Should this experiment also be executed when there is already at least one other experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // GetExperimentExecutions1Params defines parameters for GetExperimentExecutions1.
@@ -6332,11 +6353,17 @@ type SaveAndRunFromTemplateParams struct {
 	// ResetProperties If `true`, all properties will be reset to properties specified in the template either with their fixed values in the template or via template placeholder. If `false`, existing properties will stay untouched, only new properties will be added. Only relevant for experiment updates via `externalId`.
 	ResetProperties *bool `form:"resetProperties,omitempty" json:"resetProperties,omitempty"`
 
-	// AllowParallel Should this experiment also be executed when there is already another experiment running?
+	// AllowParallel Should this experiment also be executed when there is already another experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // UpdateExperimentByTemplateParams defines parameters for UpdateExperimentByTemplate.
@@ -6380,11 +6407,17 @@ type GetExperimentBadgeParams struct {
 
 // ExecuteExperimentParams defines parameters for ExecuteExperiment.
 type ExecuteExperimentParams struct {
-	// AllowParallel By default an experiment is only executed when no other experiment is running. This can be overriden by starting the new experiment execution although another one is currently running
+	// AllowParallel By default an experiment is only executed when no other experiment is running. Set to `true` to start the execution anyway. Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // GetExperimentExecutions3Params defines parameters for GetExperimentExecutions3.
@@ -11735,7 +11768,7 @@ type ClientInterface interface {
 
 	// SaveAndRunWithBody Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11744,7 +11777,7 @@ type ClientInterface interface {
 
 	// SaveAndRun Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11977,7 +12010,7 @@ type ClientInterface interface {
 
 	// SaveAndRunFromTemplateWithBody Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11986,7 +12019,7 @@ type ClientInterface interface {
 
 	// SaveAndRunFromTemplate Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -12070,6 +12103,20 @@ type ClientInterface interface {
 	//    }
 	//    ```
 	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -12094,6 +12141,20 @@ type ClientInterface interface {
 	//        }
 	//    }
 	//    ```
+	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13639,7 +13700,7 @@ func (c *Client) CreateOrUpdateExperiment(ctx context.Context, body CreateOrUpda
 
 // SaveAndRunWithBody Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type.
 //
@@ -13658,7 +13719,7 @@ func (c *Client) SaveAndRunWithBody(ctx context.Context, params *SaveAndRunParam
 
 // SaveAndRun Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14180,7 +14241,7 @@ func (c *Client) CreateExperimentByTemplate(ctx context.Context, id openapi_type
 
 // SaveAndRunFromTemplateWithBody Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14199,7 +14260,7 @@ func (c *Client) SaveAndRunFromTemplateWithBody(ctx context.Context, id openapi_
 
 // SaveAndRunFromTemplate Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14363,6 +14424,20 @@ func (c *Client) GetExperimentBadge(ctx context.Context, key string, params *Get
 //	}
 //	```
 //
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -14397,6 +14472,20 @@ func (c *Client) ExecuteExperimentWithBody(ctx context.Context, key string, para
 //	    }
 //	}
 //	```
+//
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -17965,6 +18054,18 @@ func NewSaveAndRunRequestWithBody(server string, params *SaveAndRunParams, conte
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -17989,6 +18090,21 @@ func NewSaveAndRunRequestWithBody(server string, params *SaveAndRunParams, conte
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -19063,6 +19179,18 @@ func NewSaveAndRunFromTemplateRequestWithBody(server string, id openapi_types.UU
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -19087,6 +19215,21 @@ func NewSaveAndRunFromTemplateRequestWithBody(server string, id openapi_types.UU
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -19510,6 +19653,18 @@ func NewExecuteExperimentRequestWithBody(server string, key string, params *Exec
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -19534,6 +19689,21 @@ func NewExecuteExperimentRequestWithBody(server string, key string, params *Exec
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -24100,7 +24270,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunWithBodyWithResponse Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24109,7 +24279,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunWithResponse Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24362,7 +24532,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunFromTemplateWithBodyWithResponse Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24371,7 +24541,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunFromTemplateWithResponse Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24461,6 +24631,20 @@ type ClientWithResponsesInterface interface {
 	//    }
 	//    ```
 	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -24485,6 +24669,20 @@ type ClientWithResponsesInterface interface {
 	//        }
 	//    }
 	//    ```
+	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26572,6 +26770,10 @@ type SaveAndRunResponse struct {
 	JSON200 *ExecuteExperimentResponseAO
 	// YAML200 the response for an HTTP 200 `application/yaml` response
 	YAML200 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ExecuteExperimentResponseAO
 	// YAML422 the response for an HTTP 422 `application/yaml` response
@@ -26586,6 +26788,16 @@ func (r SaveAndRunResponse) GetJSON200() *ExecuteExperimentResponseAO {
 // GetYAML200 returns the response for an HTTP 200 `application/yaml` response
 func (r SaveAndRunResponse) GetYAML200() *ExecuteExperimentResponseAO {
 	return r.YAML200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SaveAndRunResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r SaveAndRunResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -27448,6 +27660,10 @@ type SaveAndRunFromTemplateResponse struct {
 	JSON200 *ExecuteExperimentResponseAO
 	// YAML200 the response for an HTTP 200 `application/yaml` response
 	YAML200 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ExecuteExperimentResponseAO
 	// YAML422 the response for an HTTP 422 `application/yaml` response
@@ -27462,6 +27678,16 @@ func (r SaveAndRunFromTemplateResponse) GetJSON200() *ExecuteExperimentResponseA
 // GetYAML200 returns the response for an HTTP 200 `application/yaml` response
 func (r SaveAndRunFromTemplateResponse) GetYAML200() *ExecuteExperimentResponseAO {
 	return r.YAML200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SaveAndRunFromTemplateResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r SaveAndRunFromTemplateResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -27694,10 +27920,18 @@ type ExecuteExperimentResponse struct {
 	JSON201 *ExecuteExperimentResponseAO
 	// YAML201 the response for an HTTP 201 `application/yaml` response
 	YAML201 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ExecuteExperimentResponseAO
 	// YAML404 the response for an HTTP 404 `application/yaml` response
 	YAML404 *ExecuteExperimentResponseAO
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ExecuteExperimentResponseAO
+	// YAML422 the response for an HTTP 422 `application/yaml` response
+	YAML422 *ExecuteExperimentResponseAO
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -27710,6 +27944,16 @@ func (r ExecuteExperimentResponse) GetYAML201() *ExecuteExperimentResponseAO {
 	return r.YAML201
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ExecuteExperimentResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r ExecuteExperimentResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
+}
+
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ExecuteExperimentResponse) GetJSON404() *ExecuteExperimentResponseAO {
 	return r.JSON404
@@ -27718,6 +27962,16 @@ func (r ExecuteExperimentResponse) GetJSON404() *ExecuteExperimentResponseAO {
 // GetYAML404 returns the response for an HTTP 404 `application/yaml` response
 func (r ExecuteExperimentResponse) GetYAML404() *ExecuteExperimentResponseAO {
 	return r.YAML404
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ExecuteExperimentResponse) GetJSON422() *ExecuteExperimentResponseAO {
+	return r.JSON422
+}
+
+// GetYAML422 returns the response for an HTTP 422 `application/yaml` response
+func (r ExecuteExperimentResponse) GetYAML422() *ExecuteExperimentResponseAO {
+	return r.YAML422
 }
 
 // GetBody returns the raw response body bytes
@@ -32404,7 +32658,7 @@ func (c *ClientWithResponses) CreateOrUpdateExperimentWithResponse(ctx context.C
 
 // SaveAndRunWithBodyWithResponse Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32419,7 +32673,7 @@ func (c *ClientWithResponses) SaveAndRunWithBodyWithResponse(ctx context.Context
 
 // SaveAndRunWithResponse Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32846,7 +33100,7 @@ func (c *ClientWithResponses) CreateExperimentByTemplateWithResponse(ctx context
 
 // SaveAndRunFromTemplateWithBodyWithResponse Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32861,7 +33115,7 @@ func (c *ClientWithResponses) SaveAndRunFromTemplateWithBodyWithResponse(ctx con
 
 // SaveAndRunFromTemplateWithResponse Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32999,6 +33253,20 @@ func (c *ClientWithResponses) GetExperimentBadgeWithResponse(ctx context.Context
 //	}
 //	```
 //
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -33029,6 +33297,20 @@ func (c *ClientWithResponses) ExecuteExperimentWithBodyWithResponse(ctx context.
 //	    }
 //	}
 //	```
+//
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35547,6 +35829,20 @@ func ParseSaveAndRunResponse(rsp *http.Response) (*SaveAndRunResponse, error) {
 		}
 		response.YAML200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -36114,6 +36410,20 @@ func ParseSaveAndRunFromTemplateResponse(rsp *http.Response) (*SaveAndRunFromTem
 		}
 		response.YAML200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -36261,6 +36571,20 @@ func ParseExecuteExperimentResponse(rsp *http.Response) (*ExecuteExperimentRespo
 		}
 		response.YAML201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -36274,6 +36598,20 @@ func ParseExecuteExperimentResponse(rsp *http.Response) (*ExecuteExperimentRespo
 			return nil, err
 		}
 		response.YAML404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 422:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML422 = &dest
 
 	}
 
