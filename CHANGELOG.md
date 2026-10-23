@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v6.4.0
 
 - `experiment run --run-again` starts another run of an experiment that is already
   running; without it, the run in progress is followed, as before. Each run it starts
