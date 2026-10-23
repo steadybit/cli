@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## v6.3.0
 
 - `user list` lists the users of the tenant, with their role, teams, what manages them
   (SCIM, an LDAP sync, or Steadybit) and their last login; `--query` narrows it down.
   `user delete` removes a user from the tenant. Both need an admin access token, and
   the platform refuses to remove users that SCIM or an LDAP sync manages.
+- The README's installation is split by operating system and lists the Windows archives.
 
 ## v6.2.4
 
