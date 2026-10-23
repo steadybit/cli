@@ -103,7 +103,7 @@ var Experiment = Kind{
 var Schedule = Kind{
 	Name:     "experiment schedule",
 	ReadOnly: []string{"editedBy", "lastUpdated", "nextExecution"},
-	Defaults: map[string]any{"allowParallel": true},
+	Defaults: map[string]any{"allowParallel": true, "allowRunningAgain": false},
 	Identity: "id",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		id := str(local, "id")

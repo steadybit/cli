@@ -361,6 +361,7 @@ canceled or errored it before it ran. A few options make it fit pipelines:
 | `--expect-reason "…"`         | Also requires the run's reason to be exactly this                         |
 | `--expectation-retries 2`     | Runs the experiment again when a run did not end as expected              |
 | `--busy-retries 3`            | Waits and tries again while another experiment runs, instead of failing   |
+| `--run-again`                 | Starts another run when the experiment is already running                 |
 | `--external-id shop-latency`  | Runs the experiment with this external id, instead of `-k`                |
 
 In GitHub Actions a summary of every run is added to the job summary.

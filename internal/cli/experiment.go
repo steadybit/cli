@@ -77,6 +77,7 @@ func newExperimentRun() *cobra.Command {
 			"steadybit experiment run -f ./experiments -R --yes --parallel 3 --report steadybit.xml",
 			"steadybit experiment run --template d7e65100-1d20-4980-be87-c351704910b8 --team ADM -p CLUSTER=prod",
 			"steadybit experiment run --external-id shop-latency --yes --expect-state FAILED --busy-retries 3",
+			"steadybit experiment run -k ADM-1 --run-again",
 		),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
 			o.Wait = !noWait
@@ -90,6 +91,7 @@ func newExperimentRun() *cobra.Command {
 	f.BoolVar(&noWait, "no-wait", false, "Do not wait for experiment run to finish. The run is still checked until it started, for up to 15 seconds, and a run the platform canceled or errored before it ran fails.")
 	f.BoolVar(&o.Yes, "yes", false, "Skip the prompt asking for experiment run confirmation. Not necessary when no TTY is attached.")
 	f.BoolVar(&o.AllowParallel, "allowParallel", false, "Skip the prompt warning about another experiment running and allow always parallel execution.")
+	f.BoolVar(&o.RunAgain, "run-again", false, "Start another run even when this experiment is already running. Without it, a running experiment's run in progress is followed instead.")
 	f.IntVar(&o.Retries, "retries", 0, "Number of retries when the experiment fails validation (e.g., missing targets). 0 means no retry.")
 	f.IntVar(&o.RetryInterval, "retryInterval", 10, "Interval in seconds between retries.")
 	f.IntVar(&o.BusyRetries, "busy-retries", 0, "When another experiment is running and running in parallel is not allowed: try again this many times instead of asking, or failing in a pipeline.")

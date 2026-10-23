@@ -55,6 +55,7 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		Timezone      *string `json:"timezone"`
 		Enabled       *bool   `json:"enabled"`
 		AllowParallel *bool   `json:"allowParallel"`
+		RunAgain      *bool   `json:"allowRunningAgain"`
 	}
 	resp, err := c.GetAllSchedulesV2(ctx, &api.GetAllSchedulesV2Params{Team: optional(o.Teams), Experiment: optional(o.Experiments)})
 	var raw []json.RawMessage
@@ -77,10 +78,12 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 		table.Column{Name: "when", Title: "When", Alignment: table.Left},
 		table.Column{Name: "enabled", Title: "Enabled", Alignment: table.Left},
 		table.Column{Name: "allowParallel", Title: "Parallel", Alignment: table.Left},
+		table.Column{Name: "allowRunningAgain", Title: "Run again", Alignment: table.Left},
 	)
-	boolOr := func(b *bool) string {
+	// Each as the platform defaults it when a schedule does not say.
+	boolOr := func(b *bool, fallback bool) string {
 		if b == nil {
-			return "true"
+			return fmt.Sprint(fallback)
 		}
 		return fmt.Sprint(*b)
 	}
@@ -96,7 +99,8 @@ func List(ctx context.Context, c *platform.Client, o ListOptions) error {
 			when = *s.StartAt
 		}
 		t.AddRow(table.Default, table.Cell("id", s.ID), table.Cell("experiment", s.ExperimentKey), table.Cell("when", when),
-			table.Cell("enabled", boolOr(s.Enabled)), table.Cell("allowParallel", boolOr(s.AllowParallel)))
+			table.Cell("enabled", boolOr(s.Enabled, true)), table.Cell("allowParallel", boolOr(s.AllowParallel, true)),
+			table.Cell("allowRunningAgain", boolOr(s.RunAgain, false)))
 	}
 	t.Print()
 	return nil
@@ -158,6 +162,7 @@ func save(ctx context.Context, c *platform.Client, schedule *jsyaml.Map) (upsert
 type Fields struct {
 	Cron, StartAt, Timezone string
 	AllowParallel           *bool
+	AllowRunningAgain       *bool
 	Variables               *jsyaml.Map
 }
 
@@ -180,6 +185,9 @@ func (f Fields) into(m *jsyaml.Map) {
 	}
 	if f.AllowParallel != nil {
 		m.Set("allowParallel", *f.AllowParallel)
+	}
+	if f.AllowRunningAgain != nil {
+		m.Set("allowRunningAgain", *f.AllowRunningAgain)
 	}
 	if f.Variables != nil && f.Variables.Len() > 0 {
 		m.Set("variables", f.Variables)

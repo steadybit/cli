@@ -29,6 +29,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/steadybit/cli/v6/api"
 	"github.com/steadybit/cli/v6/internal/interrupt"
 	"github.com/steadybit/cli/v6/internal/jsyaml"
@@ -270,6 +271,10 @@ type RunOptions struct {
 	Recursive     bool
 	Yes, Wait     bool
 	AllowParallel bool
+	// RunAgain starts another run of an experiment that is already running, instead of
+	// following the run in progress. The platform then needs an Idempotency-Key, one per
+	// run started, so that a retried request never starts yet another run.
+	RunAgain      bool
 	Retries       int
 	RetryInterval int
 	// Parallel is how many runs go at once; 0 or 1 runs them one after another.
@@ -311,7 +316,7 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 	case o.Template != "" && o.Key != "":
 		return errors.New("--key cannot be combined with --template. Use `experiment apply --template -k` to update it.")
 	case o.Template != "":
-		runs = append(runs, runner{"this one", func(parallel, persist bool) (started, error) { return runTemplate(ctx, c, o, parallel, persist) }, false})
+		runs = append(runs, runner{"this one", func(a attempt) (started, error) { return runTemplate(ctx, c, o, a) }, false})
 	case len(o.Files) > 0:
 		files, err := ResolveFiles(o.Files, o.Recursive)
 		if err != nil {
@@ -321,13 +326,13 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 			return errors.New("If --key is specified, at most one --file can be specified.")
 		}
 		for _, file := range files {
-			runs = append(runs, runner{fileExperimentName(file), func(parallel, persist bool) (started, error) { return runFile(ctx, c, o, file, parallel, persist) }, false})
+			runs = append(runs, runner{fileExperimentName(file), func(a attempt) (started, error) { return runFile(ctx, c, o, file, a) }, false})
 		}
 	case o.Key != "":
 		if o.ExternalID != "" {
 			return errors.New("--external-id finds the experiment to run; leave out --key.")
 		}
-		runs = append(runs, runner{o.Key, func(parallel, persist bool) (started, error) { return runKey(ctx, c, o.Key, parallel, persist) }, true})
+		runs = append(runs, runner{o.Key, func(a attempt) (started, error) { return runKey(ctx, c, o.Key, a) }, true})
 	case o.ExternalID != "":
 		// Without --template, the external id names an experiment that exists, as the
 		// run-experiment action's externalId does.
@@ -335,7 +340,7 @@ func Run(ctx context.Context, c *platform.Client, o RunOptions) error {
 		if err != nil {
 			return err
 		}
-		runs = append(runs, runner{key, func(parallel, persist bool) (started, error) { return runKey(ctx, c, key, parallel, persist) }, true})
+		runs = append(runs, runner{key, func(a attempt) (started, error) { return runKey(ctx, c, key, a) }, true})
 	default:
 		return errors.New("Either --key, --file or --template must be specified.")
 	}
@@ -523,10 +528,29 @@ func runConcurrently(ctx context.Context, c *platform.Client, o RunOptions, runs
 // to start it, and where its key goes in what is printed.
 type runner struct {
 	what string
-	// run starts it; persist keeps a run the platform refused, so that its errors can be
-	// seen in the platform.
-	run     func(parallel, persist bool) (started, error)
+	// run starts it, as the attempt says.
+	run     func(attempt) (started, error)
 	keyLast bool
+}
+
+// attempt is how one request to start a run goes out: parallel runs alongside another
+// experiment, persist keeps a run the platform refused, so that its errors can be seen in
+// the platform, and runAgain alongside the experiment's own runs, under idempotencyKey.
+type attempt struct {
+	parallel, persist bool
+	runAgain          bool
+	idempotencyKey    string
+}
+
+// params is what every run endpoint takes from an attempt. The key goes along only when
+// running again, which requires one.
+func (a attempt) params() (*bool, *bool, *bool, *string) {
+	parallel, persist, runAgain := a.parallel, a.persist, a.runAgain
+	if !a.runAgain {
+		return &parallel, &persist, nil, nil
+	}
+	key := a.idempotencyKey
+	return &parallel, &persist, &runAgain, &key
 }
 
 // withRetries retries validation errors, which clear up once targets appear, and offers
@@ -534,11 +558,15 @@ type runner struct {
 // waits for it instead. Only the last attempt at a run with validation errors is kept on
 // the platform, so that it shows what was wrong without the attempts before it.
 // The prefix starts its messages, telling runs apart when several start at once.
-func withRetries(o RunOptions, what, prefix string, run func(parallel, persist bool) (started, error)) (started, error) {
+func withRetries(o RunOptions, what, prefix string, run func(attempt) (started, error)) (started, error) {
 	parallel := o.AllowParallel
+	// One key for the run being started, kept across the retries of it: none of them
+	// started a run, so the key is free, and a retry that did reach the platform before
+	// gets that run back rather than a second one.
+	idempotencyKey := uuid.NewString()
 	busy := 0
 	for attempt := 0; ; attempt++ {
-		result, err := run(parallel, attempt >= o.Retries)
+		result, err := run(attemptOf(o, parallel, attempt >= o.Retries, idempotencyKey))
 		if err == nil {
 			return result, nil
 		}
@@ -581,6 +609,10 @@ func withRetries(o RunOptions, what, prefix string, run func(parallel, persist b
 	}
 }
 
+func attemptOf(o RunOptions, parallel, persist bool, idempotencyKey string) attempt {
+	return attempt{parallel: parallel, persist: persist, runAgain: o.RunAgain, idempotencyKey: idempotencyKey}
+}
+
 func decodeStarted(body []byte, resp *http.Response, fallbackKey string) (started, error) {
 	var r api.ExecuteExperimentResponseAO
 	if len(body) > 0 {
@@ -598,16 +630,17 @@ func decodeStarted(body []byte, resp *http.Response, fallbackKey string) (starte
 	return s, nil
 }
 
-func runKey(ctx context.Context, c *platform.Client, key string, parallel, persist bool) (started, error) {
-	body, resp, err := platform.Read(c.ExecuteExperimentWithBody(ctx, key,
-		&api.ExecuteExperimentParams{AllowParallel: &parallel, ForcePersist: &persist}, "application/json", nil))
+func runKey(ctx context.Context, c *platform.Client, key string, a attempt) (started, error) {
+	parallel, persist, runAgain, idempotencyKey := a.params()
+	body, resp, err := platform.Read(c.ExecuteExperimentWithBody(ctx, key, &api.ExecuteExperimentParams{AllowParallel: parallel,
+		AllowRunningAgain: runAgain, IdempotencyKey: idempotencyKey, ForcePersist: persist}, "application/json", nil))
 	if err != nil {
 		return started{}, err
 	}
 	return decodeStarted(body, resp, key)
 }
 
-func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string, parallel, persist bool) (started, error) {
+func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string, a attempt) (started, error) {
 	document, datatype, err := load(file)
 	if err != nil {
 		return started{}, err
@@ -620,14 +653,15 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 		if err := update(ctx, c, key, document); err != nil {
 			return started{}, err
 		}
-		return runKey(ctx, c, key, parallel, persist)
+		return runKey(ctx, c, key, a)
 	}
 	reqBody, err := jsonBody(document)
 	if err != nil {
 		return started{}, err
 	}
-	body, resp, err := platform.Read(c.SaveAndRunWithBody(ctx,
-		&api.SaveAndRunParams{AllowParallel: &parallel, ForcePersist: &persist}, "application/json", reqBody))
+	parallel, persist, runAgain, idempotencyKey := a.params()
+	body, resp, err := platform.Read(c.SaveAndRunWithBody(ctx, &api.SaveAndRunParams{AllowParallel: parallel,
+		AllowRunningAgain: runAgain, IdempotencyKey: idempotencyKey, ForcePersist: persist}, "application/json", reqBody))
 	if err != nil {
 		return started{}, err
 	}
@@ -638,7 +672,7 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 	return result, writeBack(file, document, datatype, result.Key)
 }
 
-func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, parallel, persist bool) (started, error) {
+func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, a attempt) (started, error) {
 	id, err := templateID(o.Template)
 	if err != nil {
 		return started{}, err
@@ -652,8 +686,9 @@ func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, parallel
 		Placeholders: create.Placeholders, ExperimentVariables: create.ExperimentVariables,
 		ExecutionVariables: variables(o.ExecutionVariable),
 	}
-	body, resp, err := platform.Read(c.SaveAndRunFromTemplate(ctx, id,
-		&api.SaveAndRunFromTemplateParams{ResetProperties: &o.ResetProperties, AllowParallel: &parallel, ForcePersist: &persist}, request))
+	parallel, persist, runAgain, idempotencyKey := a.params()
+	body, resp, err := platform.Read(c.SaveAndRunFromTemplate(ctx, id, &api.SaveAndRunFromTemplateParams{ResetProperties: &o.ResetProperties,
+		AllowParallel: parallel, AllowRunningAgain: runAgain, IdempotencyKey: idempotencyKey, ForcePersist: persist}, request))
 	if platform.IsStatus(err, http.StatusNotFound) {
 		return started{}, fmt.Errorf("Experiment template %s not found.", o.Template)
 	}

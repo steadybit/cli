@@ -102,6 +102,19 @@ func TestCreateAndItsRules(t *testing.T) {
 	assert.EqualError(t, schedule.Create(ctx, p.Client, schedule.CreateOptions{Experiment: "ADM-1", Fields: schedule.Fields{Cron: "x", StartAt: "y"}}), "--cron and --start-at cannot be combined.")
 }
 
+func TestCreateRunningAgain(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/experiments/schedules", platformtest.Reply{Status: http.StatusCreated, JSON: saved})
+	again := true
+
+	_, err := platformtest.Stdout(t, func() error {
+		return schedule.Create(ctx, p.Client, schedule.CreateOptions{Experiment: "ADM-1", Fields: schedule.Fields{Cron: "0 0 9 ? * *", AllowRunningAgain: &again}})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, true, p.Requests("POST /api/experiments/schedules")[0].JSON(t).(map[string]any)["allowRunningAgain"])
+}
+
 func TestUpdateSendsOnlyWhatWasGiven(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("PATCH /api/experiments/schedules/"+id, platformtest.Reply{JSON: saved})
