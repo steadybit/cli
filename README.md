@@ -16,14 +16,31 @@ You need a Steadybit account. You can create a free account [via our website](ht
 
 ## Installation
 
-The CLI is a single binary for Linux, macOS and Windows, on amd64 and arm64.
+The CLI is a single binary for macOS, Linux and Windows, on amd64 (x86-64) and arm64. The
+downloads below are those of the latest release; [releases](https://github.com/steadybit/cli/releases)
+has the earlier versions, and each release's `checksums.txt` lists the SHA-256 of its files.
 
-With [Homebrew](https://brew.sh), on macOS or Linux, which also installs the shell
-completions:
+Up to version 5, the CLI was installed with `npm install -g steadybit`. That package is no
+longer updated; uninstall it with `npm uninstall -g steadybit` and install the binary instead.
+Profiles in `~/.steadybit` keep working.
+
+Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
+
+### macOS
+
+With [Homebrew](https://brew.sh), which also installs the shell completions:
 
 ```sh
 brew install steadybit/tap/steadybit
 ```
+
+Or download [steadybit_darwin_arm64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_darwin_arm64.tar.gz) (Apple
+silicon) or [steadybit_darwin_amd64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_darwin_amd64.tar.gz) (Intel)
+and put `steadybit` on your `PATH`.
+
+### Linux
+
+With [Homebrew](https://brew.sh), as on macOS.
 
 On Debian, Ubuntu, Fedora or RHEL, install the package attached to every release from
 v6.1.0 on, which also installs the shell completions:
@@ -37,14 +54,24 @@ curl -fsSLO https://github.com/steadybit/cli/releases/latest/download/steadybit-
 sudo dnf install ./steadybit-cli_amd64.rpm
 ```
 
-Or download the archive for your platform from the
-[releases](https://github.com/steadybit/cli/releases) (`checksums.txt` lists their SHA-256)
-and put `steadybit` on your `PATH`:
+For arm64, use `steadybit-cli_arm64.deb` and `steadybit-cli_arm64.rpm`.
+
+Or download [steadybit_linux_amd64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz) or
+[steadybit_linux_arm64.tar.gz](https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_arm64.tar.gz) and put `steadybit` on
+your `PATH`:
 
 ```sh
 curl -sL https://github.com/steadybit/cli/releases/latest/download/steadybit_linux_amd64.tar.gz | tar -xz steadybit
 sudo mv steadybit /usr/local/bin/
 ```
+
+### Windows
+
+Download [steadybit_windows_amd64.zip](https://github.com/steadybit/cli/releases/latest/download/steadybit_windows_amd64.zip) (x64) or
+[steadybit_windows_arm64.zip](https://github.com/steadybit/cli/releases/latest/download/steadybit_windows_arm64.zip) (Arm) and put
+`steadybit.exe` in a folder on your `PATH`.
+
+### Other ways
 
 With Go installed:
 
@@ -54,12 +81,6 @@ go install github.com/steadybit/cli/v6/cmd/steadybit@latest
 
 The CLI is also available as the [container image](#container-image) `steadybit/cli`, and
 in GitHub Actions through [`steadybit/cli`](#github-actions).
-
-Up to version 5, the CLI was installed with `npm install -g steadybit`. That package is no
-longer updated; uninstall it with `npm uninstall -g steadybit` and install the binary instead.
-Profiles in `~/.steadybit` keep working.
-
-Shell completion is available for bash, zsh, fish and PowerShell, see `steadybit completion --help`.
 
 At a terminal, the CLI tells you once a day when a newer release is out. Set
 `STEADYBIT_NO_UPDATE_CHECK=1` to turn that off; it is always off in CI.

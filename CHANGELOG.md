@@ -7,6 +7,10 @@
   `user delete` removes a user from the tenant. Both need an admin access token, and
   the platform refuses to remove users that SCIM or an LDAP sync manages.
 
+## v6.2.4
+
+- Built with Go 1.27.3, which fixes CVE-2026-111943 in the Go standard library.
+
 ## v6.2.3
 
 - Built with Go 1.27.2, which fixes CVE-2026-78667, CVE-2026-78669 and CVE-2026-97031
