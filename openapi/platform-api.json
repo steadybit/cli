@@ -8,7 +8,7 @@
       "url": "https://steadybit.com",
       "email": "support@steadybit.com"
     },
-    "version": "2.8.7"
+    "version": "2.8.10"
   },
   "externalDocs": {
     "description": "Steadybit Docs - Integrate via API",
@@ -442,11 +442,11 @@
               }
             }
           },
-          "400": {
-            "description": "The given `id` is not a uuid."
-          },
           "404": {
             "description": "Saved view with given `id` was not found."
+          },
+          "400": {
+            "description": "The given `id` is not a uuid."
           }
         }
       },
@@ -3120,7 +3120,7 @@
           "Experiment Executions"
         ],
         "summary": "Execute an experiment",
-        "description": "   Trigger execution of a single experiment specified by `key`. The body is optional and allows to specify overrides and custom properties for the experiment execution.\n\n   Examples:\n   - Override environment from the experiment for a single run:\n   ```\n   {\n       \"environment\":  \"Shop Stage\"\n   }\n   ```\n   - Override the variables for a single execution:\n   ```\n   {\n       \"variables\": {\n           \"httpEndpoint\": \"http://dev.shop.products.internal\"\n       }\n   }\n   ```\n",
+        "description": "   Trigger execution of a single experiment specified by `key`. The body is optional and allows to specify overrides and custom properties for the experiment execution.\n\n   Examples:\n   - Override environment from the experiment for a single run:\n   ```\n   {\n       \"environment\":  \"Shop Stage\"\n   }\n   ```\n   - Override the variables for a single execution:\n   ```\n   {\n       \"variables\": {\n           \"httpEndpoint\": \"http://dev.shop.products.internal\"\n       }\n   }\n   ```\n\n   While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.\n\n   While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):\n   ```\n   curl -X POST \"https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true\" \\\n        -H \"Authorization: Bearer <apiAccessToken>\" \\\n        -H \"Idempotency-Key: $(uuidgen)\"\n   ```\n   `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.\n\n   The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.\n\n   Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.\n",
         "operationId": "executeExperiment",
         "parameters": [
           {
@@ -3136,12 +3136,31 @@
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "By default an experiment is only executed when no other experiment is running. This can be overriden by starting the new experiment execution although another one is currently running",
+            "description": "By default an experiment is only executed when no other experiment is running. Set to `true` to start the execution anyway. Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
-            "example": true
+            "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -3165,7 +3184,22 @@
         },
         "responses": {
           "201": {
-            "description": "Experiment execution was started. The newly created object can be accessed via the HTTP header `location`",
+            "description": "Experiment execution was started, or a run of this experiment in progress was returned (see above). The object can be accessed via the HTTP header `location`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3181,6 +3215,21 @@
           },
           "404": {
             "description": "Experiment execution couldn't be started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Experiment execution was refused, e.g. because another experiment is running and `allowParallel` was not set - also when `allowRunningAgain` is set.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3420,7 +3469,7 @@
           "Experiment Templates"
         ],
         "summary": "Create an experiment based on an experiment template and run experiment",
-        "description": "Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.",
+        "description": "Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.",
         "operationId": "saveAndRunFromTemplate",
         "parameters": [
           {
@@ -3448,12 +3497,31 @@
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "Should this experiment also be executed when there is already another experiment running?",
+            "description": "Should this experiment also be executed when there is already another experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
             "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -3478,7 +3546,22 @@
         },
         "responses": {
           "200": {
-            "description": "Experiment started",
+            "description": "Experiment started, or a run of this experiment in progress was returned (see above)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3954,11 +4037,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Experiment execution was already canceled, errored or completed."
-          },
           "202": {
             "description": "Request to cancel the experiment was accepted and will be performed by communicating to the experiment's agents."
+          },
+          "200": {
+            "description": "Experiment execution was already canceled, errored or completed."
           },
           "404": {
             "description": "Experiment execution not found."
@@ -3972,18 +4055,37 @@
           "Experiment Designs"
         ],
         "summary": "Save and run experiment",
-        "description": "Save the given experiment and immediately run it.",
+        "description": "Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.",
         "operationId": "saveAndRun",
         "parameters": [
           {
             "name": "allowParallel",
             "in": "query",
-            "description": "Should this experiment also be executed when there is already at least one experiment running?",
+            "description": "Should this experiment also be executed when there is already at least one other experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "required": false,
             "schema": {
               "type": "boolean"
             },
             "example": false
+          },
+          {
+            "name": "allowRunningAgain",
+            "in": "query",
+            "description": "By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "forcePersist",
@@ -4008,7 +4110,22 @@
         },
         "responses": {
           "200": {
-            "description": "Experiment started",
+            "description": "Experiment started, or a run of this experiment in progress was returned (see above)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteExperimentResponseAO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `Idempotency-Key` is longer than 255 characters, or missing while `allowRunningAgain` is `true`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4555,6 +4672,57 @@
           },
           "422": {
             "description": "Validation error, schedule was not updated"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List the users of the tenant",
+        "description": "Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.",
+        "operationId": "getUsers",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Only users whose username, name or email contains this text",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "The number of the page and its size (at most 100, default 50)",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PageRequestAO"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResponseAOUserAO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResponseAOUserAO"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only admins can list users"
           }
         }
       }
@@ -6406,11 +6574,11 @@
               }
             }
           },
-          "400": {
-            "description": "The given `id` is not a uuid"
-          },
           "404": {
             "description": "Environment with given `id` was not found"
+          },
+          "400": {
+            "description": "The given `id` is not a uuid"
           }
         }
       },
@@ -6739,6 +6907,42 @@
         }
       }
     },
+    "/api/users/{username}": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Remove a user from the tenant",
+        "description": "Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.",
+        "operationId": "removeUser",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "The username of the user to remove",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane.doe"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The user was removed from the tenant"
+          },
+          "400": {
+            "description": "Admins cannot remove themselves"
+          },
+          "403": {
+            "description": "Only admins can remove users, and not users managed via SCIM or an LDAP sync"
+          },
+          "404": {
+            "description": "The user is not a member of the tenant"
+          }
+        }
+      }
+    },
     "/api/access-tokens/{id}": {
       "delete": {
         "tags": [
@@ -6926,7 +7130,8 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
           }
         },
@@ -7099,16 +7304,16 @@
         }
       },
       "VariableExpressionAO": {
-        "description": "A variable value: a constant string (≤5000 chars), an array of constant strings, or a select expression object.",
+        "description": "A variable value: a constant string (≤10000 chars), an array of constant strings, or a select expression object.",
         "oneOf": [
           {
-            "maxLength": 5000,
+            "maxLength": 10000,
             "type": "string"
           },
           {
             "type": "array",
             "items": {
-              "maxLength": 5000,
+              "maxLength": 10000,
               "type": "string"
             }
           },
@@ -7449,6 +7654,14 @@
               "$ref": "#/components/schemas/MemberUpdateAO"
             }
           },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -7473,14 +7686,6 @@
             "minLength": 0,
             "type": "string",
             "description": "An optional description of a team"
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "logoId": {
             "maxLength": 255,
@@ -7537,7 +7742,8 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
           }
         },
@@ -7577,7 +7783,8 @@
           "allowedEnvironments",
           "key",
           "members",
-          "name"
+          "name",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -7605,14 +7812,6 @@
             "minLength": 0,
             "type": "string",
             "description": "An optional description of a team"
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "logoId": {
             "maxLength": 255,
@@ -7669,8 +7868,16 @@
             "enum": [
               "MANUAL",
               "OIDC",
-              "LDAP"
+              "LDAP",
+              "SCIM"
             ]
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "example": 1
           },
           "members": {
             "maxItems": 512,
@@ -8485,7 +8692,8 @@
           "query",
           "serviceProfile",
           "team",
-          "validations"
+          "validations",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -8580,7 +8788,7 @@
           "version": {
             "minimum": 0,
             "type": "integer",
-            "description": "Version for optimistic locking",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -8701,7 +8909,7 @@
             "x-go-type": "interface{}"
           }
         },
-        "description": "List of template placeholder values"
+        "description": "List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it."
       },
       "UpsertProvidedExperimentRequestAO": {
         "required": [
@@ -8723,7 +8931,7 @@
           },
           "placeholders": {
             "type": "array",
-            "description": "List of template placeholder values",
+            "description": "List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.",
             "nullable": true,
             "items": {
               "$ref": "#/components/schemas/ExperimentTemplatePlaceholderValueAO"
@@ -8895,7 +9103,7 @@
           "version": {
             "minimum": 0,
             "type": "integer",
-            "description": "Version for optimistic locking",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -10683,6 +10891,14 @@
             "example": {
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Create or update the experiment with the given experiment design.",
@@ -10992,6 +11208,14 @@
             "example": {
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Update the experiment with the given experiment design.",
@@ -11158,14 +11382,6 @@
             "format": "uuid",
             "nullable": true
           },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
-          },
           "templateTitle": {
             "maxLength": 255,
             "minLength": 0,
@@ -11280,6 +11496,14 @@
             "type": "boolean",
             "description": "Should the experiment template be hidden",
             "example": false
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
           }
         },
         "description": "Insert or update the experiment template in Steadybit. The `id` will be used to identify whether the template already exists and should be updated or newly inserted.",
@@ -11442,7 +11666,8 @@
           "editedBy",
           "lanes",
           "templateDescription",
-          "templateTitle"
+          "templateTitle",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -11450,14 +11675,6 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
-          },
-          "version": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "Version for optimistic locking (optional in the API)",
-            "format": "int32",
-            "nullable": true,
-            "example": 1
           },
           "templateTitle": {
             "maxLength": 255,
@@ -11573,6 +11790,13 @@
             "type": "boolean",
             "description": "Should the experiment template be hidden",
             "example": false
+          },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "example": 1
           },
           "created": {
             "type": "string",
@@ -11765,6 +11989,14 @@
       "UpdateExperimentFromTemplateAO": {
         "type": "object",
         "properties": {
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "placeholders": {
             "type": "array",
             "description": "List of template placeholder values",
@@ -12033,8 +12265,13 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running? Default is true.",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.",
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.",
+            "example": false
           },
           "timezone": {
             "type": "string",
@@ -12099,8 +12336,13 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running? Default is true.",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.",
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.",
+            "example": false
           },
           "timezone": {
             "type": "string",
@@ -12141,6 +12383,7 @@
           "cron": "30 * * * * ? *",
           "enabled": true,
           "allowParallel": true,
+          "allowRunningAgain": false,
           "timezone": "Europe/Berlin",
           "variables": {},
           "id": "01951394-727f-76a0-8675-c7519ebd0ff5",
@@ -12623,6 +12866,14 @@
               "EXAMPLE_CUSTOM_PROPERTY": "I like this experiment!"
             }
           },
+          "version": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Version for optimistic locking (optional in the API)",
+            "format": "int32",
+            "nullable": true,
+            "example": 1
+          },
           "executionVariables": {
             "type": "object",
             "additionalProperties": {
@@ -12698,6 +12949,7 @@
             "type": "integer",
             "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
+            "nullable": true,
             "example": 1
           },
           "predicate": {
@@ -12724,7 +12976,8 @@
         "required": [
           "name",
           "predicate",
-          "state"
+          "state",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -13154,9 +13407,15 @@
           },
           "allowParallel": {
             "type": "boolean",
-            "description": "Should the experiment run if another experiment is running?",
+            "description": "Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.",
             "nullable": true,
             "example": true
+          },
+          "allowRunningAgain": {
+            "type": "boolean",
+            "description": "Should the experiment run while a run of this same experiment is still in progress?",
+            "nullable": true,
+            "example": false
           },
           "timezone": {
             "type": "string",
@@ -13179,6 +13438,115 @@
         "description": "A partial update for an experiment schedule. Only non-null fields will be updated.",
         "example": {
           "enabled": false
+        }
+      },
+      "PageRequestAO": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PagedResponseAOUserAO": {
+        "type": "object",
+        "properties": {
+          "totalItems": {
+            "type": "integer",
+            "description": "Total amount of runs matching your query",
+            "format": "int64",
+            "example": 241
+          },
+          "nextPage": {
+            "type": "integer",
+            "description": "Next page to query for next page of runs or null if there are none.",
+            "format": "int32",
+            "nullable": true,
+            "example": 4
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAO"
+            }
+          }
+        }
+      },
+      "UserAO": {
+        "required": [
+          "role",
+          "teams",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Username of the user, internal identifier of Steadybit",
+            "example": "13av2737-b318-4048-a79d-4789d645bc31"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the user",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the user",
+            "nullable": true,
+            "example": "jane.doe@example.com"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of the user in the tenant",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          },
+          "managedBy": {
+            "type": "string",
+            "description": "What manages a user's membership in the tenant",
+            "nullable": true,
+            "enum": [
+              "SCIM"
+            ]
+          },
+          "teams": {
+            "type": "array",
+            "description": "Keys of the teams the user is a member of; empty if the user is in no team",
+            "example": [
+              "ADM",
+              "PAYMENTS"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Keys of the teams the user is a member of; empty if the user is in no team",
+              "example": "[\"ADM\",\"PAYMENTS\"]"
+            }
+          },
+          "created": {
+            "type": "string",
+            "description": "When the user was created in Steadybit",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-01-15T09:30:00Z"
+          },
+          "lastLogin": {
+            "type": "string",
+            "description": "When the user last signed in; empty if the user never signed in",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-10-13T08:12:00Z"
+          }
         }
       },
       "TeamSummariesAO": {
@@ -13330,21 +13698,6 @@
             "items": {
               "type": "string"
             }
-          }
-        }
-      },
-      "PageRequestAO": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "size": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
@@ -13971,11 +14324,21 @@
             "example": [
               {
                 "key": "ADM-1",
-                "name": "Shop survives unavailability of hot-deals products"
+                "name": "Shop survives unavailability of hot-deals products",
+                "externalId": "1234567",
+                "tags": [
+                  "myTag",
+                  "myOtherTag"
+                ]
               },
               {
                 "key": "SHOP-2",
-                "name": "Network latency of Message Broker doesn't interfere with Online shop"
+                "name": "Network latency of Message Broker doesn't interfere with Online shop",
+                "externalId": "test-id",
+                "tags": [
+                  "yourTag",
+                  "yourOtherTag"
+                ]
               }
             ],
             "items": {
@@ -13988,11 +14351,21 @@
           "experiments": [
             {
               "key": "ADM-1",
-              "name": "Shop survives unavailability of hot-deals products"
+              "name": "Shop survives unavailability of hot-deals products",
+              "externalId": "1234567",
+              "tags": [
+                "myTag",
+                "myOtherTag"
+              ]
             },
             {
               "key": "SHOP-2",
-              "name": "Network latency of Message Broker doesn't interfere with Online shop"
+              "name": "Network latency of Message Broker doesn't interfere with Online shop",
+              "externalId": "test-id",
+              "tags": [
+                "yourTag",
+                "yourOtherTag"
+              ]
             }
           ]
         }
@@ -14009,12 +14382,36 @@
             "type": "string",
             "description": "Name of the experiment to easily identify the experiment",
             "example": "Shop survives unavailability of hot-deals products"
+          },
+          "externalId": {
+            "type": "string",
+            "description": "An optional external identifier used for create-or-update semantics.",
+            "example": "1234567"
+          },
+          "tags": {
+            "uniqueItems": true,
+            "type": "array",
+            "description": "An optional set of tags you can use to search for.",
+            "example": [
+              "myTag",
+              "myOtherTag"
+            ],
+            "items": {
+              "type": "string",
+              "description": "An optional set of tags you can use to search for.",
+              "example": "[\"myTag\",\"myOtherTag\"]"
+            }
           }
         },
         "description": "Summary of a single experiment.",
         "example": {
           "key": "ADM-1",
-          "name": "Shop survives unavailability of hot-deals products"
+          "name": "Shop survives unavailability of hot-deals products",
+          "externalId": "1234567",
+          "tags": [
+            "myTag",
+            "myOtherTag"
+          ]
         }
       },
       "ExperimentAO": {
@@ -14026,7 +14423,8 @@
           "key",
           "lanes",
           "name",
-          "team"
+          "team",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -14174,8 +14572,9 @@
             "example": "ADM-2"
           },
           "version": {
+            "minimum": 0,
             "type": "integer",
-            "description": "Experiment database version.",
+            "description": "Version for optimistic locking (optional in the API)",
             "format": "int32",
             "example": 1
           },
@@ -15351,7 +15750,8 @@
             "enum": [
               "ADMIN",
               "TEAM",
-              "WILDCARD"
+              "WILDCARD",
+              "SCIM"
             ]
           },
           "principalType": {
@@ -17144,10 +17544,9 @@
     },
     "securitySchemes": {
       "AccessToken": {
-        "type": "apiKey",
-        "description": "Learn more about [API Access Token in our docs](https://docs.steadybit.com/integrate-with-steadybit/api#access-tokens).<br/>\nTo generate a new API Access Token, go to [Platform Settings / API Access Token](/settings/api-tokens).\nWhen using the API Access Token in the HTTP Header 'Authorization', use the following value format:<br/><br/>\n```\naccessToken <apiAccessToken>\n```\n\n",
-        "name": "Authorization",
-        "in": "header"
+        "type": "http",
+        "description": "Learn more about [API Access Token in our docs](https://docs.steadybit.com/integrate-with-steadybit/api#access-tokens).<br/>\nTo generate a new API Access Token, go to [Platform Settings / API Access Token](/settings/api-tokens).\nPaste the token as-is below, the `Bearer` prefix is added for you. Outside of this page, send it in the HTTP Header 'Authorization':<br/><br/>\n```\nBearer <apiAccessToken>\n```\nThe legacy format `accessToken <apiAccessToken>` is still supported.\n\n",
+        "scheme": "bearer"
       }
     }
   }

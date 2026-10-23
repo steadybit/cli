@@ -45,6 +45,7 @@ func (e AccessTokenPrincipalALPrincipalType) Valid() bool {
 // Defines values for AccessTokenPrincipalALTokenType.
 const (
 	AccessTokenPrincipalALTokenTypeADMIN    AccessTokenPrincipalALTokenType = "ADMIN"
+	AccessTokenPrincipalALTokenTypeSCIM     AccessTokenPrincipalALTokenType = "SCIM"
 	AccessTokenPrincipalALTokenTypeTEAM     AccessTokenPrincipalALTokenType = "TEAM"
 	AccessTokenPrincipalALTokenTypeWILDCARD AccessTokenPrincipalALTokenType = "WILDCARD"
 )
@@ -53,6 +54,8 @@ const (
 func (e AccessTokenPrincipalALTokenType) Valid() bool {
 	switch e {
 	case AccessTokenPrincipalALTokenTypeADMIN:
+		return true
+	case AccessTokenPrincipalALTokenTypeSCIM:
 		return true
 	case AccessTokenPrincipalALTokenTypeTEAM:
 		return true
@@ -539,6 +542,7 @@ const (
 	MemberAOManagedByLDAP   MemberAOManagedBy = "LDAP"
 	MemberAOManagedByMANUAL MemberAOManagedBy = "MANUAL"
 	MemberAOManagedByOIDC   MemberAOManagedBy = "OIDC"
+	MemberAOManagedBySCIM   MemberAOManagedBy = "SCIM"
 )
 
 // Valid indicates whether the value is a known member of the MemberAOManagedBy enum.
@@ -549,6 +553,8 @@ func (e MemberAOManagedBy) Valid() bool {
 	case MemberAOManagedByMANUAL:
 		return true
 	case MemberAOManagedByOIDC:
+		return true
+	case MemberAOManagedBySCIM:
 		return true
 	default:
 		return false
@@ -977,6 +983,7 @@ const (
 	TeamAOManagedByLDAP   TeamAOManagedBy = "LDAP"
 	TeamAOManagedByMANUAL TeamAOManagedBy = "MANUAL"
 	TeamAOManagedByOIDC   TeamAOManagedBy = "OIDC"
+	TeamAOManagedBySCIM   TeamAOManagedBy = "SCIM"
 )
 
 // Valid indicates whether the value is a known member of the TeamAOManagedBy enum.
@@ -987,6 +994,8 @@ func (e TeamAOManagedBy) Valid() bool {
 	case TeamAOManagedByMANUAL:
 		return true
 	case TeamAOManagedByOIDC:
+		return true
+	case TeamAOManagedBySCIM:
 		return true
 	default:
 		return false
@@ -1139,6 +1148,7 @@ const (
 	UpsertTeamAOManagedByLDAP   UpsertTeamAOManagedBy = "LDAP"
 	UpsertTeamAOManagedByMANUAL UpsertTeamAOManagedBy = "MANUAL"
 	UpsertTeamAOManagedByOIDC   UpsertTeamAOManagedBy = "OIDC"
+	UpsertTeamAOManagedBySCIM   UpsertTeamAOManagedBy = "SCIM"
 )
 
 // Valid indicates whether the value is a known member of the UpsertTeamAOManagedBy enum.
@@ -1149,6 +1159,41 @@ func (e UpsertTeamAOManagedBy) Valid() bool {
 	case UpsertTeamAOManagedByMANUAL:
 		return true
 	case UpsertTeamAOManagedByOIDC:
+		return true
+	case UpsertTeamAOManagedBySCIM:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserAOManagedBy.
+const (
+	UserAOManagedBySCIM UserAOManagedBy = "SCIM"
+)
+
+// Valid indicates whether the value is a known member of the UserAOManagedBy enum.
+func (e UserAOManagedBy) Valid() bool {
+	switch e {
+	case UserAOManagedBySCIM:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserAORole.
+const (
+	UserAORoleADMIN UserAORole = "ADMIN"
+	UserAORoleUSER  UserAORole = "USER"
+)
+
+// Valid indicates whether the value is a known member of the UserAORole enum.
+func (e UserAORole) Valid() bool {
+	switch e {
+	case UserAORoleADMIN:
+		return true
+	case UserAORoleUSER:
 		return true
 	default:
 		return false
@@ -1991,6 +2036,11 @@ type CreateAndRunExperimentAO struct {
 	//
 	// Example: ADM
 	Team string `json:"team"`
+
+	// Version Version for optimistic locking (optional in the API)
+	//
+	// Example: 1
+	Version *int32 `json:"version,omitempty"`
 }
 
 // CreateAndRunExperimentFromTemplateAO Create or update an experiment based on an experiment template and run it.
@@ -2085,6 +2135,11 @@ type CreateExperimentAO struct {
 	//
 	// Example: ADM
 	Team string `json:"team"`
+
+	// Version Version for optimistic locking (optional in the API)
+	//
+	// Example: 1
+	Version *int32 `json:"version,omitempty"`
 }
 
 // CreateExperimentFromTemplateAO Create or update an experiment based on an experiment template.
@@ -2337,7 +2392,7 @@ type EnvironmentAO struct {
 	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
-	Version *int32 `json:"version,omitempty"`
+	Version int32 `json:"version"`
 }
 
 // EnvironmentAOState State of the environment to indicate current background tasks.
@@ -2486,10 +2541,10 @@ type ExperimentAO struct {
 	// TemplateTitle The title of the template that was used to create this experiment
 	TemplateTitle *string `json:"templateTitle,omitempty"`
 
-	// Version Experiment database version.
+	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
-	Version *int32 `json:"version,omitempty"`
+	Version int32 `json:"version"`
 }
 
 // ExperimentExecutionAO A single experiment execution that was triggered from a single experiment.
@@ -3111,12 +3166,17 @@ type ExperimentRiskAO struct {
 
 // ExperimentScheduleAO A schedule for an experiment.
 //
-// Example: {"allowParallel":true,"cron":"30 * * * * ? *","editedBy":{"email":"manuel@example.org","name":"Manuel","pictureUrl":"https://.../picture.png","username":"ag1hb7ap-d299-47ab-998f-c2a53b433820"},"enabled":true,"experimentKey":"ADM-8","id":"01951394-727f-76a0-8675-c7519ebd0ff5","lastUpdated":"2025-02-17T11:04:10.623486Z","nextExecution":"2025-02-20T05:54:30Z","timezone":"Europe/Berlin","variables":{}}
+// Example: {"allowParallel":true,"allowRunningAgain":false,"cron":"30 * * * * ? *","editedBy":{"email":"manuel@example.org","name":"Manuel","pictureUrl":"https://.../picture.png","username":"ag1hb7ap-d299-47ab-998f-c2a53b433820"},"enabled":true,"experimentKey":"ADM-8","id":"01951394-727f-76a0-8675-c7519ebd0ff5","lastUpdated":"2025-02-17T11:04:10.623486Z","nextExecution":"2025-02-20T05:54:30Z","timezone":"Europe/Berlin","variables":{}}
 type ExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running? Default is true.
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. Can't be used in combination with `startAt`.
 	//
@@ -3240,18 +3300,23 @@ type ExperimentStepWaitAO = BaseExperimentStepAO
 
 // ExperimentSummariesAO List of experiments.
 //
-// Example: {"experiments":[{"key":"ADM-1","name":"Shop survives unavailability of hot-deals products"},{"key":"SHOP-2","name":"Network latency of Message Broker doesn't interfere with Online shop"}]}
+// Example: {"experiments":[{"externalId":"1234567","key":"ADM-1","name":"Shop survives unavailability of hot-deals products","tags":["myTag","myOtherTag"]},{"externalId":"test-id","key":"SHOP-2","name":"Network latency of Message Broker doesn't interfere with Online shop","tags":["yourTag","yourOtherTag"]}]}
 type ExperimentSummariesAO struct {
 	// Experiments List of experiment summaries
 	//
-	// Example: [{"key":"ADM-1","name":"Shop survives unavailability of hot-deals products"},{"key":"SHOP-2","name":"Network latency of Message Broker doesn't interfere with Online shop"}]
+	// Example: [{"externalId":"1234567","key":"ADM-1","name":"Shop survives unavailability of hot-deals products","tags":["myTag","myOtherTag"]},{"externalId":"test-id","key":"SHOP-2","name":"Network latency of Message Broker doesn't interfere with Online shop","tags":["yourTag","yourOtherTag"]}]
 	Experiments *[]ExperimentSummaryAO `json:"experiments,omitempty"`
 }
 
 // ExperimentSummaryAO Summary of a single experiment.
 //
-// Example: {"key":"ADM-1","name":"Shop survives unavailability of hot-deals products"}
+// Example: {"externalId":"1234567","key":"ADM-1","name":"Shop survives unavailability of hot-deals products","tags":["myTag","myOtherTag"]}
 type ExperimentSummaryAO struct {
+	// ExternalId An optional external identifier used for create-or-update semantics.
+	//
+	// Example: 1234567
+	ExternalId *string `json:"externalId,omitempty"`
+
 	// Key Unique experiment key that identifies the experiment. Combination of `team key` and increasing number
 	//
 	// Example: ADM-2
@@ -3261,6 +3326,11 @@ type ExperimentSummaryAO struct {
 	//
 	// Example: Shop survives unavailability of hot-deals products
 	Name *string `json:"name,omitempty"`
+
+	// Tags An optional set of tags you can use to search for.
+	//
+	// Example: ["myTag","myOtherTag"]
+	Tags *[]string `json:"tags,omitempty"`
 }
 
 // ExperimentTemplateAO Example: {"created":"2024-03-22T09:24:12.802961166Z","createdBy":{"name":"Daniel","pictureUrl":"https://s.gravatar.com/avatar/4f27f3856530f8f2e4ec050b1d594306?s=480\u0026r=pg\u0026d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fda.png","username":"2bd1c2d7-4051-46ad-9f05-315062edd85e"},"edited":"2024-03-22T09:24:12.802961166Z","editedBy":{"name":"Daniel","pictureUrl":"https://s.gravatar.com/avatar/4f27f3856530f8f2e4ec050b1d594306?s=480\u0026r=pg\u0026d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fda.png","username":"2bd1c2d7-4051-46ad-9f05-315062edd85e"},"hidden":false,"id":"6bea7aec-3572-44cf-9151-c6ada57d08ca","lanes":[{"steps":[{"actionType":"com.steadybit.extension_http.check.periodically","ignoreFailure":false,"parameters":{"connectTimeout":"5s","duration":"60s","followRedirects":false,"headers":[],"maxConcurrent":5,"method":"GET","readTimeout":"5s","requestsPerSecond":1,"statusCode":"200-299","successRate":"100","url":"[[HTTP_ENDPOINT]]"},"radius":{},"type":"action"}]},{"steps":[{"ignoreFailure":false,"parameters":{"duration":"10s"},"type":"wait"},{"actionType":"com.steadybit.extension_kubernetes.rollout-restart","ignoreFailure":false,"parameters":{"wait":false},"radius":{"percentage":50,"predicate":{"operator":"AND","predicates":[{"key":"k8s.cluster-name","operator":"EQUALS","values":["[[CLUSTER]]"]},{"key":"k8s.namespace","operator":"EQUALS","values":["[[NAMESPACE]]"]},{"key":"k8s.deployment","operator":"EQUALS","values":["[[DEPLOYMENT]]"]}]},"query":null,"targetType":"com.steadybit.extension_kubernetes.kubernetes-deployment"},"type":"action"},{"actionType":"com.steadybit.extension_kubernetes.rollout-status","ignoreFailure":false,"parameters":{"duration":"10m"},"radius":{"percentage":50,"predicate":{"operator":"AND","predicates":[{"key":"k8s.cluster-name","operator":"EQUALS","values":["[[CLUSTER]]"]},{"key":"k8s.namespace","operator":"EQUALS","values":["[[NAMESPACE]]"]},{"key":"k8s.deployment","operator":"EQUALS","values":["[[DEPLOYMENT]]"]}]},"query":null,"targetType":"com.steadybit.extension_kubernetes.kubernetes-deployment"},"type":"action"}]}],"placeholders":[{"description":"Which HTTP Endpoint should be checked during experiment execution?","key":"HTTP_ENDPOINT","name":"HTTP Endpoint"},{"description":"Which Kubernetes deployment do you want to restart?","key":"DEPLOYMENT","name":"Kubernetes Deployment"},{"description":"In which Kubernetes cluster is the deployment deployed to?","key":"CLUSTER","name":"Kubernetes Cluster"},{"description":"In which Kubernetes namespace is the deployment deployed to?","key":"NAMESPACE","name":"Kubernetes Namespace"}],"properties":{"EXAMPLE_CUSTOM_PROPERTY":"I like this experiment!"},"propertiesMetadata":[{"editableInExecution":false,"key":"EXAMPLE_CUSTOM_PROPERTY","required":true}],"tags":["Kubernetes"],"templateDescription":"Test if a given HTTP Endpoint remains funcitonal if a Kubernetes deployment is restarted.","templateTitle":"HTTP Endpoint remains functional during Kubernetes Rollout Restart","version":0}
@@ -3333,7 +3403,7 @@ type ExperimentTemplateAO struct {
 	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
-	Version *int32 `json:"version,omitempty"`
+	Version int32 `json:"version"`
 }
 
 // ExperimentTemplatePlaceholderAO A list of placeholders used in this experiment template.
@@ -3343,7 +3413,7 @@ type ExperimentTemplatePlaceholderAO struct {
 	Name        string `json:"name"`
 }
 
-// ExperimentTemplatePlaceholderValueAO List of template placeholder values
+// ExperimentTemplatePlaceholderValueAO List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.
 type ExperimentTemplatePlaceholderValueAO struct {
 	// Key The key of a template placeholder
 	//
@@ -3992,6 +4062,21 @@ type PagedResponseAOString struct {
 	TotalItems *int64 `json:"totalItems,omitempty"`
 }
 
+// PagedResponseAOUserAO defines model for PagedResponseAOUserAO.
+type PagedResponseAOUserAO struct {
+	Items *[]UserAO `json:"items,omitempty"`
+
+	// NextPage Next page to query for next page of runs or null if there are none.
+	//
+	// Example: 4
+	NextPage *int32 `json:"nextPage,omitempty"`
+
+	// TotalItems Total amount of runs matching your query
+	//
+	// Example: 241
+	TotalItems *int64 `json:"totalItems,omitempty"`
+}
+
 // ParameterAO Parameters that describe how to fetch metrics for this action.
 type ParameterAO struct {
 	AcceptedFileTypes  *[]string `json:"acceptedFileTypes,omitempty"`
@@ -4019,10 +4104,15 @@ type ParameterAO struct {
 //
 // Example: {"enabled":false}
 type PatchExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running?
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress?
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. If provided, startAt will be cleared.
 	//
@@ -4554,10 +4644,10 @@ type ServiceAO struct {
 	// Example: {"httpEndpoint":"http://dev.shop.products.internal","targetServices":["gateway","hot-deals","fashion-bestseller"]}
 	Variables *map[string]VariableExpressionAO `json:"variables,omitempty"`
 
-	// Version Version for optimistic locking
+	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
-	Version *int32 `json:"version,omitempty"`
+	Version int32 `json:"version"`
 }
 
 // ServiceExperimentAO defines model for ServiceExperimentAO.
@@ -4631,7 +4721,7 @@ type ServiceProfileAO struct {
 	// Templates Template entries in this profile
 	Templates []ServiceProfileCategoryAO `json:"templates"`
 
-	// Version Version for optimistic locking
+	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
 	Version int32 `json:"version"`
@@ -5201,7 +5291,7 @@ type TeamAO struct {
 	// Version Version for optimistic locking (optional in the API)
 	//
 	// Example: 1
-	Version *int32 `json:"version,omitempty"`
+	Version int32 `json:"version"`
 }
 
 // TeamAOManagedBy How a team or team membership is managed
@@ -5391,6 +5481,11 @@ type UpdateExperimentAO struct {
 	//
 	// Example: ADM
 	Team string `json:"team"`
+
+	// Version Version for optimistic locking (optional in the API)
+	//
+	// Example: 1
+	Version *int32 `json:"version,omitempty"`
 }
 
 // UpdateExperimentExecutionPropertiesAO Experiment execution data that should be used only for that specific experiment execution and will not update the experiment design.
@@ -5462,6 +5557,11 @@ type UpdateExperimentExecutionPropertiesAO struct {
 type UpdateExperimentFromTemplateAO struct {
 	// Placeholders List of template placeholder values
 	Placeholders *[]ExperimentTemplatePlaceholderValueAO `json:"placeholders,omitempty"`
+
+	// Version Version for optimistic locking (optional in the API)
+	//
+	// Example: 1
+	Version *int32 `json:"version,omitempty"`
 }
 
 // UpsertEnvironmentAO Update or insert environment.
@@ -5496,10 +5596,15 @@ type UpsertEnvironmentAO struct {
 //
 // Example: {"cron":"30 * * * * ? *","experimentKey":"ADM-8"}
 type UpsertExperimentScheduleAO struct {
-	// AllowParallel Should the experiment run if another experiment is running? Default is true.
+	// AllowParallel Should the experiment run if another experiment is running? Does not apply to runs of this experiment itself - see `allowRunningAgain`. Default is true.
 	//
 	// Example: true
 	AllowParallel *bool `json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain Should the experiment run while a run of this same experiment is still in progress? `allowParallel` only covers other experiments. Default is false.
+	//
+	// Example: false
+	AllowRunningAgain *bool `json:"allowRunningAgain,omitempty"`
 
 	// Cron Cron expression for the experiment schedule. Can't be used in combination with `startAt`.
 	//
@@ -5751,7 +5856,7 @@ type UpsertProvidedExperimentRequestAO struct {
 	// Example: ADM-18
 	ExperimentKey *string `json:"experimentKey,omitempty"`
 
-	// Placeholders List of template placeholder values
+	// Placeholders List of template placeholder values. The `SERVICE` placeholder defaults to the id of the service and only needs to be passed to override it.
 	Placeholders *[]ExperimentTemplatePlaceholderValueAO `json:"placeholders,omitempty"`
 
 	// TemplateId The templateId that should be used for the provided experiment (needs to be included in the used service profile)
@@ -5909,6 +6014,51 @@ type UpsertTeamAO struct {
 // Example: MANUAL
 type UpsertTeamAOManagedBy string
 
+// UserAO defines model for UserAO.
+type UserAO struct {
+	// Created When the user was created in Steadybit
+	//
+	// Example: 2026-01-15T09:30:00Z
+	Created *time.Time `json:"created,omitempty"`
+
+	// Email Email address of the user
+	//
+	// Example: jane.doe@example.com
+	Email *string `json:"email,omitempty"`
+
+	// LastLogin When the user last signed in; empty if the user never signed in
+	//
+	// Example: 2026-10-13T08:12:00Z
+	LastLogin *time.Time `json:"lastLogin,omitempty"`
+
+	// ManagedBy What manages a user's membership in the tenant
+	ManagedBy *UserAOManagedBy `json:"managedBy,omitempty"`
+
+	// Name Name of the user
+	//
+	// Example: Jane Doe
+	Name *string `json:"name,omitempty"`
+
+	// Role Role of the user in the tenant
+	Role UserAORole `json:"role"`
+
+	// Teams Keys of the teams the user is a member of; empty if the user is in no team
+	//
+	// Example: ["ADM","PAYMENTS"]
+	Teams []string `json:"teams"`
+
+	// Username Username of the user, internal identifier of Steadybit
+	//
+	// Example: 13av2737-b318-4048-a79d-4789d645bc31
+	Username string `json:"username"`
+}
+
+// UserAOManagedBy What manages a user's membership in the tenant
+type UserAOManagedBy string
+
+// UserAORole Role of the user in the tenant
+type UserAORole string
+
 // UserPrincipalAL A user has performed the logged event e.g. via UI
 //
 // Example: {"email":"example@example.com","name":"Jane Doe","principalType":"USER","role":"ADMIN","username":"1ava2afg-xju33-4c6a-9451-2854584c15be"}
@@ -5967,7 +6117,7 @@ type UserSummaryAO struct {
 	Username string `json:"username"`
 }
 
-// VariableExpressionAO A variable value: a constant string (≤5000 chars), an array of constant strings, or a select expression object.
+// VariableExpressionAO A variable value: a constant string (≤10000 chars), an array of constant strings, or a select expression object.
 type VariableExpressionAO struct {
 	union json.RawMessage
 }
@@ -6116,11 +6266,17 @@ type GetExperimentsParamsKind string
 
 // SaveAndRunParams defines parameters for SaveAndRun.
 type SaveAndRunParams struct {
-	// AllowParallel Should this experiment also be executed when there is already at least one experiment running?
+	// AllowParallel Should this experiment also be executed when there is already at least one other experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // GetExperimentExecutions1Params defines parameters for GetExperimentExecutions1.
@@ -6197,11 +6353,17 @@ type SaveAndRunFromTemplateParams struct {
 	// ResetProperties If `true`, all properties will be reset to properties specified in the template either with their fixed values in the template or via template placeholder. If `false`, existing properties will stay untouched, only new properties will be added. Only relevant for experiment updates via `externalId`.
 	ResetProperties *bool `form:"resetProperties,omitempty" json:"resetProperties,omitempty"`
 
-	// AllowParallel Should this experiment also be executed when there is already another experiment running?
+	// AllowParallel Should this experiment also be executed when there is already another experiment running? Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // UpdateExperimentByTemplateParams defines parameters for UpdateExperimentByTemplate.
@@ -6245,11 +6407,17 @@ type GetExperimentBadgeParams struct {
 
 // ExecuteExperimentParams defines parameters for ExecuteExperiment.
 type ExecuteExperimentParams struct {
-	// AllowParallel By default an experiment is only executed when no other experiment is running. This can be overriden by starting the new experiment execution although another one is currently running
+	// AllowParallel By default an experiment is only executed when no other experiment is running. Set to `true` to start the execution anyway. Does not apply to runs of this experiment itself - see `allowRunningAgain`.
 	AllowParallel *bool `form:"allowParallel,omitempty" json:"allowParallel,omitempty"`
+
+	// AllowRunningAgain By default, while this experiment is already running, the run in progress is returned. Set to `true` to start another run of it. Requires an `Idempotency-Key` header, so a retried request cannot start yet another run. Other experiments running are still governed by `allowParallel`.
+	AllowRunningAgain *bool `form:"allowRunningAgain,omitempty" json:"allowRunningAgain,omitempty"`
 
 	// ForcePersist Optional parameter to always store runs on any failure. If false, won´t be stored on validation errors (default behaviour).
 	ForcePersist *bool `form:"forcePersist,omitempty" json:"forcePersist,omitempty"`
+
+	// IdempotencyKey Optional key making the request safe to retry: while the run started with this key is in progress, the same request returns that run instead of starting another one. Any unique value, e.g. a UUID, up to 255 characters. Required with `allowRunningAgain=true`.
+	IdempotencyKey *string `json:"Idempotency-Key,omitempty"`
 }
 
 // GetExperimentExecutions3Params defines parameters for GetExperimentExecutions3.
@@ -6524,6 +6692,15 @@ type SetTeamMembersParams struct {
 type AddTeamMembersParams struct {
 	// ValidateMembers By default, Steadybit will skip members, which are not yet know. If set to true, Steadybit will validate the given members and show a 422 response.
 	ValidateMembers *bool `form:"validateMembers,omitempty" json:"validateMembers,omitempty"`
+}
+
+// GetUsersParams defines parameters for GetUsers.
+type GetUsersParams struct {
+	// Query Only users whose username, name or email contains this text
+	Query *string `form:"query,omitempty" json:"query,omitempty"`
+
+	// Page The number of the page and its size (at most 100, default 50)
+	Page PageRequestAO `form:"page" json:"page"`
 }
 
 // CreateAccessTokenJSONRequestBody defines body for CreateAccessToken for application/json ContentType.
@@ -11591,7 +11768,7 @@ type ClientInterface interface {
 
 	// SaveAndRunWithBody Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11600,7 +11777,7 @@ type ClientInterface interface {
 
 	// SaveAndRun Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11833,7 +12010,7 @@ type ClientInterface interface {
 
 	// SaveAndRunFromTemplateWithBody Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -11842,7 +12019,7 @@ type ClientInterface interface {
 
 	// SaveAndRunFromTemplate Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -11926,6 +12103,20 @@ type ClientInterface interface {
 	//    }
 	//    ```
 	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -11950,6 +12141,20 @@ type ClientInterface interface {
 	//        }
 	//    }
 	//    ```
+	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -12920,6 +13125,13 @@ type ClientInterface interface {
 	// Corresponds with POST /api/teams/{key}/members/remove (the `RemoveTeamMembers` operationId).
 	RemoveTeamMembers(ctx context.Context, key string, body RemoveTeamMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetUsers List the users of the tenant
+	//
+	// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
+	//
+	// Corresponds with GET /api/users (the `GetUsers` operationId).
+	GetUsers(ctx context.Context, params *GetUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// InviteUserWithBody Invite users to a tenant
 	//
 	// Invite users to a tenant. The invited users will receive an email with an invitation link to join the tenant.
@@ -12937,6 +13149,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /api/users/invite (the `InviteUser` operationId).
 	InviteUser(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveUser Remove a user from the tenant
+	//
+	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	//
+	// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+	RemoveUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // GetAccessTokens Get access token list
@@ -13481,7 +13700,7 @@ func (c *Client) CreateOrUpdateExperiment(ctx context.Context, body CreateOrUpda
 
 // SaveAndRunWithBody Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type.
 //
@@ -13500,7 +13719,7 @@ func (c *Client) SaveAndRunWithBody(ctx context.Context, params *SaveAndRunParam
 
 // SaveAndRun Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14022,7 +14241,7 @@ func (c *Client) CreateExperimentByTemplate(ctx context.Context, id openapi_type
 
 // SaveAndRunFromTemplateWithBody Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14041,7 +14260,7 @@ func (c *Client) SaveAndRunFromTemplateWithBody(ctx context.Context, id openapi_
 
 // SaveAndRunFromTemplate Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -14205,6 +14424,20 @@ func (c *Client) GetExperimentBadge(ctx context.Context, key string, params *Get
 //	}
 //	```
 //
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -14239,6 +14472,20 @@ func (c *Client) ExecuteExperimentWithBody(ctx context.Context, key string, para
 //	    }
 //	}
 //	```
+//
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16399,6 +16646,23 @@ func (c *Client) RemoveTeamMembers(ctx context.Context, key string, body RemoveT
 	return c.Client.Do(req)
 }
 
+// GetUsers List the users of the tenant
+//
+// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
+//
+// Corresponds with GET /api/users (the `GetUsers` operationId).
+func (c *Client) GetUsers(ctx context.Context, params *GetUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetUsersRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // InviteUserWithBody Invite users to a tenant
 //
 // Invite users to a tenant. The invited users will receive an email with an invitation link to join the tenant.
@@ -16427,6 +16691,23 @@ func (c *Client) InviteUserWithBody(ctx context.Context, contentType string, bod
 // Corresponds with POST /api/users/invite (the `InviteUser` operationId).
 func (c *Client) InviteUser(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewInviteUserRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RemoveUser Remove a user from the tenant
+//
+// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+//
+// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+func (c *Client) RemoveUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveUserRequest(c.Server, username)
 	if err != nil {
 		return nil, err
 	}
@@ -17773,6 +18054,18 @@ func NewSaveAndRunRequestWithBody(server string, params *SaveAndRunParams, conte
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -17797,6 +18090,21 @@ func NewSaveAndRunRequestWithBody(server string, params *SaveAndRunParams, conte
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -18871,6 +19179,18 @@ func NewSaveAndRunFromTemplateRequestWithBody(server string, id openapi_types.UU
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -18895,6 +19215,21 @@ func NewSaveAndRunFromTemplateRequestWithBody(server string, id openapi_types.UU
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -19318,6 +19653,18 @@ func NewExecuteExperimentRequestWithBody(server string, key string, params *Exec
 
 		}
 
+		if params.AllowRunningAgain != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "allowRunningAgain", *params.AllowRunningAgain, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if params.ForcePersist != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "forcePersist", *params.ForcePersist, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
@@ -19342,6 +19689,21 @@ func NewExecuteExperimentRequestWithBody(server string, key string, params *Exec
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IdempotencyKey != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "Idempotency-Key", *params.IdempotencyKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("Idempotency-Key", headerParam0)
+		}
+
+	}
 
 	return req, nil
 }
@@ -23454,6 +23816,68 @@ func NewRemoveTeamMembersRequestWithBody(server string, key string, contentType 
 	return req, nil
 }
 
+// NewGetUsersRequest constructs an http.Request for the GetUsers method
+func NewGetUsersRequest(server string, params *GetUsersParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/users")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Query != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "query", *params.Query, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "object", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewInviteUserRequest calls the generic InviteUser builder with application/json body
 func NewInviteUserRequest(server string, body InviteUserJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -23490,6 +23914,40 @@ func NewInviteUserRequestWithBody(server string, contentType string, body io.Rea
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRemoveUserRequest constructs an http.Request for the RemoveUser method
+func NewRemoveUserRequest(server string, username string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "username", username, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/users/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -23812,7 +24270,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunWithBodyWithResponse Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -23821,7 +24279,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunWithResponse Save and run experiment
 	//
-	// Save the given experiment and immediately run it.
+	// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24074,7 +24532,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunFromTemplateWithBodyWithResponse Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24083,7 +24541,7 @@ type ClientWithResponsesInterface interface {
 
 	// SaveAndRunFromTemplateWithResponse Create an experiment based on an experiment template and run experiment
 	//
-	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+	// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -24173,6 +24631,20 @@ type ClientWithResponsesInterface interface {
 	//    }
 	//    ```
 	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -24197,6 +24669,20 @@ type ClientWithResponsesInterface interface {
 	//        }
 	//    }
 	//    ```
+	//
+	//    While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+	//
+	//    While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+	//    ```
+	//    curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+	//         -H "Authorization: Bearer <apiAccessToken>" \
+	//         -H "Idempotency-Key: $(uuidgen)"
+	//    ```
+	//    `allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+	//
+	//    The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+	//
+	//    Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25275,6 +25761,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /api/teams/{key}/members/remove (the `RemoveTeamMembers` operationId).
 	RemoveTeamMembersWithResponse(ctx context.Context, key string, body RemoveTeamMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*RemoveTeamMembersResponse, error)
 
+	// GetUsersWithResponse List the users of the tenant
+	//
+	// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/users (the `GetUsers` operationId).
+	GetUsersWithResponse(ctx context.Context, params *GetUsersParams, reqEditors ...RequestEditorFn) (*GetUsersResponse, error)
+
 	// InviteUserWithBodyWithResponse Invite users to a tenant
 	//
 	// Invite users to a tenant. The invited users will receive an email with an invitation link to join the tenant.
@@ -25292,6 +25787,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /api/users/invite (the `InviteUser` operationId).
 	InviteUserWithResponse(ctx context.Context, body InviteUserJSONRequestBody, reqEditors ...RequestEditorFn) (*InviteUserResponse, error)
+
+	// RemoveUserWithResponse Remove a user from the tenant
+	//
+	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+	RemoveUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*RemoveUserResponse, error)
 }
 
 type GetAccessTokensResponse struct {
@@ -26266,6 +26770,10 @@ type SaveAndRunResponse struct {
 	JSON200 *ExecuteExperimentResponseAO
 	// YAML200 the response for an HTTP 200 `application/yaml` response
 	YAML200 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ExecuteExperimentResponseAO
 	// YAML422 the response for an HTTP 422 `application/yaml` response
@@ -26280,6 +26788,16 @@ func (r SaveAndRunResponse) GetJSON200() *ExecuteExperimentResponseAO {
 // GetYAML200 returns the response for an HTTP 200 `application/yaml` response
 func (r SaveAndRunResponse) GetYAML200() *ExecuteExperimentResponseAO {
 	return r.YAML200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SaveAndRunResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r SaveAndRunResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -27142,6 +27660,10 @@ type SaveAndRunFromTemplateResponse struct {
 	JSON200 *ExecuteExperimentResponseAO
 	// YAML200 the response for an HTTP 200 `application/yaml` response
 	YAML200 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON422 the response for an HTTP 422 `application/json` response
 	JSON422 *ExecuteExperimentResponseAO
 	// YAML422 the response for an HTTP 422 `application/yaml` response
@@ -27156,6 +27678,16 @@ func (r SaveAndRunFromTemplateResponse) GetJSON200() *ExecuteExperimentResponseA
 // GetYAML200 returns the response for an HTTP 200 `application/yaml` response
 func (r SaveAndRunFromTemplateResponse) GetYAML200() *ExecuteExperimentResponseAO {
 	return r.YAML200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SaveAndRunFromTemplateResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r SaveAndRunFromTemplateResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
 }
 
 // GetJSON422 returns the response for an HTTP 422 `application/json` response
@@ -27388,10 +27920,18 @@ type ExecuteExperimentResponse struct {
 	JSON201 *ExecuteExperimentResponseAO
 	// YAML201 the response for an HTTP 201 `application/yaml` response
 	YAML201 *ExecuteExperimentResponseAO
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ExecuteExperimentResponseAO
+	// YAML400 the response for an HTTP 400 `application/yaml` response
+	YAML400 *ExecuteExperimentResponseAO
 	// JSON404 the response for an HTTP 404 `application/json` response
 	JSON404 *ExecuteExperimentResponseAO
 	// YAML404 the response for an HTTP 404 `application/yaml` response
 	YAML404 *ExecuteExperimentResponseAO
+	// JSON422 the response for an HTTP 422 `application/json` response
+	JSON422 *ExecuteExperimentResponseAO
+	// YAML422 the response for an HTTP 422 `application/yaml` response
+	YAML422 *ExecuteExperimentResponseAO
 }
 
 // GetJSON201 returns the response for an HTTP 201 `application/json` response
@@ -27404,6 +27944,16 @@ func (r ExecuteExperimentResponse) GetYAML201() *ExecuteExperimentResponseAO {
 	return r.YAML201
 }
 
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r ExecuteExperimentResponse) GetJSON400() *ExecuteExperimentResponseAO {
+	return r.JSON400
+}
+
+// GetYAML400 returns the response for an HTTP 400 `application/yaml` response
+func (r ExecuteExperimentResponse) GetYAML400() *ExecuteExperimentResponseAO {
+	return r.YAML400
+}
+
 // GetJSON404 returns the response for an HTTP 404 `application/json` response
 func (r ExecuteExperimentResponse) GetJSON404() *ExecuteExperimentResponseAO {
 	return r.JSON404
@@ -27412,6 +27962,16 @@ func (r ExecuteExperimentResponse) GetJSON404() *ExecuteExperimentResponseAO {
 // GetYAML404 returns the response for an HTTP 404 `application/yaml` response
 func (r ExecuteExperimentResponse) GetYAML404() *ExecuteExperimentResponseAO {
 	return r.YAML404
+}
+
+// GetJSON422 returns the response for an HTTP 422 `application/json` response
+func (r ExecuteExperimentResponse) GetJSON422() *ExecuteExperimentResponseAO {
+	return r.JSON422
+}
+
+// GetYAML422 returns the response for an HTTP 422 `application/yaml` response
+func (r ExecuteExperimentResponse) GetYAML422() *ExecuteExperimentResponseAO {
+	return r.YAML422
 }
 
 // GetBody returns the raw response body bytes
@@ -31529,6 +32089,54 @@ func (r RemoveTeamMembersResponse) ContentType() string {
 	return ""
 }
 
+type GetUsersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PagedResponseAOUserAO
+	// YAML200 the response for an HTTP 200 `application/yaml` response
+	YAML200 *PagedResponseAOUserAO
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetUsersResponse) GetJSON200() *PagedResponseAOUserAO {
+	return r.JSON200
+}
+
+// GetYAML200 returns the response for an HTTP 200 `application/yaml` response
+func (r GetUsersResponse) GetYAML200() *PagedResponseAOUserAO {
+	return r.YAML200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetUsersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetUsersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetUsersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetUsersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type InviteUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -31557,6 +32165,40 @@ func (r InviteUserResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r InviteUserResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemoveUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r RemoveUserResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveUserResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -32016,7 +32658,7 @@ func (c *ClientWithResponses) CreateOrUpdateExperimentWithResponse(ctx context.C
 
 // SaveAndRunWithBodyWithResponse Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32031,7 +32673,7 @@ func (c *ClientWithResponses) SaveAndRunWithBodyWithResponse(ctx context.Context
 
 // SaveAndRunWithResponse Save and run experiment
 //
-// Save the given experiment and immediately run it.
+// Save the given experiment and immediately run it. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32458,7 +33100,7 @@ func (c *ClientWithResponses) CreateExperimentByTemplateWithResponse(ctx context
 
 // SaveAndRunFromTemplateWithBodyWithResponse Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32473,7 +33115,7 @@ func (c *ClientWithResponses) SaveAndRunFromTemplateWithBodyWithResponse(ctx con
 
 // SaveAndRunFromTemplateWithResponse Create an experiment based on an experiment template and run experiment
 //
-// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted.
+// Use the given experiment template id and the placeholder values to create or update and immediately run the experiment. The `externalId` will be used to identify whether the experiment exists already and should be updated or newly inserted. While the experiment is already running, the run in progress is returned instead of starting another one, unless `allowRunningAgain` is `true`. The `Idempotency-Key` covers the run only: the experiment is saved on every request.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -32611,6 +33253,20 @@ func (c *ClientWithResponses) GetExperimentBadgeWithResponse(ctx context.Context
 //	}
 //	```
 //
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/experiments/{key}/execute (the `ExecuteExperiment` operationId).
@@ -32641,6 +33297,20 @@ func (c *ClientWithResponses) ExecuteExperimentWithBodyWithResponse(ctx context.
 //	    }
 //	}
 //	```
+//
+//	While another experiment is running, depending on the platform's configuration, the execution is refused unless `allowParallel` is `true`.
+//
+//	While this experiment is already running, the run in progress is returned instead of starting another one. To start another run of the same experiment, pass `allowRunningAgain=true` together with an `Idempotency-Key` header (any unique value, e.g. a UUID, up to 255 characters):
+//	```
+//	curl -X POST "https://<your-platform>/api/experiments/ADM-2/execute?allowRunningAgain=true" \
+//	     -H "Authorization: Bearer <apiAccessToken>" \
+//	     -H "Idempotency-Key: $(uuidgen)"
+//	```
+//	`allowRunningAgain` only concerns runs of this experiment. While another experiment is running, the request is still refused unless `allowParallel` is `true` as well.
+//
+//	The optional `Idempotency-Key` makes any execute request safe to retry: while the run started with that key is in progress, repeating the request with the same key returns that run instead of starting another one. Once the run has ended, the same key starts a new run. Use a new key for every run you want to start, and the same key only for retries of that request.
+//
+//	Both a new run and a run returned instead answer with `201`. To tell them apart, compare the `executionId` of the response with the runs you already know of.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34433,6 +35103,21 @@ func (c *ClientWithResponses) RemoveTeamMembersWithResponse(ctx context.Context,
 	return ParseRemoveTeamMembersResponse(rsp)
 }
 
+// GetUsersWithResponse List the users of the tenant
+//
+// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/users (the `GetUsers` operationId).
+func (c *ClientWithResponses) GetUsersWithResponse(ctx context.Context, params *GetUsersParams, reqEditors ...RequestEditorFn) (*GetUsersResponse, error) {
+	rsp, err := c.GetUsers(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetUsersResponse(rsp)
+}
+
 // InviteUserWithBodyWithResponse Invite users to a tenant
 //
 // Invite users to a tenant. The invited users will receive an email with an invitation link to join the tenant.
@@ -34461,6 +35146,21 @@ func (c *ClientWithResponses) InviteUserWithResponse(ctx context.Context, body I
 		return nil, err
 	}
 	return ParseInviteUserResponse(rsp)
+}
+
+// RemoveUserWithResponse Remove a user from the tenant
+//
+// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+func (c *ClientWithResponses) RemoveUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*RemoveUserResponse, error) {
+	rsp, err := c.RemoveUser(ctx, username, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveUserResponse(rsp)
 }
 
 // ParseGetAccessTokensResponse parses an HTTP response from a GetAccessTokensWithResponse call
@@ -35129,6 +35829,20 @@ func ParseSaveAndRunResponse(rsp *http.Response) (*SaveAndRunResponse, error) {
 		}
 		response.YAML200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -35696,6 +36410,20 @@ func ParseSaveAndRunFromTemplateResponse(rsp *http.Response) (*SaveAndRunFromTem
 		}
 		response.YAML200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -35843,6 +36571,20 @@ func ParseExecuteExperimentResponse(rsp *http.Response) (*ExecuteExperimentRespo
 		}
 		response.YAML201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 400:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML400 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest ExecuteExperimentResponseAO
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -35856,6 +36598,20 @@ func ParseExecuteExperimentResponse(rsp *http.Response) (*ExecuteExperimentRespo
 			return nil, err
 		}
 		response.YAML404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest ExecuteExperimentResponseAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 422:
+		var dest ExecuteExperimentResponseAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML422 = &dest
 
 	}
 
@@ -38769,6 +39525,42 @@ func ParseRemoveTeamMembersResponse(rsp *http.Response) (*RemoveTeamMembersRespo
 	return response, nil
 }
 
+// ParseGetUsersResponse parses an HTTP response from a GetUsersWithResponse call
+func ParseGetUsersResponse(rsp *http.Response) (*GetUsersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetUsersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PagedResponseAOUserAO
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 200:
+		var dest PagedResponseAOUserAO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML200 = &dest
+
+	case rsp.StatusCode == 403:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
 // ParseInviteUserResponse parses an HTTP response from a InviteUserWithResponse call
 func ParseInviteUserResponse(rsp *http.Response) (*InviteUserResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -38778,6 +39570,22 @@ func ParseInviteUserResponse(rsp *http.Response) (*InviteUserResponse, error) {
 	}
 
 	response := &InviteUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRemoveUserResponse parses an HTTP response from a RemoveUserWithResponse call
+func ParseRemoveUserResponse(rsp *http.Response) (*RemoveUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveUserResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
