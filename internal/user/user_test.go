@@ -96,20 +96,26 @@ func TestListNeedsAnAdminToken(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	p := platformtest.New(t)
-	p.Reply("DELETE /api/users/u-1", platformtest.Reply{Status: http.StatusNoContent})
+	p.Reply("DELETE /api/users", platformtest.Reply{Status: http.StatusNoContent})
+	// an ADFS subject: base64, so it contains '/', '+' and '='
+	username := "Xr2m/ZO0F+ab="
 
-	out, err := platformtest.Stdout(t, func() error { return user.Delete(ctx, p.Client, user.DeleteOptions{Username: "u-1", Yes: true}) })
+	out, err := platformtest.Stdout(t, func() error { return user.Delete(ctx, p.Client, user.DeleteOptions{Username: username, Yes: true}) })
 
 	require.NoError(t, err)
-	assert.Equal(t, "User u-1 removed from the tenant.\n", out)
-	assert.Len(t, p.Requests("DELETE /api/users/u-1"), 1)
+	assert.Equal(t, "User "+username+" removed from the tenant.\n", out)
+	require.Len(t, p.Requests("DELETE /api/users"), 1)
+	assert.Equal(t, []string{username}, p.Requests("DELETE /api/users")[0].Query["username"])
 }
 
 func TestDeleteRefusals(t *testing.T) {
 	p := platformtest.New(t)
-	p.Reply("DELETE /api/users/nobody", platformtest.Reply{Status: http.StatusNotFound})
-	p.Reply("DELETE /api/users/u-2", platformtest.Reply{Status: http.StatusForbidden,
-		JSON: map[string]any{"title": "Forbidden", "detail": "The user is managed by SCIM"}})
+	p.Handle("DELETE /api/users", func(r platformtest.Request) platformtest.Reply {
+		if q := r.Query["username"]; len(q) == 1 && q[0] == "nobody" {
+			return platformtest.Reply{Status: http.StatusNotFound}
+		}
+		return platformtest.Reply{Status: http.StatusForbidden, JSON: map[string]any{"title": "Forbidden", "detail": "The user is managed by SCIM"}}
+	})
 
 	assert.EqualError(t, user.Delete(ctx, p.Client, user.DeleteOptions{Username: "nobody", Yes: true}), "User nobody is not a member of the tenant.")
 	err := user.Delete(ctx, p.Client, user.DeleteOptions{Username: "u-2", Yes: true})

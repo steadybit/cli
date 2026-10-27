@@ -8,7 +8,7 @@
       "url": "https://steadybit.com",
       "email": "support@steadybit.com"
     },
-    "version": "2.8.10"
+    "version": "1.0.0-SNAPSHOT"
   },
   "externalDocs": {
     "description": "Steadybit Docs - Integrate via API",
@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "https://platform.steadybit.com",
+      "url": "https://platform.dev.steadybit.com",
       "description": "Generated server url"
     }
   ],
@@ -4725,6 +4725,40 @@
             "description": "Only admins can list users"
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Remove a user from the tenant",
+        "description": "Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.",
+        "operationId": "removeUserFromTenant",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "description": "The username of the user to remove",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane.doe"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The user was removed from the tenant"
+          },
+          "400": {
+            "description": "Admins cannot remove themselves"
+          },
+          "403": {
+            "description": "Only admins can remove users, and not users managed via SCIM or an LDAP sync"
+          },
+          "404": {
+            "description": "The user is not a member of the tenant"
+          }
+        }
       }
     },
     "/api/teams/{key}": {
@@ -6913,7 +6947,7 @@
           "Users"
         ],
         "summary": "Remove a user from the tenant",
-        "description": "Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.",
+        "description": "Deprecated, use `DELETE /api/users?username=…` instead: a username containing `/` (e.g. the subject of an ADFS login) cannot be passed as a path segment. Otherwise the same.",
         "operationId": "removeUser",
         "parameters": [
           {
@@ -6940,7 +6974,8 @@
           "404": {
             "description": "The user is not a member of the tenant"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/access-tokens/{id}": {
@@ -8237,7 +8272,12 @@
         "type": "object",
         "properties": {
           "predicate": {
-            "$ref": "#/components/schemas/TargetPredicateAO"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetPredicateAO"
+              }
+            ]
           },
           "query": {
             "maxLength": 20000,
@@ -11279,7 +11319,6 @@
           }
         },
         "description": "Experiment execution data that should be used only for that specific experiment execution and will not update the experiment design.",
-        "nullable": true,
         "example": {}
       },
       "ExecuteExperimentResponseAO": {
@@ -12953,7 +12992,12 @@
             "example": 1
           },
           "predicate": {
-            "$ref": "#/components/schemas/TargetPredicateAO"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TargetPredicateAO"
+              }
+            ]
           },
           "query": {
             "maxLength": 20000,
@@ -14096,7 +14140,12 @@
         "type": "object",
         "properties": {
           "license": {
-            "$ref": "#/components/schemas/LicenseSummaryAO"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LicenseSummaryAO"
+              }
+            ]
           },
           "expires": {
             "type": "string",
@@ -14183,8 +14232,7 @@
             "type": "string",
             "format": "date"
           }
-        },
-        "nullable": true
+        }
       },
       "KillswitchAO": {
         "type": "object",
@@ -15801,19 +15849,39 @@
             "example": "2023-01-03T09:13:00Z"
           },
           "trigger": {
-            "$ref": "#/components/schemas/AuditLogTrigger"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditLogTrigger"
+              }
+            ]
           },
           "principal": {
-            "$ref": "#/components/schemas/PrincipalAL"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PrincipalAL"
+              }
+            ]
           },
           "tenant": {
             "$ref": "#/components/schemas/TenantAL"
           },
           "team": {
-            "$ref": "#/components/schemas/TeamAL"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TeamAL"
+              }
+            ]
           },
           "environment": {
-            "$ref": "#/components/schemas/EnvironmentAL"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EnvironmentAL"
+              }
+            ]
           }
         },
         "description": "Audit log entry.",
@@ -16131,7 +16199,12 @@
             ]
           },
           "hint": {
-            "$ref": "#/components/schemas/HintAO"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HintAO"
+              }
+            ]
           },
           "target": {
             "$ref": "#/components/schemas/TargetSelectorAO"
@@ -16243,8 +16316,7 @@
             "description": "Content of the hint as markdown text."
           }
         },
-        "description": "An informational or warning hint displayed to the user.",
-        "nullable": true
+        "description": "An informational or warning hint displayed to the user."
       },
       "OptionAO": {
         "type": "object",
@@ -16320,7 +16392,12 @@
             "type": "string"
           },
           "hint": {
-            "$ref": "#/components/schemas/HintAO"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HintAO"
+              }
+            ]
           },
           "acceptedFileTypes": {
             "uniqueItems": true,
@@ -16451,6 +16528,7 @@
             "uniqueItems": true,
             "type": "array",
             "description": "Teams associated with this token.",
+            "nullable": true,
             "items": {
               "type": "string",
               "description": "Teams associated with this token."
@@ -16468,12 +16546,14 @@
           "expiresAt": {
             "type": "string",
             "description": "Expiration date of the token. Null means the token never expires.",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           },
           "lastUsed": {
             "type": "string",
             "description": "Date of the last token usage. Null means the token was never used.",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "A single access token"

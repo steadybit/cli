@@ -1623,11 +1623,9 @@ type ActionAO struct {
 	DefaultBlastRadius DefaultBlastRadiusAO `json:"defaultBlastRadius"`
 
 	// Description Description of the action.
-	Description string `json:"description"`
-
-	// Hint An informational or warning hint displayed to the user.
-	Hint       *HintAO `json:"hint,omitempty"`
-	HubSummary *string `json:"hubSummary,omitempty"`
+	Description string  `json:"description"`
+	Hint        *HintAO `json:"hint,omitempty"`
+	HubSummary  *string `json:"hubSummary,omitempty"`
 
 	// Icon Icon of the action as a data URI (may be a large base64-encoded image).
 	Icon *string `json:"icon,omitempty"`
@@ -1764,9 +1762,6 @@ type AttributeAO struct {
 //
 // Example: {"eventName":"experiment.created","eventTime":"2023-01-03T09:13:00Z","experiment":{"key":"ADM-1"},"id":"14av1421-aol3-4159-8ae2-47f5a9ba119e","tenant":{"key":"Demo","name":"Demo Tenant"},"trigger":{"triggerType":"HTTP_REQUEST","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"}}
 type AuditLogEntry struct {
-	// Environment The environment in which the event was triggered
-	//
-	// Example: {"id":"1avfd231-8322-42f2-bad9-307dc962ec37","name":"Global","predicate":{"operator":"AND","predicates":[]}}
 	Environment *EnvironmentAL `json:"environment,omitempty"`
 
 	// EventName Event name that was audited
@@ -1780,26 +1775,14 @@ type AuditLogEntry struct {
 	EventTime time.Time `json:"eventTime"`
 
 	// Id Unique identifier of the audit log entry
-	Id openapi_types.UUID `json:"id"`
-
-	// Principal The principal that has performed the logged event
-	//
-	// Example: {"email":"example@example.com","name":"Jane Doe","principalType":"USER","role":"ADMIN","username":"1ava2afg-xju33-4c6a-9451-2854584c15be"}
-	Principal *PrincipalAL `json:"principal,omitempty"`
-
-	// Team The team in which the event was triggered
-	//
-	// Example: {"id":"a2167b29-e73b-4445-8468-4670a0b459b3","key":"ADMIN","name":"Administrators"}
-	Team *TeamAL `json:"team,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Principal *PrincipalAL       `json:"principal,omitempty"`
+	Team      *TeamAL            `json:"team,omitempty"`
 
 	// Tenant The tenant in which the event was performed. Only relevant in case you are using multiple tenants of the Steadybit platform.
 	//
 	// Example: {"key":"Demo","name":"Demo Tenant"}
-	Tenant TenantAL `json:"tenant"`
-
-	// Trigger The trigger that caused the event to happen
-	//
-	// Example: {"triggerType":"HTTP_REQUEST","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"}
+	Tenant  TenantAL         `json:"tenant"`
 	Trigger *AuditLogTrigger `json:"trigger,omitempty"`
 }
 
@@ -4079,25 +4062,23 @@ type PagedResponseAOUserAO struct {
 
 // ParameterAO Parameters that describe how to fetch metrics for this action.
 type ParameterAO struct {
-	AcceptedFileTypes  *[]string `json:"acceptedFileTypes,omitempty"`
-	Advanced           *bool     `json:"advanced,omitempty"`
-	DefaultValue       *string   `json:"defaultValue,omitempty"`
-	Deprecated         *bool     `json:"deprecated,omitempty"`
-	DeprecationMessage *string   `json:"deprecationMessage,omitempty"`
-	Description        *string   `json:"description,omitempty"`
-	DurationUnits      *[]string `json:"durationUnits,omitempty"`
-
-	// Hint An informational or warning hint displayed to the user.
-	Hint        *HintAO     `json:"hint,omitempty"`
-	Label       string      `json:"label"`
-	Max         *int32      `json:"max,omitempty"`
-	Min         *int32      `json:"min,omitempty"`
-	Name        string      `json:"name"`
-	Options     *[]OptionAO `json:"options,omitempty"`
-	OptionsOnly *bool       `json:"optionsOnly,omitempty"`
-	Order       *int32      `json:"order,omitempty"`
-	Required    *bool       `json:"required,omitempty"`
-	Type        string      `json:"type"`
+	AcceptedFileTypes  *[]string   `json:"acceptedFileTypes,omitempty"`
+	Advanced           *bool       `json:"advanced,omitempty"`
+	DefaultValue       *string     `json:"defaultValue,omitempty"`
+	Deprecated         *bool       `json:"deprecated,omitempty"`
+	DeprecationMessage *string     `json:"deprecationMessage,omitempty"`
+	Description        *string     `json:"description,omitempty"`
+	DurationUnits      *[]string   `json:"durationUnits,omitempty"`
+	Hint               *HintAO     `json:"hint,omitempty"`
+	Label              string      `json:"label"`
+	Max                *int32      `json:"max,omitempty"`
+	Min                *int32      `json:"min,omitempty"`
+	Name               string      `json:"name"`
+	Options            *[]OptionAO `json:"options,omitempty"`
+	OptionsOnly        *bool       `json:"optionsOnly,omitempty"`
+	Order              *int32      `json:"order,omitempty"`
+	Required           *bool       `json:"required,omitempty"`
+	Type               string      `json:"type"`
 }
 
 // PatchExperimentScheduleAO A partial update for an experiment schedule. Only non-null fields will be updated.
@@ -5214,9 +5195,6 @@ type TargetSelectorAO struct {
 
 // TargetStatsRequest defines model for TargetStatsRequest.
 type TargetStatsRequest struct {
-	// Predicate Query defining the overall superset of targets being effected
-	//
-	// Example: [{"key":"container.host/name","operator":"EQUALS","values":["docker-desktop/minikube"]}]
 	Predicate *TargetPredicateAO `json:"predicate,omitempty"`
 
 	// Query Alternative to `predicate`. If both `query` and `predicate` will be provided, `query` will override the `predicate`.
@@ -5574,11 +5552,7 @@ type UpsertEnvironmentAO struct {
 	// Name Name of the environment.
 	//
 	// Example: Global
-	Name string `json:"name"`
-
-	// Predicate Query defining the overall superset of targets being effected
-	//
-	// Example: [{"key":"container.host/name","operator":"EQUALS","values":["docker-desktop/minikube"]}]
+	Name      string             `json:"name"`
 	Predicate *TargetPredicateAO `json:"predicate,omitempty"`
 
 	// Query Alternative to `predicate`. If both `query` and `predicate` will be provided, `query` will override the `predicate`.
@@ -6692,6 +6666,12 @@ type SetTeamMembersParams struct {
 type AddTeamMembersParams struct {
 	// ValidateMembers By default, Steadybit will skip members, which are not yet know. If set to true, Steadybit will validate the given members and show a 422 response.
 	ValidateMembers *bool `form:"validateMembers,omitempty" json:"validateMembers,omitempty"`
+}
+
+// RemoveUserFromTenantParams defines parameters for RemoveUserFromTenant.
+type RemoveUserFromTenantParams struct {
+	// Username The username of the user to remove
+	Username string `form:"username" json:"username"`
 }
 
 // GetUsersParams defines parameters for GetUsers.
@@ -13125,6 +13105,13 @@ type ClientInterface interface {
 	// Corresponds with POST /api/teams/{key}/members/remove (the `RemoveTeamMembers` operationId).
 	RemoveTeamMembers(ctx context.Context, key string, body RemoveTeamMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RemoveUserFromTenant Remove a user from the tenant
+	//
+	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	//
+	// Corresponds with DELETE /api/users (the `RemoveUserFromTenant` operationId).
+	RemoveUserFromTenant(ctx context.Context, params *RemoveUserFromTenantParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetUsers List the users of the tenant
 	//
 	// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
@@ -13152,9 +13139,11 @@ type ClientInterface interface {
 
 	// RemoveUser Remove a user from the tenant
 	//
-	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	// Deprecated, use `DELETE /api/users?username=…` instead: a username containing `/` (e.g. the subject of an ADFS login) cannot be passed as a path segment. Otherwise the same.
 	//
 	// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RemoveUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
@@ -16646,6 +16635,23 @@ func (c *Client) RemoveTeamMembers(ctx context.Context, key string, body RemoveT
 	return c.Client.Do(req)
 }
 
+// RemoveUserFromTenant Remove a user from the tenant
+//
+// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+//
+// Corresponds with DELETE /api/users (the `RemoveUserFromTenant` operationId).
+func (c *Client) RemoveUserFromTenant(ctx context.Context, params *RemoveUserFromTenantParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveUserFromTenantRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetUsers List the users of the tenant
 //
 // Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
@@ -16703,9 +16709,10 @@ func (c *Client) InviteUser(ctx context.Context, body InviteUserJSONRequestBody,
 
 // RemoveUser Remove a user from the tenant
 //
-// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+// Deprecated, use `DELETE /api/users?username=…` instead: a username containing `/` (e.g. the subject of an ADFS login) cannot be passed as a path segment. Otherwise the same.
 //
 // Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) RemoveUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRemoveUserRequest(c.Server, username)
 	if err != nil {
@@ -23816,6 +23823,56 @@ func NewRemoveTeamMembersRequestWithBody(server string, key string, contentType 
 	return req, nil
 }
 
+// NewRemoveUserFromTenantRequest constructs an http.Request for the RemoveUserFromTenant method
+func NewRemoveUserFromTenantRequest(server string, params *RemoveUserFromTenantParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/users")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "username", params.Username, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetUsersRequest constructs an http.Request for the GetUsers method
 func NewGetUsersRequest(server string, params *GetUsersParams) (*http.Request, error) {
 	var err error
@@ -25761,6 +25818,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /api/teams/{key}/members/remove (the `RemoveTeamMembers` operationId).
 	RemoveTeamMembersWithResponse(ctx context.Context, key string, body RemoveTeamMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*RemoveTeamMembersResponse, error)
 
+	// RemoveUserFromTenantWithResponse Remove a user from the tenant
+	//
+	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/users (the `RemoveUserFromTenant` operationId).
+	RemoveUserFromTenantWithResponse(ctx context.Context, params *RemoveUserFromTenantParams, reqEditors ...RequestEditorFn) (*RemoveUserFromTenantResponse, error)
+
 	// GetUsersWithResponse List the users of the tenant
 	//
 	// Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
@@ -25790,11 +25856,13 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveUserWithResponse Remove a user from the tenant
 	//
-	// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+	// Deprecated, use `DELETE /api/users?username=…` instead: a username containing `/` (e.g. the subject of an ADFS login) cannot be passed as a path segment. Otherwise the same.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RemoveUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*RemoveUserResponse, error)
 }
 
@@ -32089,6 +32157,40 @@ func (r RemoveTeamMembersResponse) ContentType() string {
 	return ""
 }
 
+type RemoveUserFromTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r RemoveUserFromTenantResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveUserFromTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveUserFromTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveUserFromTenantResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetUsersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -35103,6 +35205,21 @@ func (c *ClientWithResponses) RemoveTeamMembersWithResponse(ctx context.Context,
 	return ParseRemoveTeamMembersResponse(rsp)
 }
 
+// RemoveUserFromTenantWithResponse Remove a user from the tenant
+//
+// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/users (the `RemoveUserFromTenant` operationId).
+func (c *ClientWithResponses) RemoveUserFromTenantWithResponse(ctx context.Context, params *RemoveUserFromTenantParams, reqEditors ...RequestEditorFn) (*RemoveUserFromTenantResponse, error) {
+	rsp, err := c.RemoveUserFromTenant(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveUserFromTenantResponse(rsp)
+}
+
 // GetUsersWithResponse List the users of the tenant
 //
 // Lists all members of the tenant, including users that are in no team, sorted by username. Admins only.
@@ -35150,11 +35267,13 @@ func (c *ClientWithResponses) InviteUserWithResponse(ctx context.Context, body I
 
 // RemoveUserWithResponse Remove a user from the tenant
 //
-// Removes the user's membership in this tenant: the user leaves all teams of the tenant, loses its access tokens for the tenant and is logged out. A user that is then a member of no tenant at all is deleted. If your identity provider still grants the user access, the user comes back on the next login - remove it there to offboard it for good. Users managed via SCIM can only be removed by the identity provider, and while an LDAP sync manages the users of the tenant, no user can be removed by hand. Admins only.
+// Deprecated, use `DELETE /api/users?username=…` instead: a username containing `/` (e.g. the subject of an ADFS login) cannot be passed as a path segment. Otherwise the same.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /api/users/{username} (the `RemoveUser` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) RemoveUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*RemoveUserResponse, error) {
 	rsp, err := c.RemoveUser(ctx, username, reqEditors...)
 	if err != nil {
@@ -39520,6 +39639,22 @@ func ParseRemoveTeamMembersResponse(rsp *http.Response) (*RemoveTeamMembersRespo
 	case rsp.StatusCode == 422:
 		break // No content-type
 
+	}
+
+	return response, nil
+}
+
+// ParseRemoveUserFromTenantResponse parses an HTTP response from a RemoveUserFromTenantWithResponse call
+func ParseRemoveUserFromTenantResponse(rsp *http.Response) (*RemoveUserFromTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveUserFromTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
