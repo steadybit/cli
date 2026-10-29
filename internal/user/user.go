@@ -130,7 +130,8 @@ func Delete(ctx context.Context, c *platform.Client, o DeleteOptions) error {
 	if ok, err := resource.Confirmed(o.Yes, fmt.Sprintf("Remove user %s from the tenant? They lose access to it.", o.Username)); !ok || err != nil {
 		return err
 	}
-	_, _, err := platform.Read(c.RemoveUser(ctx, o.Username))
+	// as a query parameter, not a path segment: usernames may contain '/' (ADFS subjects are base64)
+	_, _, err := platform.Read(c.RemoveUserFromTenant(ctx, &api.RemoveUserFromTenantParams{Username: o.Username}))
 	if platform.IsStatus(err, http.StatusNotFound) {
 		return fmt.Errorf("User %s is not a member of the tenant.", o.Username)
 	}

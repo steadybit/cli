@@ -1,5 +1,9 @@
 # Changelog
 
+- `user delete` removes users whose username contains a `/`, such as the base64 subjects
+  ADFS issues; the platform answered 404 for them. Needs a platform that knows
+  `DELETE /api/users?username=…`.
+
 ## v6.4.0
 
 - `experiment run --run-again` starts another run of an experiment that is already
