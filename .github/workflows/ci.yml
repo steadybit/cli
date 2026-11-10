@@ -157,15 +157,17 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.tags.outputs.tags }}
           build-args: VERSION=${{ steps.tags.outputs.version }}
+      - name: 'set up snyk'
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: steadybit/extension-kit/.github/actions/setup-snyk@main # NOSONAR githubactions:S7637 - our own action
       - name: 'snyk monitor docker image'
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: snyk/actions/docker@master
-        with:
-          image: 'steadybit/cli:${{ steps.tags.outputs.version }}'
-          args: --file=Dockerfile --username=${{ secrets.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
-          command: monitor
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_REGISTRY_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          SNYK_REGISTRY_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          VERSION: ${{ steps.tags.outputs.version }}
+        run: snyk container monitor "steadybit/cli:$VERSION" --file=Dockerfile
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -209,12 +211,13 @@ jobs:
           major="${GITHUB_REF_NAME%%.*}"
           git tag -f "${major}" "${GITHUB_SHA}"
           git push -f origin "refs/tags/${major}"
+      # Snyk takes the stdlib version of the Go scan from the toolchain set up above (go.mod's toolchain directive).
+      - name: 'set up snyk'
+        uses: steadybit/extension-kit/.github/actions/setup-snyk@main # NOSONAR githubactions:S7637 - our own action
       - name: 'snyk monitor'
-        uses: snyk/actions/golang@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: monitor
+        run: snyk monitor
 
   # The signed packages of a release, installed before they are published to the apt and yum
   # repositories. A job of its own, so that a failing upload leaves the release, the cask and
