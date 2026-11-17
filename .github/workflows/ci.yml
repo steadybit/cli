@@ -150,7 +150,7 @@ jobs:
       # and may only push steadybit/cli. The connection id names the OIDC connection of the
       # steadybit Docker organisation; it is not a secret.
       - name: Docker Hub login
-        if: steps.tags.outputs.push == 'true'
+        if: true # TEMP: login on the pull request too, to prove the connection
         uses: docker/login-action@v4
         env:
           DOCKERHUB_OIDC_CONNECTIONID: cb9fd54c-9f94-4732-b0ce-53c03b0a008e
