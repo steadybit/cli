@@ -24,6 +24,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/property"
 	"github.com/steadybit/cli/v6/internal/schedule"
+	"github.com/steadybit/cli/v6/internal/scope"
 	"github.com/steadybit/cli/v6/internal/service"
 	"github.com/steadybit/cli/v6/internal/serviceprofile"
 	"github.com/steadybit/cli/v6/internal/team"
@@ -117,11 +118,15 @@ func fileName(dir, name string, taken map[string]bool) string {
 	return filepath.Join(dir, candidate+".yaml")
 }
 
-func writeDocument(file string, doc *jsyaml.Map, readOnly []string) error {
+func writeDocument(file string, doc *jsyaml.Map, k Kind) error {
 	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(file, []byte(jsyaml.Dump(strip(doc, readOnly))), 0o644)
+	stripped := strip(doc, k.ReadOnly)
+	if k.Scopes != nil {
+		scope.ForFile(stripped, k.Scopes)
+	}
+	return os.WriteFile(file, []byte(jsyaml.Dump(stripped)), 0o644)
 }
 
 type ExportOptions struct {
@@ -156,7 +161,7 @@ func Export(ctx context.Context, c *platform.Client, o ExportOptions) error {
 		if err != nil {
 			return platform.Failed(err, "Failed to get experiment %s", e.Key)
 		}
-		if err := writeDocument(fileName(filepath.Join(o.Directory, "experiments"), e.Key, taken), doc.Value(), Experiment.ReadOnly); err != nil {
+		if err := writeDocument(fileName(filepath.Join(o.Directory, "experiments"), e.Key, taken), doc.Value(), Experiment); err != nil {
 			return err
 		}
 		counts["experiments"]++
@@ -176,7 +181,7 @@ func Export(ctx context.Context, c *platform.Client, o ExportOptions) error {
 		if len(id) > 8 {
 			id = id[len(id)-8:]
 		}
-		if err := writeDocument(fileName(filepath.Join(o.Directory, "schedules"), key+"-"+id, taken), doc.Value(), Schedule.ReadOnly); err != nil {
+		if err := writeDocument(fileName(filepath.Join(o.Directory, "schedules"), key+"-"+id, taken), doc.Value(), Schedule); err != nil {
 			return err
 		}
 		counts["schedules"]++
@@ -199,7 +204,7 @@ func Export(ctx context.Context, c *platform.Client, o ExportOptions) error {
 			return platform.Failed(err, "Failed to get service %s", s.ID)
 		}
 		profiles[str(doc.Value(), "serviceProfile")] = true
-		if err := writeDocument(fileName(filepath.Join(o.Directory, "services"), str(doc.Value(), "name"), taken), doc.Value(), Service.ReadOnly); err != nil {
+		if err := writeDocument(fileName(filepath.Join(o.Directory, "services"), str(doc.Value(), "name"), taken), doc.Value(), Service); err != nil {
 			return err
 		}
 		counts["services"]++
@@ -218,7 +223,7 @@ func Export(ctx context.Context, c *platform.Client, o ExportOptions) error {
 		if profile == nil || str(profile, "origin") != "CUSTOM" {
 			continue
 		}
-		if err := writeDocument(fileName(filepath.Join(o.Directory, "service-profiles"), name, taken), profile, ServiceProfile.ReadOnly); err != nil {
+		if err := writeDocument(fileName(filepath.Join(o.Directory, "service-profiles"), name, taken), profile, ServiceProfile); err != nil {
 			return err
 		}
 		counts["service-profiles"]++

@@ -51,6 +51,7 @@ func DiffFiles(ctx context.Context, c *platform.Client, k Kind, paths []string, 
 		case Changed:
 			different++
 			fmt.Print(colorDiff(r.Diff))
+			printHints(r)
 		case New:
 			different++
 			fmt.Println(r.Describe(k))
@@ -72,8 +73,16 @@ func DryRun(ctx context.Context, c *platform.Client, k Kind, paths []string, rec
 	}
 	for _, r := range results {
 		fmt.Println(r.Describe(k))
+		printHints(r)
 	}
 	return nil
+}
+
+// printHints explains what a file can do about a difference, one line each.
+func printHints(r Result) {
+	for _, h := range r.Hints {
+		fmt.Printf("%s: %s\n", r.File, h)
+	}
 }
 
 func colorDiff(diff string) string {
