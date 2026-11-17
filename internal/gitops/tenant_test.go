@@ -286,3 +286,43 @@ func TestAnInvalidIDIsReported(t *testing.T) {
 	_, err = platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Hub, []string{file}, false) })
 	assert.EqualError(t, err, "Failed to get the hub for "+file+": not-an-id is not a valid id")
 }
+
+// The platform keeps a team's actions, environments and members in sets and returns them
+// in an order of its own. The same items in another order are no difference.
+func TestATeamsSetsMatchInAnyOrder(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"id":"` + teamID + `","key":"CHK","name":"Checkout","managedBy":"MANUAL","version":0,` +
+		`"allowedActions":["service-validation","container-stop","wait","http-check"],"allowedEnvironments":["Staging","Prod"],` +
+		`"members":[{"username":"u2","name":"Max","email":"max@example.com","role":"MEMBER"},{"username":"u1","name":"Jane","email":"jane@example.com","role":"OWNER"}]}`})
+	file := write(t, "team.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - container-stop\n  - http-check\n  - service-validation\n  - wait\n"+
+		"allowedEnvironments:\n  - Prod\n  - Staging\nmembers:\n  - username: u1\n    email: jane@example.com\n    role: OWNER\n  - username: u2\n    email: max@example.com\n    role: MEMBER\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
+
+	require.NoError(t, err, out)
+}
+
+func TestATeamsSetsStillReportChangedItems(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["wait","container-stop"],"allowedEnvironments":["Prod"],` +
+		`"members":[{"username":"u2","email":"max@example.com","role":"MEMBER"},{"username":"u1","email":"jane@example.com","role":"OWNER"}]}`})
+	file := write(t, "team.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - container-stop\n  - http-check\nallowedEnvironments:\n  - Prod\n"+
+		"members:\n  - username: u1\n    email: jane@example.com\n    role: OWNER\n  - username: u2\n    email: max@example.com\n    role: MEMBER\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
+
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Contains(t, out, " allowedActions:\n   - container-stop\n-  - wait\n+  - http-check\n")
+	assert.NotContains(t, out, "role")
+}
+
+// A team sent no actions holds the default ones, in whatever order the platform keeps them.
+func TestATeamsDefaultActionsMatchInAnyOrder(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["service-validation","wait"],"allowedEnvironments":[],"members":[]}`})
+	file := write(t, "team.yml", "key: CHK\nname: Checkout\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
+
+	require.NoError(t, err, out)
+}

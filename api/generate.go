@@ -5,3 +5,4 @@
 package api
 
 //go:generate go tool oapi-codegen --config oapi-codegen.yaml ../openapi/platform-api.json
+//go:generate go run ../internal/tools/unordered ../openapi/platform-api.json unordered.gen.go

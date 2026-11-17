@@ -5,6 +5,7 @@ package gitops_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -170,4 +171,34 @@ func TestAHandWrittenServiceAndProfileMatchRightAfterApply(t *testing.T) {
 	require.NoError(t, err)
 	_, err = platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.ServiceProfile, []string{profile}, false) })
 	require.NoError(t, err)
+}
+
+func TestAnExperimentsTagsMatchInAnyOrder(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/ADM-1", platformtest.Reply{Body: `{"key":"ADM-1","name":"x","teamKey":"ADM","environment":"Global","tags":["shop","resilience","checkout"],"lanes":[]}`})
+	file := write(t, "e.yml", "key: ADM-1\nname: x\nteamKey: ADM\nenvironment: Global\ntags:\n  - checkout\n  - resilience\n  - shop\nlanes: []\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Experiment, []string{file}, false) })
+
+	require.NoError(t, err, out)
+}
+
+// Each kind names the schema of the platform's version, which decides how its sets are
+// compared. A misspelt one would quietly compare them by order again.
+func TestEveryKindNamesASchemaOfTheSpec(t *testing.T) {
+	raw, err := os.ReadFile("../../openapi/platform-api.json")
+	require.NoError(t, err)
+	var spec struct {
+		Components struct {
+			Schemas map[string]json.RawMessage `json:"schemas"`
+		} `json:"components"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &spec))
+	kinds := []gitops.Kind{gitops.Experiment, gitops.Schedule, gitops.Service, gitops.ServiceProfile, gitops.Template, gitops.Environment, gitops.Team, gitops.PropertyDefinition, gitops.Hub}
+	for _, k := range gitops.Integrations {
+		kinds = append(kinds, k)
+	}
+	for _, k := range kinds {
+		assert.Contains(t, spec.Components.Schemas, k.Schema, k.Name)
+	}
 }

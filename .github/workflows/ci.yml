@@ -34,7 +34,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           go generate ./api
-          git diff --exit-code -- api/platform.gen.go
+          git diff --exit-code -- api/platform.gen.go api/unordered.gen.go
       - run: go vet ./...
       - run: go test ./...
 

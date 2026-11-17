@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -42,6 +43,9 @@ type Kind struct {
 	// Remote finds the platform's version of a file: its id and content, or nil when
 	// applying the file would create something new.
 	Remote func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error)
+	// Schema is the spec's name for the platform's version, which api.Unordered looks up
+	// to compare its sets without regard to order.
+	Schema string
 }
 
 func str(m *jsyaml.Map, key string) string {
@@ -69,6 +73,7 @@ func uuid(id string) (openapi_types.UUID, bool) {
 
 var Experiment = Kind{
 	Name:     "experiment",
+	Schema:   "ExperimentAO",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy"},
 	Identity: "key",
 	// By its key, or, for a file that has none yet, by the externalId an apply would
@@ -102,6 +107,7 @@ var Experiment = Kind{
 
 var Schedule = Kind{
 	Name:     "experiment schedule",
+	Schema:   "ExperimentScheduleAO",
 	ReadOnly: []string{"editedBy", "lastUpdated", "nextExecution"},
 	Defaults: map[string]any{"allowParallel": true, "allowRunningAgain": false},
 	Identity: "id",
@@ -117,6 +123,7 @@ var Schedule = Kind{
 
 var Service = Kind{
 	Name:     "service",
+	Schema:   "ServiceAO",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy"},
 	Defaults: map[string]any{"logoId": "service", "logoColor": "blue"},
 	Identity: "id",
@@ -133,6 +140,7 @@ var Service = Kind{
 
 var ServiceProfile = Kind{
 	Name:     "service profile",
+	Schema:   "ServiceProfileAO",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy", "defaultProfile"},
 	Defaults: map[string]any{"origin": "CUSTOM"},
 	Identity: "id",
@@ -187,6 +195,7 @@ func byID(get func(ctx context.Context, c *platform.Client, id openapi_types.UUI
 
 var Template = Kind{
 	Name:     "experiment template",
+	Schema:   "ExperimentTemplateAO",
 	ReadOnly: template.ReadOnly,
 	Identity: "id",
 	Remote: byID(func(ctx context.Context, c *platform.Client, id openapi_types.UUID) (*http.Response, error) {
@@ -196,6 +205,7 @@ var Template = Kind{
 
 var Environment = Kind{
 	Name:     "environment",
+	Schema:   "EnvironmentAO",
 	ReadOnly: environment.ReadOnly,
 	Identity: "id",
 	// By its id, or by its name, which the platform matches a file without an id by.
@@ -235,6 +245,7 @@ var Environment = Kind{
 // namesake anywhere.
 var Team = Kind{
 	Name:     "team",
+	Schema:   "TeamAO",
 	ReadOnly: append(append([]string{"id"}, team.ReadOnly...), prefixed("members.", team.MemberReadOnly)...),
 	// Sent none, a team may still wait and validate services.
 	Defaults: map[string]any{"allowedActions": []any{"wait", "service-validation"}, "managedBy": "MANUAL"},
@@ -251,6 +262,7 @@ var Team = Kind{
 
 var PropertyDefinition = Kind{
 	Name:     "property definition",
+	Schema:   "PropertyDefinitionAO",
 	ReadOnly: property.ReadOnly,
 	Identity: "key",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
@@ -265,6 +277,7 @@ var PropertyDefinition = Kind{
 
 var Hub = Kind{
 	Name:     "hub",
+	Schema:   "HubAO",
 	ReadOnly: hub.ReadOnly,
 	Identity: "id",
 	Remote: byID(func(ctx context.Context, c *platform.Client, id openapi_types.UUID) (*http.Response, error) {
@@ -274,18 +287,19 @@ var Hub = Kind{
 
 // Integrations are the kinds of integration by their command's name.
 var Integrations = map[string]Kind{
-	integration.Webhook.Name:         integrationKind(integration.Webhook, "webhook integration", allTargetAttributes),
-	integration.Slack.Name:           integrationKind(integration.Slack, "Slack integration", nil),
-	integration.Preflight.Name:       integrationKind(integration.Preflight, "preflight webhook", allTargetAttributes),
-	integration.PreflightAction.Name: integrationKind(integration.PreflightAction, "preflight action integration", nil),
+	integration.Webhook.Name:         integrationKind(integration.Webhook, "webhook integration", "CustomWebhookAO", allTargetAttributes),
+	integration.Slack.Name:           integrationKind(integration.Slack, "Slack integration", "SlackWebhookAO", nil),
+	integration.Preflight.Name:       integrationKind(integration.Preflight, "preflight webhook", "PreflightWebhookAO", allTargetAttributes),
+	integration.PreflightAction.Name: integrationKind(integration.PreflightAction, "preflight action integration", "PreflightActionIntegrationAO", nil),
 }
 
 // Sent none, a webhook reports every target attribute.
 var allTargetAttributes = map[string]any{"targetAttributeIncludes": []any{"*"}}
 
-func integrationKind(k integration.Kind, name string, defaults map[string]any) Kind {
+func integrationKind(k integration.Kind, name, schema string, defaults map[string]any) Kind {
 	return Kind{
 		Name:     name,
+		Schema:   schema,
 		ReadOnly: integration.ReadOnly,
 		Defaults: defaults,
 		Secrets:  k.Secrets,
@@ -361,7 +375,10 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	for key := range k.Defaults {
 		defaulted = append(defaulted, key)
 	}
-	l, r := strip(local.Value(), ignored), withoutDefaults(local.Value(), strip(remote, ignored), k.Defaults)
+	unordered := api.Unordered[k.Schema]
+	l := strip(local.Value(), ignored)
+	r := inFileOrder(l, strip(remote, ignored), unordered)
+	r = withoutDefaults(l, r, k.Defaults, unordered)
 	hideSecrets(l, r, k.Secrets)
 	diff, err := Diff(file, l, r, defaulted...)
 	if err != nil {
@@ -386,11 +403,15 @@ func (r Result) Describe(k Kind) string {
 
 // withoutDefaults drops the fields the file leaves out that hold the platform's default,
 // and takes the file's empty list or map for the default the platform turned it into.
-func withoutDefaults(local, remote *jsyaml.Map, defaults map[string]any) *jsyaml.Map {
+// A set holds its default in any order.
+func withoutDefaults(local, remote *jsyaml.Map, defaults map[string]any, unordered []string) *jsyaml.Map {
 	out := jsyaml.Clone(remote).(*jsyaml.Map)
 	for key, value := range defaults {
 		held, ok := out.Get(key)
-		if !ok || jsyaml.CompactJSON(held) != jsyaml.CompactJSON(value) {
+		if !ok {
+			continue
+		}
+		if jsyaml.CompactJSON(held) != jsyaml.CompactJSON(value) && !(slices.Contains(unordered, key) && sameSet(held, value)) {
 			continue
 		}
 		switch set, has := local.Get(key); {

@@ -1,5 +1,10 @@
 # Changelog
 
+- `diff` and `apply --dry-run` compare a team's allowed actions, allowed environments
+  and members, and an experiment's or template's tags and shared teams, without regard
+  to order: the platform keeps them in sets and returns them in an order of its own.
+  The fields come from the spec (`uniqueItems`), so new ones are picked up with it.
+
 ## v6.4.1
 
 - `user delete` removes users whose username contains a `/`, such as the base64 subjects

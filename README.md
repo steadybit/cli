@@ -344,6 +344,9 @@ Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
 `steadybit integration webhook diff -f ./platform/integrations/webhook -R`. Fields the
 platform fills in with defaults are not reported as differences.
 
+Lists the platform keeps as sets, such as a team's allowed actions, environments and
+members or an experiment's tags, are compared in any order.
+
 ## In CI
 
 `experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
