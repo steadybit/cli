@@ -46,6 +46,9 @@ type Kind struct {
 	// Schema is the spec's name for the platform's version, which api.Unordered looks up
 	// to compare its sets without regard to order.
 	Schema string
+	// Keys name the fields that identify an item of a set of objects, by the set's path.
+	// Any one of them does: the file may give either, and the platform fills in the rest.
+	Keys map[string][]string
 }
 
 func str(m *jsyaml.Map, key string) string {
@@ -249,6 +252,7 @@ var Team = Kind{
 	ReadOnly: append(append([]string{"id"}, team.ReadOnly...), prefixed("members.", team.MemberReadOnly)...),
 	// Sent none, a team may still wait and validate services.
 	Defaults: map[string]any{"allowedActions": []any{"wait", "service-validation"}, "managedBy": "MANUAL"},
+	Keys:     map[string][]string{"members": team.MemberKeys},
 	Identity: "key",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		key := str(local, "key")
@@ -377,7 +381,7 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	}
 	unordered := api.Unordered[k.Schema]
 	l := strip(local.Value(), ignored)
-	r := inFileOrder(l, strip(remote, ignored), unordered)
+	r := inFileOrder(l, strip(remote, ignored), unordered, k.Keys)
 	r = withoutDefaults(l, r, k.Defaults, unordered)
 	hideSecrets(l, r, k.Secrets)
 	diff, err := Diff(file, l, r, defaulted...)

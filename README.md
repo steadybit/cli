@@ -345,7 +345,8 @@ Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
 platform fills in with defaults are not reported as differences.
 
 Lists the platform keeps as sets, such as a team's allowed actions, environments and
-members or an experiment's tags, are compared in any order.
+members or an experiment's tags, are compared in any order. A team member may be listed by
+`username` or by `email` alone, keeping user ids out of the repository.
 
 ## In CI
 

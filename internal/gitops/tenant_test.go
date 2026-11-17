@@ -305,15 +305,16 @@ func TestATeamsSetsMatchInAnyOrder(t *testing.T) {
 func TestATeamsSetsStillReportChangedItems(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["wait","container-stop"],"allowedEnvironments":["Prod"],` +
-		`"members":[{"username":"u2","email":"max@example.com","role":"MEMBER"},{"username":"u1","email":"jane@example.com","role":"OWNER"}]}`})
+		`"members":[{"username":"u2","email":"max@example.com","role":"MEMBER"},{"username":"u1","email":"jane@example.com","role":"MEMBER"}]}`})
 	file := write(t, "team.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - container-stop\n  - http-check\nallowedEnvironments:\n  - Prod\n"+
-		"members:\n  - username: u1\n    email: jane@example.com\n    role: OWNER\n  - username: u2\n    email: max@example.com\n    role: MEMBER\n")
+		"members:\n  - email: jane@example.com\n    role: OWNER\n  - email: max@example.com\n    role: MEMBER\n")
 
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
 
 	assert.ErrorIs(t, err, gitops.ErrDifferent)
 	assert.Contains(t, out, " allowedActions:\n   - container-stop\n-  - wait\n+  - http-check\n")
-	assert.NotContains(t, out, "role")
+	assert.Contains(t, out, "   - email: jane@example.com\n-    role: MEMBER\n+    role: OWNER\n")
+	assert.NotContains(t, out, "username")
 }
 
 // A team sent no actions holds the default ones, in whatever order the platform keeps them.
@@ -321,6 +322,19 @@ func TestATeamsDefaultActionsMatchInAnyOrder(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["service-validation","wait"],"allowedEnvironments":[],"members":[]}`})
 	file := write(t, "team.yml", "key: CHK\nname: Checkout\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
+
+	require.NoError(t, err, out)
+}
+
+// A member may be listed by email alone, keeping user ids out of the repository, or by
+// username alone. The platform fills in the other; that is no difference.
+func TestAMemberListedByEmailOrUsernameAloneMatches(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["wait"],"allowedEnvironments":[],` +
+		`"members":[{"username":"google-oauth2|42","name":"Jane","email":"Jane@Example.com","role":"OWNER"},{"username":"u2","name":"Max","email":"max@example.com","role":"MEMBER"}]}`})
+	file := write(t, "team.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - wait\nmembers:\n  - username: u2\n    role: MEMBER\n  - email: jane@example.com\n    role: OWNER\n")
 
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
 

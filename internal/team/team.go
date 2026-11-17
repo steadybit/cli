@@ -20,10 +20,12 @@ import (
 )
 
 // The version is dropped as `service get` drops it. Members are sent back as the platform
-// takes them, by username, email and role; the rest describes the user.
+// takes them, by username, email and role; the rest describes the user. Either the
+// username or the email names the member.
 var (
 	ReadOnly       = []string{"version"}
 	MemberReadOnly = []string{"name", "pictureUrl", "managedBy"}
+	MemberKeys     = []string{"username", "email"}
 )
 
 func notFoundOr(err error, key, format string) error {

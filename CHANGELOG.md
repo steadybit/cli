@@ -4,6 +4,9 @@
   and members, and an experiment's or template's tags and shared teams, without regard
   to order: the platform keeps them in sets and returns them in an order of its own.
   The fields come from the spec (`uniqueItems`), so new ones are picked up with it.
+- `diff` and `apply --dry-run` match a team member listed by email alone, or by
+  username alone, and ignore the username or email the platform fills in, so a team
+  file can keep user ids out of the repository.
 
 ## v6.4.1
 
