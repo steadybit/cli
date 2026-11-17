@@ -36,6 +36,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/prompt"
+	"github.com/steadybit/cli/v6/internal/scope"
 )
 
 type Document = *output.Document
@@ -78,6 +79,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return err
 	}
+	scope.ForFile(document.Value(), scope.Steps)
 	if output.JQ != "" && o.File == "" {
 		return output.ApplyJQ(os.Stdout, jsyaml.CompactJSON(document.Value()), output.JQ)
 	}

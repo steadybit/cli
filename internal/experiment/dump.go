@@ -19,6 +19,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/jsyaml"
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
+	"github.com/steadybit/cli/v6/internal/scope"
 )
 
 // A dump walks every experiment of every team and every execution of every experiment.
@@ -270,29 +271,12 @@ func dumpExperiment(ctx context.Context, c *platform.Client, key, dir string, da
 	return r
 }
 
-// The query and list of a step's radius are deprecated and left out of dumps.
+// Dumps hold one form of each step's scope, as files do, and leave out the deprecated
+// list of a step's radius.
 func removeDeprecatedFields(experiment *jsyaml.Map) {
-	lanes, _ := experiment.Get("lanes")
-	laneList, _ := lanes.([]any)
-	for _, lane := range laneList {
-		laneMap, _ := lane.(*jsyaml.Map)
-		if laneMap == nil {
-			continue
-		}
-		steps, _ := laneMap.Get("steps")
-		stepList, _ := steps.([]any)
-		for _, step := range stepList {
-			stepMap, _ := step.(*jsyaml.Map)
-			if stepMap == nil {
-				continue
-			}
-			if radius, ok := stepMap.Get("radius"); ok {
-				if radiusMap, ok := radius.(*jsyaml.Map); ok {
-					radiusMap.Delete("query")
-					radiusMap.Delete("list")
-				}
-			}
-		}
+	scope.ForFile(experiment, scope.Steps)
+	for _, h := range scope.Steps(experiment) {
+		h.Map.Delete("list")
 	}
 }
 
