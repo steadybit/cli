@@ -196,3 +196,20 @@ func TestSetAsksNamingWhoStays(t *testing.T) {
 	assert.Contains(t, out, "Make Global, Prod the only environments of team OPS?")
 	assert.Empty(t, p.Requests("POST /api/teams/OPS/members/set"))
 }
+
+// `allowedActions: []` reads like a team that may run nothing; the platform still allows
+// it to wait and validate services, and apply says so.
+func TestApplyNotesTheActionsEveryTeamMayUse(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/teams", platformtest.Reply{Status: http.StatusCreated, Body: stored})
+	file := filepath.Join(t.TempDir(), "team.yml")
+	require.NoError(t, os.WriteFile(file, []byte("key: OPS\nname: Operations\nallowedActions:\n  - wait\nallowedEnvironments: []\n"), 0o644))
+
+	stderr, err := platformtest.Stderr(t, func() error {
+		_, err := platformtest.Stdout(t, func() error { return team.Apply(ctx, p.Client, team.ApplyOptions{Files: []string{file}}) })
+		return err
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Note: "+file+" leaves service-validation out of allowedActions. The platform allows wait and service-validation for every team, so the team has them anyway.\n", stderr)
+}

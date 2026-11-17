@@ -49,6 +49,11 @@ type Kind struct {
 	// Keys name the fields that identify an item of a set of objects, by the set's path.
 	// Any one of them does: the file may give either, and the platform fills in the rest.
 	Keys map[string][]string
+	// Implied are items the platform adds to a set whatever it is sent, by the set's path.
+	// A file that sets the field may leave them out.
+	Implied map[string][]string
+	// Note tells about a file what a reader might take for something else.
+	Note func(file string, doc *jsyaml.Map)
 }
 
 func str(m *jsyaml.Map, key string) string {
@@ -251,7 +256,9 @@ var Team = Kind{
 	Schema:   "TeamAO",
 	ReadOnly: append(append([]string{"id"}, team.ReadOnly...), prefixed("members.", team.MemberReadOnly)...),
 	// Sent none, a team may still wait and validate services.
-	Defaults: map[string]any{"allowedActions": []any{"wait", "service-validation"}, "managedBy": "MANUAL"},
+	Defaults: map[string]any{"allowedActions": anyList(team.AlwaysAllowed), "managedBy": "MANUAL"},
+	Implied:  map[string][]string{"allowedActions": team.AlwaysAllowed},
+	Note:     team.NoteAlwaysAllowed,
 	Keys:     map[string][]string{"members": team.MemberKeys},
 	Identity: "key",
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
@@ -379,9 +386,12 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	for key := range k.Defaults {
 		defaulted = append(defaulted, key)
 	}
+	if k.Note != nil {
+		k.Note(file, local.Value())
+	}
 	unordered := api.Unordered[k.Schema]
 	l := strip(local.Value(), ignored)
-	r := inFileOrder(l, strip(remote, ignored), unordered, k.Keys)
+	r := inFileOrder(l, withoutImplied(l, strip(remote, ignored), k.Implied), unordered, k.Keys)
 	r = withoutDefaults(l, r, k.Defaults, unordered)
 	hideSecrets(l, r, k.Secrets)
 	diff, err := Diff(file, l, r, defaulted...)
@@ -424,6 +434,42 @@ func withoutDefaults(local, remote *jsyaml.Map, defaults map[string]any, unorder
 		case isEmptyCollection(set):
 			out.Set(key, set)
 		}
+	}
+	return out
+}
+
+// withoutImplied drops from the platform's sets the items it adds whatever it is sent,
+// where the file sets the field and leaves them out: applying the file keeps them.
+func withoutImplied(local, remote *jsyaml.Map, implied map[string][]string) *jsyaml.Map {
+	out := remote
+	for key, items := range implied {
+		lv, ok := local.Get(key)
+		if !ok {
+			continue
+		}
+		listed, _ := lv.([]any)
+		held, ok := out.Get(key)
+		rl, isList := held.([]any)
+		if !ok || !isList {
+			continue
+		}
+		kept := make([]any, 0, len(rl))
+		for _, item := range rl {
+			s, _ := item.(string)
+			if slices.Contains(items, s) && !slices.Contains(listed, item) {
+				continue
+			}
+			kept = append(kept, item)
+		}
+		out.Set(key, kept)
+	}
+	return out
+}
+
+func anyList(items []string) []any {
+	out := make([]any, len(items))
+	for i, item := range items {
+		out[i] = item
 	}
 	return out
 }

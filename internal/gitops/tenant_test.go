@@ -218,10 +218,10 @@ func TestAHandWrittenTeamAndWebhookMatchRightAfterApply(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	p.Reply("GET /api/teams/CLIX", platformtest.Reply{Body: `{"key":"CLIX","name":"x","allowedActions":["wait"],"allowedEnvironments":["Prod"]}`})
+	p.Reply("GET /api/teams/CLIX", platformtest.Reply{Body: `{"key":"CLIX","name":"x","allowedActions":["wait","http-check","service-validation"],"allowedEnvironments":["Prod"]}`})
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{team}, false) })
 	assert.ErrorIs(t, err, gitops.ErrDifferent)
-	assert.Contains(t, out, "-allowedActions:\n-  - wait\n+allowedActions: []\n")
+	assert.Contains(t, out, "-allowedActions:\n-  - http-check\n+allowedActions: []\n")
 }
 
 // On another platform the team has another id. It is the same team by its key, and
@@ -312,7 +312,8 @@ func TestATeamsSetsStillReportChangedItems(t *testing.T) {
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
 
 	assert.ErrorIs(t, err, gitops.ErrDifferent)
-	assert.Contains(t, out, " allowedActions:\n   - container-stop\n-  - wait\n+  - http-check\n")
+	assert.Contains(t, out, " allowedActions:\n   - container-stop\n+  - http-check\n")
+	assert.NotContains(t, out, "wait")
 	assert.Contains(t, out, "   - email: jane@example.com\n-    role: MEMBER\n+    role: OWNER\n")
 	assert.NotContains(t, out, "username")
 }
@@ -339,4 +340,31 @@ func TestAMemberListedByEmailOrUsernameAloneMatches(t *testing.T) {
 	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
 
 	require.NoError(t, err, out)
+}
+
+// The platform allows wait and service-validation for every team and adds them to any
+// list it is sent. A file that leaves them out matches, since applying it keeps them,
+// and a note says so; other actions the platform holds are still differences.
+func TestActionsEveryTeamMayUseNeedNotBeListed(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/teams/CHK", platformtest.Reply{Body: `{"key":"CHK","name":"Checkout","allowedActions":["service-validation","http-check","wait"],"allowedEnvironments":[],"members":[]}`})
+	file := write(t, "team.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - http-check\n")
+
+	var out string
+	stderr, err := platformtest.Stderr(t, func() error {
+		var err error
+		out, err = platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{file}, false) })
+		return err
+	})
+
+	require.NoError(t, err, out)
+	assert.Equal(t, "Note: "+file+" leaves wait and service-validation out of allowedActions. The platform allows wait and service-validation for every team, so the team has them anyway.\n", stderr)
+
+	listed := write(t, "listed.yml", "key: CHK\nname: Checkout\nallowedActions:\n  - wait\n  - service-validation\n")
+	stderr, err = platformtest.Stderr(t, func() error {
+		_, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Team, []string{listed}, false) })
+		return err
+	})
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Empty(t, stderr)
 }
