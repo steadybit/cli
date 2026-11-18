@@ -17,6 +17,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/scope"
 	"github.com/steadybit/cli/v6/internal/table"
 )
 
@@ -104,6 +105,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return err
 	}
+	scope.ForFile(doc.Value(), scope.Steps)
 	if o.Placeholders {
 		// A starting point for --placeholders: every key the template asks for, empty.
 		values := jsyaml.NewMap()

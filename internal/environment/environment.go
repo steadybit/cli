@@ -14,6 +14,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/resource"
+	"github.com/steadybit/cli/v6/internal/scope"
 	"github.com/steadybit/cli/v6/internal/table"
 )
 
@@ -88,6 +89,7 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 	if err != nil {
 		return notFoundOr(err, o.ID, "Failed to get environment %s")
 	}
+	scope.ForFile(doc.Value(), scope.Environment)
 	if err := resource.Output(resource.Strip(doc, ReadOnly...), o.File, o.Type); err != nil {
 		return err
 	}

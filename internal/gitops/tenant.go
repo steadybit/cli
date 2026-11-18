@@ -33,7 +33,7 @@ type tenantExport struct {
 
 func (e *tenantExport) write(dir, name string, doc *jsyaml.Map, k Kind) error {
 	e.counts[dir]++
-	return writeDocument(fileName(filepath.Join(e.o.Directory, dir), name, e.taken), doc, k.ReadOnly)
+	return writeDocument(fileName(filepath.Join(e.o.Directory, dir), name, e.taken), doc, k)
 }
 
 func (e *tenantExport) each(ids []string, what string, get func(id string) (*http.Response, error), write func(doc *jsyaml.Map) error) error {

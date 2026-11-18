@@ -399,7 +399,7 @@ func TestDumpWritesEveryTeamAndCountsWhatFailed(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("GET /api/teams", platformtest.Reply{JSON: map[string]any{"teams": []any{map[string]any{"key": "TST", "name": "Test"}}}})
 	p.Reply("GET /api/experiments", platformtest.Reply{JSON: map[string]any{"experiments": []any{map[string]any{"key": "TST-1"}}}})
-	p.Reply("GET /api/experiments/TST-1", platformtest.Reply{Body: `{"key":"TST-1","lanes":[{"steps":[{"type":"action","radius":{"query":"x","list":[],"percentage":50}}]}]}`})
+	p.Reply("GET /api/experiments/TST-1", platformtest.Reply{Body: `{"key":"TST-1","lanes":[{"steps":[{"type":"action","radius":{"predicate":{"query":"x"},"query":"x","list":[],"percentage":50}}]}]}`})
 	p.Reply("GET /api/experiments/TST-1/executions", platformtest.Reply{JSON: map[string]any{"executions": []any{map[string]any{"id": 1}, map[string]any{"id": 2}}}})
 	p.Reply("GET /api/experiments/executions/1", platformtest.Reply{JSON: map[string]any{"id": 1}})
 	p.Reply("GET /api/experiments/executions/2", platformtest.Reply{Status: http.StatusInternalServerError})
@@ -410,7 +410,7 @@ func TestDumpWritesEveryTeamAndCountsWhatFailed(t *testing.T) {
 	assert.ErrorIs(t, err, experiment.ErrIncomplete)
 	assert.Equal(t, "Listing experiments for 1 team.\nFetching experiments for team Test (TST)... experiments: 1, executions: 1, failed: 1\nWritten 1 experiments with 1 executions\n", out)
 	design, _ := os.ReadFile(filepath.Join(dir, "TST-1", "experiment.yaml"))
-	assert.Equal(t, "key: TST-1\nlanes:\n  - steps:\n      - type: action\n        radius:\n          percentage: 50\n", string(design))
+	assert.Equal(t, "key: TST-1\nlanes:\n  - steps:\n      - type: action\n        radius:\n          query: x\n          percentage: 50\n", string(design))
 	_, err = os.Stat(filepath.Join(dir, "TST-1", "execution-1.yaml"))
 	assert.NoError(t, err)
 }
