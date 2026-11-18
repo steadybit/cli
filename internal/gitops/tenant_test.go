@@ -45,7 +45,7 @@ func fakeTenant(t *testing.T) *platformtest.Platform {
 	p.Reply("GET /api/hubs/"+providedHubID, platformtest.Reply{Body: `{"hubName":"Steadybit Reliability Hub","id":"` + providedHubID + `","templates":[{"id":"` + importedID + `","templateTitle":"Imported"}]}`})
 	p.Reply("GET /api/hubs/"+hubID, platformtest.Reply{Body: `{"hubName":"Own Hub","repositoryUrl":"https://example.com/index.json","id":"` + hubID + `","version":4,"templates":[],"lastSync":"x","created":"c"}`})
 	p.Reply("GET /api/experiments/templates", platformtest.Reply{JSON: map[string]any{"templates": []any{map[string]any{"id": templateID}, map[string]any{"id": importedID}}}})
-	p.Reply("GET /api/experiments/templates/"+templateID, platformtest.Reply{Body: `{"id":"` + templateID + `","templateTitle":"Pod Crash","templateDescription":"d","placeholders":[],"tags":[],"lanes":[{"steps":[{"type":"wait","ignoreFailure":false,"parameters":{"duration":"5s"}}]}],"properties":{},"propertiesMetadata":[],"version":0,"created":"c","createdBy":{}}`})
+	p.Reply("GET /api/experiments/templates/"+templateID, platformtest.Reply{Body: `{"id":"` + templateID + `","templateTitle":"Pod Crash","templateDescription":"d","placeholders":[],"tags":[],"lanes":[{"steps":[{"type":"wait","ignoreFailure":false,"parameters":{"duration":"5s"}},{"type":"action","radius":{"predicate":{"query":"k8s.pod.label.app=\"shop\""},"query":"k8s.pod.label.app=\"shop\""}}]}],"properties":{},"propertiesMetadata":[],"version":0,"created":"c","createdBy":{}}`})
 	p.Reply("GET /api/integrations/webhook", platformtest.Reply{JSON: map[string]any{"content": []any{map[string]any{"id": webhookID}}}})
 	p.Reply("GET /api/integrations/webhook/"+webhookID, platformtest.Reply{Body: storedWebhook})
 	p.Reply("GET /api/integrations/slack", platformtest.Reply{JSON: map[string]any{"content": []any{map[string]any{"id": slackID}}}})
@@ -75,7 +75,8 @@ func TestExportTenantLeavesOutWhatThePlatformProvides(t *testing.T) {
 			"members:\n  - username: u1\n    email: jane@example.com\n    role: OWNER\n",
 		"hubs/own-hub.yaml": "hubName: Own Hub\nrepositoryUrl: https://example.com/index.json\nid: " + hubID + "\n",
 		"templates/pod-crash.yaml": "id: " + templateID + "\ntemplateTitle: Pod Crash\ntemplateDescription: d\nplaceholders: []\ntags: []\nlanes:\n  - steps:\n      - type: wait\n        ignoreFailure: false\n" +
-			"        parameters:\n          duration: 5s\nproperties: {}\npropertiesMetadata: []\n",
+			"        parameters:\n          duration: 5s\n" +
+			"      - type: action\n        radius:\n          query: k8s.pod.label.app=\"shop\"\nproperties: {}\npropertiesMetadata: []\n",
 		// Credentials are masked: the platform's mask of the secret gives away its length.
 		"integrations/webhook/notify.yaml": "id: " + webhookID + "\nscope: GLOBAL\nname: Notify\nurl: https://example.com/hook\nsecret: '********'\nevents:\n  - '*'\n" +
 			"targetAttributeIncludes:\n  - '*'\nheaders:\n  Authorization: '********'\n",

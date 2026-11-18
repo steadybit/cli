@@ -202,3 +202,35 @@ func TestEveryKindNamesASchemaOfTheSpec(t *testing.T) {
 		assert.Contains(t, spec.Components.Schemas, k.Schema, k.Name)
 	}
 }
+
+// The platform reports an environment's query twice, as predicate and as query; a file
+// holding it once matches. (Card 26212: `diff` exited 2 right after a clean apply.)
+func TestDiffMatchesAnEnvironmentFileHoldingItsQueryOnce(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/environments/"+environmentID, platformtest.Reply{Body: `{"id":"` + environmentID +
+		`","name":"Checkout","version":3,"state":"READY","predicate":{"query":"k8s.namespace=\"checkout\""},"query":"k8s.namespace=\"checkout\""}`})
+	file := write(t, "checkout.yml", "id: "+environmentID+"\nname: Checkout\nquery: k8s.namespace=\"checkout\"\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Environment, []string{file}, false) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "1 environment file(s) match the platform.\n", out)
+}
+
+// A step still selecting its targets with a predicate tree, which the platform now holds
+// as a query, is a difference; diff names the query to use instead.
+func TestDiffHintsAtTheQueryForADeprecatedPredicate(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/experiments/TST-1", platformtest.Reply{Body: `{"key":"TST-1","name":"x","lanes":[{"steps":[{"type":"action","radius":` +
+		`{"targetType":"container","predicate":{"query":"k8s.namespace=\"checkout\""},"query":"k8s.namespace=\"checkout\""}}]}]}`})
+	file := write(t, "tst-1.yml", "key: TST-1\nname: x\nlanes:\n  - steps:\n      - type: action\n        radius:\n          targetType: container\n"+
+		"          predicate:\n            operator: AND\n            predicates:\n              - key: k8s.namespace\n                operator: EQUALS\n                values:\n                  - checkout\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Experiment, []string{file}, false) })
+
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Contains(t, out, "-            query: k8s.namespace=\"checkout\"\n")
+	assert.NotContains(t, out, "-          query:")
+	assert.Contains(t, out, file+`: lanes[0].steps[0].radius.predicate is deprecated; the platform holds this scope as query: "k8s.namespace=\"checkout\"". `+
+		"Unless the predicate was edited, replace it with that query.\n")
+}

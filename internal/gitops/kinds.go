@@ -19,6 +19,7 @@ import (
 	"github.com/steadybit/cli/v6/internal/output"
 	"github.com/steadybit/cli/v6/internal/platform"
 	"github.com/steadybit/cli/v6/internal/property"
+	"github.com/steadybit/cli/v6/internal/scope"
 	"github.com/steadybit/cli/v6/internal/team"
 	"github.com/steadybit/cli/v6/internal/template"
 )
@@ -54,6 +55,9 @@ type Kind struct {
 	Implied map[string][]string
 	// Note tells about a file what a reader might take for something else.
 	Note func(file string, doc *jsyaml.Map)
+	// Scopes finds the target scopes a document holds, for kinds that select targets.
+	// Files hold one form of each, and diff compares them by the platform's rule.
+	Scopes func(doc *jsyaml.Map) []scope.Holder
 }
 
 func str(m *jsyaml.Map, key string) string {
@@ -84,6 +88,7 @@ var Experiment = Kind{
 	Schema:   "ExperimentAO",
 	ReadOnly: []string{"version", "created", "createdBy", "edited", "editedBy"},
 	Identity: "key",
+	Scopes:   scope.Steps,
 	// By its key, or, for a file that has none yet, by the externalId an apply would
 	// match it with.
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
@@ -206,6 +211,7 @@ var Template = Kind{
 	Schema:   "ExperimentTemplateAO",
 	ReadOnly: template.ReadOnly,
 	Identity: "id",
+	Scopes:   scope.Steps,
 	Remote: byID(func(ctx context.Context, c *platform.Client, id openapi_types.UUID) (*http.Response, error) {
 		return c.GetExperimentTemplate(ctx, id)
 	}),
@@ -216,6 +222,7 @@ var Environment = Kind{
 	Schema:   "EnvironmentAO",
 	ReadOnly: environment.ReadOnly,
 	Identity: "id",
+	Scopes:   scope.Environment,
 	// By its id, or by its name, which the platform matches a file without an id by.
 	Remote: func(ctx context.Context, c *platform.Client, local *jsyaml.Map) (string, *jsyaml.Map, error) {
 		if id := str(local, "id"); id != "" {
@@ -365,6 +372,8 @@ type Result struct {
 	ID    string
 	State State
 	Diff  string
+	// Hints explain differences the file can resolve, such as a deprecated field.
+	Hints []string
 }
 
 // Compare works out what applying the file would change on the platform.
@@ -394,6 +403,10 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	r := inFileOrder(l, withoutImplied(l, strip(remote, ignored), k.Implied), unordered, k.Keys)
 	r = withoutDefaults(l, r, k.Defaults, unordered)
 	hideSecrets(l, r, k.Secrets)
+	var hints []string
+	if k.Scopes != nil {
+		hints = scope.Comparable(l, r, k.Scopes)
+	}
 	diff, err := Diff(file, l, r, defaulted...)
 	if err != nil {
 		return Result{}, err
@@ -401,7 +414,7 @@ func Compare(ctx context.Context, c *platform.Client, k Kind, file string, local
 	if diff == "" {
 		return Result{File: file, ID: id, State: Unchanged}, nil
 	}
-	return Result{File: file, ID: id, State: Changed, Diff: diff}, nil
+	return Result{File: file, ID: id, State: Changed, Diff: diff, Hints: hints}, nil
 }
 
 // Describe is the one-line outcome of a comparison, as a dry run reports it.

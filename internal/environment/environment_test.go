@@ -44,7 +44,7 @@ func TestListSaysWhenThereIsNone(t *testing.T) {
 
 func TestGetAndApplyRoundTrip(t *testing.T) {
 	p := platformtest.New(t)
-	p.Reply("GET /api/environments/"+id, platformtest.Reply{Body: `{"id":"` + id + `","name":"Prod","version":4,"query":"k8s.cluster-name=\"prod\"","state":"READY"}`})
+	p.Reply("GET /api/environments/"+id, platformtest.Reply{Body: `{"id":"` + id + `","name":"Prod","version":4,"predicate":{"query":"k8s.cluster-name=\"prod\""},"query":"k8s.cluster-name=\"prod\"","state":"READY"}`})
 	p.Reply("POST /api/environments", platformtest.Reply{JSON: map[string]any{"id": id, "name": "Prod"}})
 	file := filepath.Join(t.TempDir(), "environment.yml")
 
