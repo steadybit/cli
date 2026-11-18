@@ -18,6 +18,9 @@ func teamKeyFlag(cmd *cobra.Command, key *string) {
 	_ = cmd.MarkFlagRequired("key")
 }
 
+// validateMembersUsage describes --validate-members of `team apply` and `apply`.
+const validateMembersUsage = "Refuse a team whose file names a member that is no user of the tenant. By default the platform leaves such members out, and the CLI warns about each."
+
 func newTeam() *cobra.Command {
 	cmd := &cobra.Command{Use: "team", Short: "Manage teams, their members and environments."}
 
@@ -52,6 +55,7 @@ func newTeam() *cobra.Command {
 		RunE:    withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return team.Apply(ctx, c, a) }),
 	}
 	fileFlags(apply, &a.Files, &a.Recursive, "team")
+	apply.Flags().BoolVar(&a.ValidateMembers, "validate-members", false, validateMembersUsage)
 	dryRun(apply, gitops.Team, &a.Files, &a.Recursive)
 
 	var d team.DeleteOptions

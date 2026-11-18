@@ -47,8 +47,8 @@ var projectKinds = []struct {
 	{"environments", Environment, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
 		return environment.Apply(ctx, c, environment.ApplyOptions{Files: []string{path}, Recursive: true})
 	}},
-	{"teams", Team, func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
-		return team.Apply(ctx, c, team.ApplyOptions{Files: []string{path}, Recursive: true})
+	{"teams", Team, func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error {
+		return team.Apply(ctx, c, team.ApplyOptions{Files: []string{path}, Recursive: true, ValidateMembers: o.ValidateMembers})
 	}},
 	// Synchronized, as `hub apply --synchronize` does: service profiles name the templates
 	// a hub brings, so on a restored tenant those have to be there first. A hub that cannot
@@ -261,6 +261,7 @@ type ApplyOptions struct {
 	Directory         string
 	DeleteExperiments bool
 	DryRun            bool
+	ValidateMembers   bool
 }
 
 // ApplyProject applies every kind in a project, in the order of projectKinds.
