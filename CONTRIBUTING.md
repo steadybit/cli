@@ -101,9 +101,14 @@ committed as `openapi/platform-api.json`. Refresh both together:
 
 ```sh
 go run ./internal/tools/spec fetch   # the live spec into openapi/platform-api.json
-go generate ./api                    # the client from it
+go generate ./api                    # the client and its sets from it
 go build ./...                       # a breaking change fails here
 ```
+
+`go generate ./api` also writes `api/unordered.gen.go`: the fields the spec marks
+`uniqueItems`, which the platform keeps in a set and returns in an order of its own.
+`diff` and `apply --dry-run` compare them without regard to order, for the kinds whose
+`Schema` names them in `internal/gitops/kinds.go`.
 
 CI fails when the generated client does not match the committed spec, and builds against
 the live spec daily and before each release.

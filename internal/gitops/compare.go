@@ -7,6 +7,8 @@ package gitops
 
 import (
 	"math"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -70,6 +72,147 @@ func comparable(local, remote any, always map[string]bool) any {
 		}
 	}
 	return remote
+}
+
+// inFileOrder puts the platform's sets into the order of the file's, so the order alone
+// is never a difference: the items the file lists, in its order, then those only the
+// platform holds. paths are the sets, as api.Unordered names them; keys name the fields
+// that identify an item of a set of objects, by its path. Items without keys match when
+// they agree on every field the file sets.
+func inFileOrder(local, remote *jsyaml.Map, paths []string, keys map[string][]string) *jsyaml.Map {
+	sorted := append([]string{}, paths...)
+	// A set within a set is matched once its own items are lined up.
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return strings.Count(sorted[i], ".") < strings.Count(sorted[j], ".")
+	})
+	out := jsyaml.Clone(remote).(*jsyaml.Map)
+	for _, p := range sorted {
+		alignAt(local, out, strings.Split(p, "."), keys[p])
+	}
+	return out
+}
+
+// alignAt lines up the set at path in remote, going into every item of the lists and,
+// for "*", every value of the maps on its way. Lists on the way pair up by position.
+func alignAt(local, remote any, path []string, keys []string) {
+	switch r := remote.(type) {
+	case *jsyaml.Map:
+		l, _ := local.(*jsyaml.Map)
+		if l == nil {
+			return
+		}
+		fields := []string{path[0]}
+		if path[0] == "*" {
+			fields = r.Keys()
+		}
+		for _, field := range fields {
+			rv, ok := r.Get(field)
+			if !ok {
+				continue
+			}
+			lv, ok := l.Get(field)
+			if !ok {
+				continue
+			}
+			if len(path) == 1 {
+				ll, lok := lv.([]any)
+				rl, rok := rv.([]any)
+				if lok && rok {
+					r.Set(field, matchItems(ll, rl, keys))
+				}
+				continue
+			}
+			alignAt(lv, rv, path[1:], keys)
+		}
+	case []any:
+		l, _ := local.([]any)
+		for i := range r {
+			if i < len(l) {
+				alignAt(l[i], r[i], path, keys)
+			}
+		}
+	}
+}
+
+// matchItems orders remote like local. An item matched by one of its keys takes the
+// file's spelling of it and loses the other keys the file leaves out: the platform fills
+// in a member's username for an email, and its email for a username.
+func matchItems(local, remote []any, keys []string) []any {
+	out := make([]any, 0, len(remote))
+	used := make([]bool, len(remote))
+	for _, l := range local {
+		for i, r := range remote {
+			if used[i] {
+				continue
+			}
+			if key, ok := sameItem(l, r, keys); ok {
+				used[i] = true
+				out = append(out, withoutOtherKeys(l, r, keys, key))
+				break
+			}
+		}
+	}
+	for i, r := range remote {
+		if !used[i] {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// sameItem tells whether r is the platform's version of l, and by which key.
+func sameItem(l, r any, keys []string) (string, bool) {
+	lm, lok := l.(*jsyaml.Map)
+	rm, rok := r.(*jsyaml.Map)
+	if lok && rok && len(keys) > 0 {
+		for _, key := range keys {
+			lv, _ := lm.Get(key)
+			rv, _ := rm.Get(key)
+			ls, _ := lv.(string)
+			rs, _ := rv.(string)
+			if ls != "" && strings.EqualFold(ls, rs) {
+				return key, true
+			}
+		}
+		return "", false
+	}
+	return "", jsyaml.CompactJSON(withoutMissing(Comparable(l, r))) == jsyaml.CompactJSON(l)
+}
+
+func withoutOtherKeys(l, r any, keys []string, matched string) any {
+	lm, lok := l.(*jsyaml.Map)
+	rm, rok := r.(*jsyaml.Map)
+	if !lok || !rok || matched == "" {
+		return r
+	}
+	out := jsyaml.Clone(rm).(*jsyaml.Map)
+	// Matched regardless of case, an email is the same however either spells it.
+	spelled, _ := lm.Get(matched)
+	out.Set(matched, spelled)
+	for _, key := range keys {
+		if _, set := lm.Get(key); key != matched && !set {
+			out.Delete(key)
+		}
+	}
+	return out
+}
+
+// sameSet tells whether two lists hold the same items, in any order.
+func sameSet(a, b any) bool {
+	al, aok := a.([]any)
+	bl, bok := b.([]any)
+	if !aok || !bok || len(al) != len(bl) {
+		return false
+	}
+	items := func(l []any) []string {
+		out := make([]string, len(l))
+		for i, item := range l {
+			out[i] = jsyaml.CompactJSON(item)
+		}
+		sort.Strings(out)
+		return out
+	}
+	return slices.Equal(items(al), items(bl))
 }
 
 // missing marks a field the file sets and the platform does not have.

@@ -1,5 +1,17 @@
 # Changelog
 
+- `diff` and `apply --dry-run` compare a team's allowed actions, allowed environments
+  and members, and an experiment's or template's tags and shared teams, without regard
+  to order: the platform keeps them in sets and returns them in an order of its own.
+  The fields come from the spec (`uniqueItems`), so new ones are picked up with it.
+- `diff` and `apply --dry-run` match a team member listed by email alone, or by
+  username alone, and ignore the username or email the platform fills in, so a team
+  file can keep user ids out of the repository.
+- A team file may leave `wait` and `service-validation` out of `allowedActions`: the
+  platform allows them for every team. `diff` and `apply --dry-run` no longer report them
+  as removed, which applying could never do, and `team apply`, `diff` and dry runs note
+  that the team has them anyway.
+
 ## v6.4.1
 
 - `user delete` removes users whose username contains a `/`, such as the base64 subjects

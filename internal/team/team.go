@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/steadybit/cli/v6/api"
@@ -20,11 +22,39 @@ import (
 )
 
 // The version is dropped as `service get` drops it. Members are sent back as the platform
-// takes them, by username, email and role; the rest describes the user.
+// takes them, by username, email and role; the rest describes the user. Either the
+// username or the email names the member.
 var (
 	ReadOnly       = []string{"version"}
 	MemberReadOnly = []string{"name", "pictureUrl", "managedBy"}
+	MemberKeys     = []string{"username", "email"}
 )
+
+// AlwaysAllowed are the actions every team may use. The platform adds them to whatever
+// list of allowed actions it is sent, so a team never has none.
+var AlwaysAllowed = []string{"wait", "service-validation"}
+
+// NoteAlwaysAllowed tells, on stderr, when a file's allowed actions leave out actions
+// the platform allows every team anyway, so that `allowedActions: []` is not read as a
+// team that may run nothing.
+func NoteAlwaysAllowed(file string, doc *jsyaml.Map) {
+	value, ok := doc.Get("allowedActions")
+	if !ok {
+		return
+	}
+	listed, _ := value.([]any)
+	var left []string
+	for _, action := range AlwaysAllowed {
+		if !slices.Contains(listed, any(action)) {
+			left = append(left, action)
+		}
+	}
+	if len(left) == 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "Note: %s leaves %s out of allowedActions. The platform allows %s for every team, so the team has them anyway.\n",
+		file, strings.Join(left, " and "), strings.Join(AlwaysAllowed, " and "))
+}
 
 func notFoundOr(err error, key, format string) error {
 	if platform.IsStatus(err, http.StatusNotFound) {
@@ -119,6 +149,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		if key == "" {
 			return resource.Applied{}, fmt.Errorf("Team file '%s' does not name the team key.", file)
 		}
+		NoteAlwaysAllowed(file, doc.Value())
 		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, append([]string{"id"}, ReadOnly...)...).Value()))
 		_, resp, err = platform.Read(resp, err)
 		if err != nil {

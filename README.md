@@ -344,6 +344,13 @@ Each kind also has its own `diff`, and its `apply` a `--dry-run`, e.g.
 `steadybit integration webhook diff -f ./platform/integrations/webhook -R`. Fields the
 platform fills in with defaults are not reported as differences.
 
+Lists the platform keeps as sets, such as a team's allowed actions, environments and
+members or an experiment's tags, are compared in any order. A team member may be listed by
+`username` or by `email` alone, keeping user ids out of the repository. Every team may use
+`wait` and `service-validation`: the platform adds them to any list of allowed actions, so
+a team file may leave them out, and `allowedActions: []` is a team that may use only those
+two. The CLI notes it when a file leaves them out.
+
 ## In CI
 
 `experiment run` waits for the run and fails the job when the run fails; with `--no-wait` it
