@@ -1,5 +1,8 @@
 # Changelog
 
+- `team apply` and `apply` warn about each team member the platform left out because its
+  username or email is no user of the tenant; before, the team was reported as saved
+  without a word. `--validate-members` makes the platform refuse such a team instead.
 - `diff` and `apply --dry-run` compare a team's allowed actions, allowed environments
   and members, and an experiment's or template's tags and shared teams, without regard
   to order: the platform keeps them in sets and returns them in an order of its own.

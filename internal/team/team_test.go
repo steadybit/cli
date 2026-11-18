@@ -213,3 +213,64 @@ func TestApplyNotesTheActionsEveryTeamMayUse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Note: "+file+" leaves service-validation out of allowedActions. The platform allows wait and service-validation for every team, so the team has them anyway.\n", stderr)
 }
+
+// The platform leaves out members whose username or email is no user of the tenant and
+// still saves the team. apply names each one it left out, matching as the platform does:
+// by the username where the file gives one, by the email, in any case, otherwise.
+func TestApplyWarnsAboutMembersThePlatformLeftOut(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/teams", platformtest.Reply{Status: http.StatusOK, Body: stored})
+	file := filepath.Join(t.TempDir(), "team.yml")
+	require.NoError(t, os.WriteFile(file, []byte("key: OPS\nname: Operations\nallowedActions: [wait, service-validation]\nallowedEnvironments: []\nmembers:\n"+
+		"  - email: Jane@Example.com\n    role: OWNER\n"+
+		"  - email: nobody@example.com\n    role: MEMBER\n"+
+		"  - username: u-1\n    email: other@example.com\n    role: OWNER\n"+
+		"  - username: u-404\n    role: MEMBER\n"), 0o644))
+
+	var out string
+	stderr, err := platformtest.Stderr(t, func() error {
+		var err error
+		out, err = platformtest.Stdout(t, func() error { return team.Apply(ctx, p.Client, team.ApplyOptions{Files: []string{file}}) })
+		return err
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Team OPS updated.\n", out)
+	assert.Equal(t, "Warning: "+file+" lists the member with email nobody@example.com, but no user of the tenant has that email, so the platform left it out.\n"+
+		"Warning: "+file+" lists the member with username u-404, but no user of the tenant has that username, so the platform left it out.\n", stderr)
+	assert.Empty(t, p.Requests("POST /api/teams")[0].Query["validateMembers"])
+}
+
+// With --validate-members the platform refuses the team instead, and apply says why.
+func TestApplyWithValidateMembersRefusesUnknownMembers(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/teams", platformtest.Reply{Status: http.StatusUnprocessableEntity,
+		Body: `{"type":"https://steadybit.com/problems/validation-exception","title":"Constraint Violation","status":422,"violations":[{"field":"members","message":"No user found for email: nobody@example.com"}]}`})
+	file := filepath.Join(t.TempDir(), "team.yml")
+	require.NoError(t, os.WriteFile(file, []byte("key: OPS\nname: Operations\nallowedActions: [wait, service-validation]\nallowedEnvironments: []\nmembers:\n  - email: nobody@example.com\n    role: MEMBER\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return team.Apply(ctx, p.Client, team.ApplyOptions{Files: []string{file}, ValidateMembers: true})
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Team OPS was not saved: no user found for email: nobody@example.com. Every member must be a user of the tenant")
+	assert.Equal(t, []string{"true"}, p.Requests("POST /api/teams")[0].Query["validateMembers"])
+}
+
+// A 422 for anything else keeps the platform's full problem.
+func TestApplyReportsOtherValidationErrorsAsBefore(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/teams", platformtest.Reply{Status: http.StatusUnprocessableEntity,
+		Body: `{"title":"Constraint Violation","status":422,"violations":[{"field":"allowedActions","message":"must not be null"}]}`})
+	file := filepath.Join(t.TempDir(), "team.yml")
+	require.NoError(t, os.WriteFile(file, []byte("key: OPS\nname: Operations\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return team.Apply(ctx, p.Client, team.ApplyOptions{Files: []string{file}, ValidateMembers: true})
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed to save team OPS")
+	assert.Contains(t, err.Error(), "must not be null")
+}

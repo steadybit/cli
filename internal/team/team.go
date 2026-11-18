@@ -6,6 +6,7 @@ package team
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -138,6 +139,9 @@ func Get(ctx context.Context, c *platform.Client, o GetOptions) error {
 type ApplyOptions struct {
 	Files     []string
 	Recursive bool
+	// ValidateMembers makes the platform refuse a team whose file names a member that is
+	// no user of the tenant, instead of leaving the member out.
+	ValidateMembers bool
 }
 
 // Apply upserts teams by their key, which is what names a team; there is no id to write back.
@@ -150,15 +154,89 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 			return resource.Applied{}, fmt.Errorf("Team file '%s' does not name the team key.", file)
 		}
 		NoteAlwaysAllowed(file, doc.Value())
-		resp, err := c.UpsertTeamWithBody(ctx, &api.UpsertTeamParams{}, "application/json", resource.Body(resource.Strip(doc, append([]string{"id"}, ReadOnly...)...).Value()))
-		_, resp, err = platform.Read(resp, err)
+		params := &api.UpsertTeamParams{}
+		if o.ValidateMembers {
+			params.ValidateMembers = &o.ValidateMembers
+		}
+		resp, err := c.UpsertTeamWithBody(ctx, params, "application/json", resource.Body(resource.Strip(doc, append([]string{"id"}, ReadOnly...)...).Value()))
+		body, resp, err := platform.Read(resp, err)
 		if err != nil {
+			if unknown := unknownMembers(err); unknown != "" {
+				return resource.Applied{}, fmt.Errorf("Team %s was not saved: %s. Every member must be a user of the tenant, which people become when they first log in.", key, unknown)
+			}
 			return resource.Applied{}, platform.Failed(err, "Failed to save team %s", key)
 		}
 		created := resp.StatusCode == http.StatusCreated
 		fmt.Printf("Team %s %s.\n", key, resource.CreatedOrUpdated(created))
+		WarnSkippedMembers(file, doc.Value(), body)
 		return resource.Applied{Created: created}, nil
 	})
+}
+
+// unknownMembers is the platform's reason for refusing a team with --validate-members:
+// "No user found for email: …", or empty when it refused the team for something else.
+func unknownMembers(err error) string {
+	var apiErr *platform.APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusUnprocessableEntity {
+		return ""
+	}
+	var problem struct {
+		Violations []struct {
+			Field   string `json:"field"`
+			Message string `json:"message"`
+		} `json:"violations"`
+	}
+	_ = json.Unmarshal(apiErr.Body, &problem)
+	var reasons []string
+	for _, v := range problem.Violations {
+		if strings.HasPrefix(v.Message, "No user found") {
+			reasons = append(reasons, "n"+strings.TrimPrefix(v.Message, "N"))
+		}
+	}
+	return strings.Join(reasons, "; ")
+}
+
+// WarnSkippedMembers tells, on stderr, about each member of a file the platform left out
+// of the team it saved: by default it skips usernames and emails that are no user of the
+// tenant. It goes by the username where the file gives one and by the email otherwise,
+// as the platform does. Emails compare regardless of case: the platform stores them in
+// lower case, and a capitalised email it failed to find is missing from the team anyway.
+func WarnSkippedMembers(file string, doc *jsyaml.Map, saved []byte) {
+	value, _ := doc.Get("members")
+	listed, _ := value.([]any)
+	if len(listed) == 0 {
+		return
+	}
+	var team struct {
+		Members []member `json:"members"`
+	}
+	if json.Unmarshal(saved, &team) != nil {
+		return
+	}
+	for _, item := range listed {
+		m, ok := item.(*jsyaml.Map)
+		if !ok {
+			continue
+		}
+		username, _ := stringField(m, "username")
+		email, _ := stringField(m, "email")
+		switch {
+		case username != "":
+			if !slices.ContainsFunc(team.Members, func(s member) bool { return s.Username == username }) {
+				fmt.Fprintf(os.Stderr, "Warning: %s lists the member with username %s, but no user of the tenant has that username, so the platform left it out.\n", file, username)
+			}
+		case email != "":
+			if !slices.ContainsFunc(team.Members, func(s member) bool { return strings.EqualFold(s.Email, email) }) {
+				fmt.Fprintf(os.Stderr, "Warning: %s lists the member with email %s, but no user of the tenant has that email, so the platform left it out.\n", file, email)
+			}
+		}
+	}
+}
+
+func stringField(m *jsyaml.Map, key string) (string, bool) {
+	v, ok := m.Get(key)
+	s, _ := v.(string)
+	return s, ok
 }
 
 type DeleteOptions struct {

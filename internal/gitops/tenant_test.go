@@ -369,3 +369,20 @@ func TestActionsEveryTeamMayUseNeedNotBeListed(t *testing.T) {
 	assert.ErrorIs(t, err, gitops.ErrDifferent)
 	assert.Empty(t, stderr)
 }
+
+// `apply -d --validate-members` hands the check to every team of the project.
+func TestApplyProjectPassesValidateMembersToTeams(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("POST /api/teams", platformtest.Reply{JSON: map[string]any{}})
+	dir := t.TempDir()
+	file := filepath.Join(dir, "teams", "adm.yaml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+	require.NoError(t, os.WriteFile(file, []byte("key: ADM\nname: Admins\nallowedActions: [wait, service-validation]\nallowedEnvironments: []\nmembers: []\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return gitops.ApplyProject(ctx, p.Client, gitops.ApplyOptions{Directory: dir, ValidateMembers: true})
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"true"}, p.Requests("POST /api/teams")[0].Query["validateMembers"])
+}

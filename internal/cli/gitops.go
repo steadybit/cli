@@ -89,6 +89,7 @@ func newApplyProject() *cobra.Command {
 	cmd.Flags().StringVarP(&o.Directory, "directory", "d", ".", "The project directory.")
 	cmd.Flags().BoolVar(&o.DryRun, "dry-run", false, "Report what applying the project would create or update, without changing anything.")
 	cmd.Flags().BoolVar(&o.DeleteExperiments, "delete-experiments", false, "Delete provided experiments that changed service profiles no longer provide.")
+	cmd.Flags().BoolVar(&o.ValidateMembers, "validate-members", false, validateMembersUsage)
 	return cmd
 }
 
