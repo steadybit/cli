@@ -386,3 +386,26 @@ func TestApplyProjectPassesValidateMembersToTeams(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"true"}, p.Requests("POST /api/teams")[0].Query["validateMembers"])
 }
+
+// In a file of several integrations, one that matches the platform but holds a masked
+// secret is left out while a new one beside it is created: `integration apply` alone would
+// refuse the mask, as it compares without the defaults and key order diff allows for.
+func TestApplyingAProjectAppliesOnlyTheIntegrationsOfAFileThatDiffer(t *testing.T) {
+	p := fakeTenant(t)
+	const created = "019eacd7-fb2c-733a-bed5-99a935323d07"
+	p.Reply("POST /api/integrations/webhook", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"id": created, "name": "Second"}})
+	dir := t.TempDir()
+	file := filepath.Join(dir, "integrations", "webhook", "all.yaml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+	require.NoError(t, os.WriteFile(file, []byte("name: Notify\nid: "+webhookID+"\nscope: GLOBAL\nurl: https://example.com/hook\nsecret: '********'\nevents:\n  - '*'\n"+
+		"headers:\n  Authorization: '********'\n---\nscope: GLOBAL\nname: Second\nurl: https://example.com/second\nevents:\n  - '*'\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.ApplyProject(ctx, p.Client, gitops.ApplyOptions{Directory: dir}) })
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "all.yaml (document 1) matches webhook integration "+webhookID+".\n")
+	require.Len(t, p.Requests("POST /api/integrations/webhook"), 1)
+	assert.Equal(t, "Second", p.Requests("POST /api/integrations/webhook")[0].JSON(t).(map[string]any)["name"])
+	content, _ := os.ReadFile(file)
+	assert.Contains(t, string(content), "---\nid: "+created+"\nscope: GLOBAL\nname: Second\n")
+}

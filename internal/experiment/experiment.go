@@ -159,7 +159,20 @@ func ResolveFiles(paths []string, recursive bool) ([]string, error) {
 	return files, nil
 }
 
+// load reads a file of one experiment, as running takes.
 func load(file string) (*output.File, error) {
+	f, err := loadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	if n := f.Len(); n > 1 {
+		return nil, fmt.Errorf("Experiment file '%s' holds %d experiments; running takes one experiment per file.", file, n)
+	}
+	return f, nil
+}
+
+// loadAll reads the experiments of a file: one for JSON, one per YAML document.
+func loadAll(file string) (*output.File, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read experiment file at path '%s': %w", file, err)
@@ -171,10 +184,10 @@ func load(file string) (*output.File, error) {
 	return f, nil
 }
 
-// writeKey puts the key the platform assigned into the file, so that the next apply
-// updates this experiment instead of creating another one.
-func writeKey(file string, f *output.File, key string) error {
-	if err := f.Set("key", key); err != nil {
+// writeKey puts the key the platform assigned into the experiment at index of the file, so
+// that the next apply updates this experiment instead of creating another one.
+func writeKey(file string, f *output.File, index int, key string) error {
+	if err := f.Set(index, "key", key); err != nil {
 		return err
 	}
 	return os.WriteFile(file, f.Bytes(), 0o644)
@@ -220,39 +233,50 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		return errors.New("If --key is specified, at most one --file can be specified.")
 	}
 	for _, file := range files {
-		f, err := load(file)
+		f, err := loadAll(file)
 		if err != nil {
 			return err
 		}
-		document := f.Document()
-		key := o.Key
-		if key == "" {
-			key = keyOf(document)
+		documents := f.Documents()
+		if o.Key != "" && len(documents) > 1 {
+			return fmt.Errorf("If --key is specified, the file can hold only one experiment; '%s' holds %d.", file, len(documents))
 		}
-		if key != "" {
-			if err := update(ctx, c, key, document); err != nil {
+		for i, document := range documents {
+			if err := applyOne(ctx, c, o.Key, file, f, i, document); err != nil {
 				return err
 			}
-			fmt.Printf("Experiment %s updated.\n", key)
-			continue
 		}
-		body, err := jsonBody(document)
-		if err != nil {
+	}
+	return nil
+}
+
+func applyOne(ctx context.Context, c *platform.Client, key, file string, f *output.File, index int, document Document) error {
+	if key == "" {
+		key = keyOf(document)
+	}
+	if key != "" {
+		if err := update(ctx, c, key, document); err != nil {
 			return err
 		}
-		_, resp, err := platform.Read(c.CreateOrUpdateExperimentWithBody(ctx, "application/json", body))
-		if err != nil {
-			return platform.Failed(err, "Failed to save the experiment. HTTP request failed.")
+		fmt.Printf("Experiment %s updated.\n", key)
+		return nil
+	}
+	body, err := jsonBody(document)
+	if err != nil {
+		return err
+	}
+	_, resp, err := platform.Read(c.CreateOrUpdateExperimentWithBody(ctx, "application/json", body))
+	if err != nil {
+		return platform.Failed(err, "Failed to save the experiment. HTTP request failed.")
+	}
+	key = keyFromLocation(resp)
+	if resp.StatusCode == http.StatusCreated {
+		if err := writeKey(file, f, index, key); err != nil {
+			return err
 		}
-		key = keyFromLocation(resp)
-		if resp.StatusCode == http.StatusCreated {
-			if err := writeKey(file, f, key); err != nil {
-				return err
-			}
-			fmt.Printf("Experiment %s created.\n", key)
-		} else {
-			fmt.Printf("Experiment %s updated.\n", key)
-		}
+		fmt.Printf("Experiment %s created.\n", key)
+	} else {
+		fmt.Printf("Experiment %s updated.\n", key)
 	}
 	return nil
 }
@@ -637,7 +661,7 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 	if err != nil {
 		return started{}, err
 	}
-	document := f.Document()
+	document := f.Documents()[0]
 	key := o.Key
 	if key == "" {
 		key = keyOf(document)
@@ -662,7 +686,7 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 	if err != nil {
 		return started{}, err
 	}
-	return result, writeKey(file, f, result.Key)
+	return result, writeKey(file, f, 0, result.Key)
 }
 
 func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, a attempt) (started, error) {
@@ -797,7 +821,7 @@ func fileExperimentName(file string) string {
 	if err != nil {
 		return "the experiment"
 	}
-	document := f.Document()
+	document := f.Documents()[0]
 	for _, field := range []string{"key", "name"} {
 		if v, ok := document.Get(field); ok && v != "" {
 			return v

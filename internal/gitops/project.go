@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/steadybit/cli/v6/api"
@@ -77,9 +78,9 @@ var projectKinds = []struct {
 	}},
 }
 
-// applyIntegrations leaves out the files that match the platform. Those holding a masked
-// secret could not be applied, the platform keeping no secret it is not sent, and the
-// others need not be.
+// applyIntegrations leaves out the integrations that match the platform. Those holding a
+// masked secret could not be applied, the platform keeping no secret it is not sent, and
+// the others need not be.
 func applyIntegrations(k integration.Kind) func(ctx context.Context, c *platform.Client, path string, o ApplyOptions) error {
 	return func(ctx context.Context, c *platform.Client, path string, _ ApplyOptions) error {
 		gk := Integrations[k.Name]
@@ -87,18 +88,22 @@ func applyIntegrations(k integration.Kind) func(ctx context.Context, c *platform
 		if err != nil {
 			return err
 		}
-		var changed []string
+		var files []string
+		changed := map[string]bool{}
 		for _, r := range results {
 			if r.State == Unchanged {
 				fmt.Println(r.Describe(gk))
-			} else {
-				changed = append(changed, r.File)
+				continue
 			}
+			if !slices.Contains(files, r.Path) {
+				files = append(files, r.Path)
+			}
+			changed[r.File] = true
 		}
-		if len(changed) == 0 {
+		if len(files) == 0 {
 			return nil
 		}
-		return integration.Apply(ctx, c, k, integration.ApplyOptions{Files: changed})
+		return integration.Apply(ctx, c, k, integration.ApplyOptions{Files: files, Only: changed})
 	}
 }
 

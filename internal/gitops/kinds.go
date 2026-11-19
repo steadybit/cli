@@ -368,7 +368,10 @@ const (
 )
 
 type Result struct {
-	File  string
+	// File names the object in messages: the file, or its place in a file of several.
+	File string
+	// Path is the file it was read from.
+	Path  string
 	ID    string
 	State State
 	Diff  string

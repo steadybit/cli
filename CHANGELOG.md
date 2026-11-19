@@ -1,5 +1,13 @@
 # Changelog
 
+- A YAML file may hold several objects of its kind, one per document, separated by
+  `---`: `apply`, the `apply` of each kind, `diff` and `apply --dry-run` take each of
+  them, and an id or key the platform assigns is written into the document it belongs
+  to, the file's other documents kept as they are. Messages name such an object as
+  `file (document 2)`. Before, every document after the first was ignored without a word,
+  so applying such a file saved one object and reported success. `experiment run --file`
+  still takes one experiment per file, and says so; a placeholders or variables file
+  still holds one value.
 - An id or key that `apply` writes back into a YAML file where no line could go in front,
   as in a flow mapping `{...}` or a file holding the field empty, keeps the file's
   comments, anchors and quoting; a flow mapping stays one, and a field held empty keeps

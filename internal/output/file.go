@@ -5,24 +5,27 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"slices"
 
 	"github.com/steadybit/cli/v6/internal/jsyaml"
 	"go.yaml.in/yaml/v4"
 )
 
-// File is a file of an object, as kept in Git: its text and the object it holds. A change
-// to the object goes into the text and changes as little else of it as it can.
+// File is a file of objects, as kept in Git: its text and the objects it holds, one per
+// YAML document. A change to an object goes into the text and changes as little else of it
+// as it can; the file's other objects stay as they are.
 type File struct {
 	bom      bool
 	text     []byte
 	datatype Datatype
-	doc      *Document
+	docs     []*Document
 }
 
-// ParseFile reads a file's content as JSON or YAML; JSON is tried first, as it was.
+// ParseFile reads a file's content as JSON or YAML; JSON is tried first, as it was. JSON
+// holds one object, YAML one per document.
 func ParseFile(content []byte) (*File, error) {
-	doc, err := ParseDocument(content)
+	docs, err := ParseDocuments(content)
 	if err != nil {
 		return nil, err
 	}
@@ -31,13 +34,20 @@ func ParseFile(content []byte) (*File, error) {
 		datatype = JSON
 	}
 	text, hasBOM := bytes.CutPrefix(content, bom)
-	return &File{bom: hasBOM, text: text, datatype: datatype, doc: doc}, nil
+	return &File{bom: hasBOM, text: text, datatype: datatype, docs: docs}, nil
 }
 
-// Document is a copy of the object the file holds: changing it changes neither the file
-// nor its text.
-func (f *File) Document() *Document {
-	return NewDocument(jsyaml.Clone(f.doc.value).(*jsyaml.Map))
+// Len is the number of objects the file holds.
+func (f *File) Len() int { return len(f.docs) }
+
+// Documents are copies of the objects the file holds: changing them changes neither the
+// file nor its text.
+func (f *File) Documents() []*Document {
+	docs := make([]*Document, len(f.docs))
+	for i, doc := range f.docs {
+		docs[i] = NewDocument(jsyaml.Clone(doc.value).(*jsyaml.Map))
+	}
+	return docs
 }
 
 // Bytes is the content of the file, with the changes made to it.
@@ -48,29 +58,86 @@ func (f *File) Bytes() []byte {
 	return f.text
 }
 
-// Set sets key to value in the object, as reading the file back gives it: a key the object
-// holds gets the value where it is, a key it does not hold goes first. YAML keeps the rest
-// of the file as far as the change allows (see setInDocument); JSON is written out again in the
-// style it was in.
-func (f *File) Set(key, value string) error {
+// Set sets key to value in the object at index, as reading the file back gives it: a key
+// the object holds gets the value where it is, a key it does not hold goes first. YAML
+// changes only that object's document, as far as the change allows (see setInDocument);
+// JSON is written out again in the style it was in.
+func (f *File) Set(index int, key, value string) error {
+	if index >= len(f.docs) {
+		return fmt.Errorf("the file holds no object %d", index+1)
+	}
+	doc := f.docs[index]
 	if f.datatype == YAML {
-		edited, err := setInDocument(f.text, f.doc.value, key, value)
+		return f.setYAML(index, key, value)
+	}
+	if _, holds := doc.value.Get(key); holds {
+		doc.value.Set(key, value)
+	} else {
+		doc.value.SetFirst(key, value)
+	}
+	f.text = renderJSONLike(f.text, doc)
+	return nil
+}
+
+// setYAML changes the document of the object at index on its own, as setInDocument changes
+// a file of one, and puts it back between the same markers. Where it cannot be changed so,
+// every object is written out again from its values.
+func (f *File) setYAML(index int, key, value string) error {
+	segments := documentSegments(f.text)
+	n := 0
+	for i, segment := range segments {
+		docs, err := yamlDocuments(segment)
+		if err != nil {
+			return err
+		}
+		if len(docs) == 0 {
+			continue
+		}
+		if n < index {
+			n++
+			continue
+		}
+		edited, err := setInDocument(segment, f.docs[index].value, key, value)
 		if err != nil {
 			return err
 		}
 		if edited == nil {
-			edited = f.doc.RenderFile(YAML)
+			parts := make([][]byte, len(f.docs))
+			for j, doc := range f.docs {
+				parts[j] = doc.RenderFile(YAML)
+			}
+			f.text = bytes.Join(parts, []byte("---\n"))
+			return nil
 		}
-		f.text = edited
+		segments[i] = edited
+		f.text = slices.Concat(segments...)
 		return nil
 	}
-	if _, holds := f.doc.value.Get(key); holds {
-		f.doc.value.Set(key, value)
-	} else {
-		f.doc.value.SetFirst(key, value)
+	return fmt.Errorf("the file holds no object %d", index+1)
+}
+
+// documentSegments cuts YAML text in front of every `---` marker line and the directives
+// right above it, so that each segment holds at most one document: YAML wants a `---` in
+// front of every document after the first, and a `---` at the start of a line can only be
+// a marker.
+func documentSegments(text []byte) [][]byte {
+	lines := lineStarts(text)
+	var segments [][]byte
+	start := 0
+	for line := 2; line+1 < len(lines); line++ {
+		if !isMarker(text[lines[line]:lines[line+1]]) {
+			continue
+		}
+		cut := line
+		for cut > 1 && lines[cut-1] >= start && bytes.HasPrefix(text[lines[cut-1]:], []byte("%")) {
+			cut--
+		}
+		if lines[cut] > start {
+			segments = append(segments, text[start:lines[cut]])
+			start = lines[cut]
+		}
 	}
-	f.text = renderJSONLike(f.text, f.doc)
-	return nil
+	return append(segments, text[start:])
 }
 
 // renderJSONLike writes the object as JSON in the style of text: compact or indented, with
@@ -195,12 +262,16 @@ func lineStarts(text []byte) []int {
 // A document starts with its directives; one without a marker starts with its content.
 func markerLine(text []byte, lines []int, from, to int) int {
 	for line := min(to, len(lines)-2); line >= from && line > 0; line-- {
-		rest := text[lines[line]:lines[line+1]]
-		if bytes.HasPrefix(rest, []byte("---")) && (len(rest) == 3 || bytes.IndexByte([]byte(" \t\r\n"), rest[3]) >= 0) {
+		if isMarker(text[lines[line]:lines[line+1]]) {
 			return line
 		}
 	}
 	return 0
+}
+
+// isMarker tells whether a line is a `---` document marker.
+func isMarker(line []byte) bool {
+	return bytes.HasPrefix(line, []byte("---")) && (len(line) == 3 || bytes.IndexByte([]byte(" \t\r\n"), line[3]) >= 0)
 }
 
 // keyLine is `key: value` as a line of a block mapping at column, quoted as js-yaml quotes

@@ -29,11 +29,15 @@ func compareAll(ctx context.Context, c *platform.Client, k Kind, paths []string,
 		if err != nil {
 			return nil, err
 		}
-		r, err := Compare(ctx, c, k, file, f.Document())
-		if err != nil {
-			return nil, err
+		docs := f.Documents()
+		for i, doc := range docs {
+			r, err := Compare(ctx, c, k, output.Label(file, i, len(docs)), doc)
+			if err != nil {
+				return nil, err
+			}
+			r.Path = file
+			results = append(results, r)
 		}
-		results = append(results, r)
 	}
 	return results, nil
 }
@@ -57,12 +61,26 @@ func DiffFiles(ctx context.Context, c *platform.Client, k Kind, paths []string, 
 			fmt.Println(r.Describe(k))
 		}
 	}
+	counted := "file(s)"
+	if severalPerFile(results) {
+		counted = "document(s)"
+	}
 	if different == 0 {
-		fmt.Printf("%d %s file(s) match the platform.\n", len(results), k.Name)
+		fmt.Printf("%d %s %s match the platform.\n", len(results), k.Name, counted)
 		return nil
 	}
-	fmt.Printf("%d of %d %s file(s) differ from the platform.\n", different, len(results), k.Name)
+	fmt.Printf("%d of %d %s %s differ from the platform.\n", different, len(results), k.Name, counted)
 	return ErrDifferent
+}
+
+// severalPerFile tells whether a file held more than one object, so that counting files
+// would be wrong.
+func severalPerFile(results []Result) bool {
+	paths := map[string]bool{}
+	for _, r := range results {
+		paths[r.Path] = true
+	}
+	return len(paths) != len(results)
 }
 
 // DryRun reports what applying the files would do, without applying anything.

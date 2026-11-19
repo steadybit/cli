@@ -75,3 +75,46 @@ func TestNeverLetsAnIdStepOutOfADirectory(t *testing.T) {
 	assert.Equal(t, "evil", PathSegment("../../evil"))
 	assert.Equal(t, "report.zip", PathSegment("report.zip"))
 }
+
+// yaml.Unmarshal would read the first of several documents and drop the others, so
+// applying such a file would have saved one object and reported success.
+func TestReadsEveryYAMLDocument(t *testing.T) {
+	docs, err := ParseDocuments([]byte("---\nname: a\n---\n# b follows\nname: b\n---\n---\nname: c\n...\n"))
+	require.NoError(t, err)
+	var names []string
+	for _, doc := range docs {
+		name, _ := doc.Get("name")
+		names = append(names, name)
+	}
+	assert.Equal(t, []string{"a", "b", "c"}, names)
+}
+
+func TestNamesTheDocumentThatIsNoObject(t *testing.T) {
+	_, err := ParseDocuments([]byte("name: a\n---\n- b\n"))
+	assert.EqualError(t, err, "document 2: expected an object")
+}
+
+func TestOneObjectIsExpectedWhereSeveralCannotBeTaken(t *testing.T) {
+	in := []byte("name: a\n---\nname: b\n")
+	_, err := ParseDocument(in)
+	assert.EqualError(t, err, "found 2 documents where one object is expected")
+	_, err = ParseValue(in)
+	assert.EqualError(t, err, "found 2 documents where one object is expected")
+}
+
+func TestReadsOneYAMLDocumentBetweenMarkers(t *testing.T) {
+	for name, in := range map[string]string{
+		"leading marker":         "---\nname: a\n",
+		"trailing marker":        "name: a\n---\n",
+		"comment after a marker": "name: a\n---\n# nothing more\n",
+		"document end marker":    "name: a\n...\n",
+		"markers on either side": "---\nname: a\n---\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			doc, err := ParseDocument([]byte(in))
+			require.NoError(t, err)
+			name, _ := doc.Get("name")
+			assert.Equal(t, "a", name)
+		})
+	}
+}

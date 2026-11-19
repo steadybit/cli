@@ -109,3 +109,53 @@ func TestVariablesMergeUnlessReplaced(t *testing.T) {
 	assert.Equal(t, map[string]any{}, p.Requests("POST /api/environments/" + id + "/variables")[0].JSON(t))
 	assert.EqualError(t, environment.SetVariables(ctx, p.Client, nil, environment.VariableSetOptions{ID: id}), "No variables given. Pass KEY=VALUE arguments or --file.")
 }
+
+// Ids that differ by name show which document each went into.
+func createByName(t *testing.T, p *platformtest.Platform) {
+	p.Handle("POST /api/environments", func(r platformtest.Request) platformtest.Reply {
+		sent := r.JSON(t).(map[string]any)
+		if existing, ok := sent["id"]; ok {
+			return platformtest.Reply{JSON: map[string]any{"id": existing, "name": sent["name"]}}
+		}
+		return platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"id": "id-" + sent["name"].(string), "name": sent["name"]}}
+	})
+}
+
+func TestApplyAppliesEveryDocumentAndWritesEachNewIdIntoIts(t *testing.T) {
+	p := platformtest.New(t)
+	createByName(t, p)
+	file := filepath.Join(t.TempDir(), "environments.yaml")
+	original := "# shop\nname: shop\nquery: a=\"1\"\n---\nid: id-known\nname: known\nquery: a=\"2\"\n---\n# payments\nname: payments\nquery: a=\"3\"\n"
+	require.NoError(t, os.WriteFile(file, []byte(original), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error { return environment.Apply(ctx, p.Client, environment.ApplyOptions{Files: []string{file}}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "Environment shop (id-shop) created.\nEnvironment known (id-known) updated.\nEnvironment payments (id-payments) created.\n", out)
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "id: id-shop\n# shop\nname: shop\nquery: a=\"1\"\n---\nid: id-known\nname: known\nquery: a=\"2\"\n---\nid: id-payments\n# payments\nname: payments\nquery: a=\"3\"\n", string(content))
+}
+
+func TestApplyKeepsTheOtherDocumentsWhenOneCannotTakeALineInFront(t *testing.T) {
+	p := platformtest.New(t)
+	createByName(t, p)
+	file := filepath.Join(t.TempDir(), "environments.yaml")
+	require.NoError(t, os.WriteFile(file, []byte("# shop\nname: shop\nquery: x\n---\n{name: flow, query: y}  # flow\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error { return environment.Apply(ctx, p.Client, environment.ApplyOptions{Files: []string{file}}) })
+
+	require.NoError(t, err)
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "id: id-shop\n# shop\nname: shop\nquery: x\n---\n{id: id-flow, name: flow, query: y} # flow\n", string(content))
+}
+
+func TestApplyNamesTheDocumentOfAFileOfSeveral(t *testing.T) {
+	p := platformtest.New(t)
+	createByName(t, p)
+	file := filepath.Join(t.TempDir(), "environments.yaml")
+	require.NoError(t, os.WriteFile(file, []byte("name: shop\nquery: x\n---\nquery: y\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error { return environment.Apply(ctx, p.Client, environment.ApplyOptions{Files: []string{file}}) })
+
+	assert.EqualError(t, err, "Environment file '"+file+" (document 2)' does not name the environment.")
+}

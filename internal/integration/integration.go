@@ -312,10 +312,16 @@ func Get(ctx context.Context, c *platform.Client, k Kind, o GetOptions) error {
 type ApplyOptions struct {
 	Files     []string
 	Recursive bool
+	// Only, when set, applies just the objects it names, as resource.ApplyFiles names
+	// them to upsert: those `apply -d` found to differ from the platform.
+	Only map[string]bool
 }
 
 func Apply(ctx context.Context, c *platform.Client, k Kind, o ApplyOptions) error {
 	return resource.ApplyFiles(o.Files, o.Recursive, k.Name+" integration", func(file string, doc *output.Document) (resource.Applied, error) {
+		if o.Only != nil && !o.Only[file] {
+			return resource.Applied{}, nil
+		}
 		name, _ := doc.Get("name")
 		if name == "" {
 			return resource.Applied{}, fmt.Errorf("%s file '%s' does not name the integration.", k.Title, file)

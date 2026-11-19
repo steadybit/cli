@@ -53,7 +53,7 @@ func format(doc *output.Document, datatype output.Datatype) string {
 	return jsyaml.Dump(doc.Value())
 }
 
-// Read loads a JSON or YAML file.
+// Read loads the objects of a JSON or YAML file: one for JSON, one per YAML document.
 func Read(file, what string) (*output.File, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
@@ -87,8 +87,10 @@ type Applied struct {
 	Created bool
 }
 
-// ApplyFiles upserts every file. A file without an id gets the new one written into it,
-// first, so the next apply updates what this one created instead of creating another.
+// ApplyFiles upserts every object of every file, in order; a YAML file may hold several,
+// one per document. An object without an id gets the new one written into it, first, so
+// the next apply updates what this one created instead of creating another. upsert gets
+// the file's name, or for a file of several objects, the object's place in it.
 func ApplyFiles(paths []string, recursive bool, what string, upsert func(file string, doc *output.Document) (Applied, error)) error {
 	files, err := experiment.ResolveFiles(paths, recursive)
 	if err != nil {
@@ -99,19 +101,21 @@ func ApplyFiles(paths []string, recursive bool, what string, upsert func(file st
 		if err != nil {
 			return err
 		}
-		doc := f.Document()
-		existingID, _ := doc.Value().Get("id")
-		result, err := upsert(file, doc)
-		if err != nil {
-			return err
-		}
-		// Resources named by a key, like teams, have no id to write back.
-		if (existingID == nil || existingID == "") && result.ID != "" {
-			if err := f.Set("id", result.ID); err != nil {
+		docs := f.Documents()
+		for i, doc := range docs {
+			existingID, _ := doc.Value().Get("id")
+			result, err := upsert(output.Label(file, i, len(docs)), doc)
+			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(file, f.Bytes(), 0o644); err != nil {
-				return err
+			// Resources named by a key, like teams, have no id to write back.
+			if (existingID == nil || existingID == "") && result.ID != "" {
+				if err := f.Set(i, "id", result.ID); err != nil {
+					return err
+				}
+				if err := os.WriteFile(file, f.Bytes(), 0o644); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -170,10 +174,10 @@ func Variables(pairs []string, file string, replace bool) (*jsyaml.Map, error) {
 	variables := jsyaml.NewMap()
 	if file != "" {
 		f, err := Read(file, "variables")
-		if err != nil {
+		if err != nil || f.Len() != 1 {
 			return nil, fmt.Errorf("Variables file '%s' must be a map of variable names to values.", file)
 		}
-		variables = f.Document().Value()
+		variables = f.Documents()[0].Value()
 	}
 	for _, k := range given.Keys() {
 		v, _ := given.Get(k)

@@ -234,3 +234,16 @@ func TestDiffHintsAtTheQueryForADeprecatedPredicate(t *testing.T) {
 	assert.Contains(t, out, file+`: lanes[0].steps[0].radius.predicate is deprecated; the platform holds this scope as query: "k8s.namespace=\"checkout\"". `+
 		"Unless the predicate was edited, replace it with that query.\n")
 }
+
+func TestDiffComparesEachDocumentOfAFileAndNamesIt(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/environments/"+environmentID, platformtest.Reply{Body: `{"id":"` + environmentID +
+		`","name":"Checkout","version":3,"state":"READY","query":"k8s.namespace=\"checkout\""}`})
+	p.Reply("GET /api/environments", platformtest.Reply{Body: `{"environments":[]}`})
+	file := write(t, "environments.yml", "id: "+environmentID+"\nname: Checkout\nquery: k8s.namespace=\"checkout\"\n---\nname: Payments\nquery: k8s.namespace=\"payments\"\n")
+
+	out, err := platformtest.Stdout(t, func() error { return gitops.DiffFiles(ctx, p.Client, gitops.Environment, []string{file}, false) })
+
+	assert.ErrorIs(t, err, gitops.ErrDifferent)
+	assert.Equal(t, file+" (document 2) would create a new environment.\n1 of 2 environment document(s) differ from the platform.\n", out)
+}

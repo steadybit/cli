@@ -315,6 +315,12 @@ steadybit apply -d ./chaos --dry-run      # what an apply would create or update
 steadybit apply -d ./chaos                # profiles, services, experiments, then schedules
 ```
 
+A YAML file may hold several objects of its kind, one per document, separated by `---`,
+for example all environments in `environments/all.yaml`. Each is applied and compared on
+its own, and an id or key the platform assigns goes into the document it belongs to.
+`export` still writes one object per file, and `experiment run --file` takes one
+experiment per file.
+
 Keep the tenant's configuration in Git the same way: experiment templates, environments,
 teams, property definitions, hubs, integrations and custom service profiles, one directory
 each (`templates/`, `environments/`, `teams/`, `property-definitions/`, `hubs/`,

@@ -12,15 +12,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// set sets the key and checks that the file reads back as the object Set holds.
 func set(t *testing.T, in, key, value string) string {
+	t.Helper()
+	return setIn(t, in, 0, key, value)
+}
+
+// setIn sets the key in the object at index and checks that the file reads back as the
+// objects Set holds.
+func setIn(t *testing.T, in string, index int, key, value string) string {
 	t.Helper()
 	f, err := ParseFile([]byte(in))
 	require.NoError(t, err)
-	require.NoError(t, f.Set(key, value))
-	read, err := ParseDocument(f.Bytes())
+	require.NoError(t, f.Set(index, key, value))
+	read, err := ParseDocuments(f.Bytes())
 	require.NoError(t, err, string(f.Bytes()))
-	assert.Equal(t, jsyaml.CompactJSON(f.Document().Value()), jsyaml.CompactJSON(read.Value()), "what the file reads back as")
+	require.Len(t, read, f.Len(), string(f.Bytes()))
+	for i, doc := range f.Documents() {
+		assert.Equal(t, jsyaml.CompactJSON(doc.Value()), jsyaml.CompactJSON(read[i].Value()), "what object %d reads back as", i+1)
+	}
 	return string(f.Bytes())
 }
 
@@ -89,9 +98,8 @@ func TestSetPutsANewKeyFirstInTheTreeOfAFlowOrMarkedMapping(t *testing.T) {
 // out again from its values.
 func TestSetWritesTheObjectOutWhereTheTreeWouldChangeMore(t *testing.T) {
 	for name, tc := range map[string]struct{ in, out string }{
-		"anchored value":    {"key: &k ''\nname: x\nother: *k\n", "key: NEW-1\nname: x\nother: ''\n"},
-		"anchor inside it":  {"key:\n  a: &x 1\nother: *x\n", "key: NEW-1\nother: 1\n"},
-		"a second document": {"key: ''\nname: x\n---\nother: y\n", "key: NEW-1\nname: x\n"},
+		"anchored value":   {"key: &k ''\nname: x\nother: *k\n", "key: NEW-1\nname: x\nother: ''\n"},
+		"anchor inside it": {"key:\n  a: &x 1\nother: *x\n", "key: NEW-1\nother: 1\n"},
 	} {
 		t.Run(name, func(t *testing.T) { assert.Equal(t, tc.out, set(t, tc.in, "key", "NEW-1")) })
 	}
@@ -112,8 +120,54 @@ func TestSetKeepsTheStyleOfJSON(t *testing.T) {
 func TestDocumentIsACopy(t *testing.T) {
 	f, err := ParseFile([]byte("name: new\n"))
 	require.NoError(t, err)
-	f.Document().Value().SetFirst("key", "changed")
+	f.Documents()[0].Value().SetFirst("key", "changed")
 	assert.Equal(t, "name: new\n", string(f.Bytes()))
-	_, has := f.Document().Get("key")
+	_, has := f.Documents()[0].Get("key")
 	assert.False(t, has)
+}
+
+// In a file of several objects, only the document of the object changes; the others stay
+// byte for byte, blank lines included.
+func TestSetChangesOnlyTheDocumentOfTheObject(t *testing.T) {
+	for name, tc := range map[string]struct {
+		in    string
+		index int
+		out   string
+	}{
+		"first":                {"name: a # a\n---\nname: b\n", 0, "id: X\nname: a # a\n---\nname: b\n"},
+		"after a comment":      {"name: a\n---\n# b\nname: b\nq: &q 1\nr: *q\n", 1, "name: a\n---\nid: X\n# b\nname: b\nq: &q 1\nr: *q\n"},
+		"indented":             {"name: a\n---\n  name: b\n  q: 1\n", 1, "name: a\n---\n  id: X\n  name: b\n  q: 1\n"},
+		"after an empty one":   {"name: a\n---\n---\nname: c\n", 1, "name: a\n---\n---\nid: X\nname: c\n"},
+		"comment before all":   {"# c\n---\nname: a\n---\nname: b\n", 0, "# c\n---\nid: X\nname: a\n---\nname: b\n"},
+		"crlf":                 {"name: a\r\n---\r\nname: b\r\n", 1, "name: a\r\n---\r\nid: X\nname: b\r\n"},
+		"byte order mark":      {"\ufeffname: a\n---\nname: b\n", 1, "\ufeffname: a\n---\nid: X\nname: b\n"},
+		"flow":                 {"# kept\nname: a\n\nq: 1\n---\n{name: b}  # flow\n---\nname: c # c\n", 1, "# kept\nname: a\n\nq: 1\n---\n{id: X, name: b} # flow\n---\nname: c # c\n"},
+		"flow on the marker":   {"name: a\n\nq: 1\n--- {name: b}\n", 1, "name: a\n\nq: 1\n--- {id: X, name: b}\n"},
+		"held key":             {"name: a\n\nq: 1\n---\n# b\nid: '' # empty\nname: b\n...\n---\nname: c\n", 1, "name: a\n\nq: 1\n---\n# b\nid: X # empty\nname: b\n---\nname: c\n"},
+		"held key, first":      {"id: ''\nname: a\n---\nother: y\n", 0, "id: X\nname: a\n---\nother: y\n"},
+		"last, without an end": {"name: a\n---\n{name: b}", 1, "name: a\n---\n{id: X, name: b}\n"},
+	} {
+		t.Run(name, func(t *testing.T) { assert.Equal(t, tc.out, setIn(t, tc.in, tc.index, "id", "X")) })
+	}
+}
+
+// Ids written one after another into a file of several objects each land in their own.
+func TestSetOneAfterAnother(t *testing.T) {
+	f, err := ParseFile([]byte("# a\nname: a\n---\n{name: b}\n---\nid: ''\nname: c\n"))
+	require.NoError(t, err)
+	for i, id := range []string{"id-a", "id-b", "id-c"} {
+		require.NoError(t, f.Set(i, "id", id))
+	}
+	assert.Equal(t, "id: id-a\n# a\nname: a\n---\n{id: id-b, name: b}\n---\nid: id-c\nname: c\n", string(f.Bytes()))
+	var ids []string
+	for _, doc := range f.Documents() {
+		id, _ := doc.Get("id")
+		ids = append(ids, id)
+	}
+	assert.Equal(t, []string{"id-a", "id-b", "id-c"}, ids)
+}
+
+// Directives stay with the document they belong to.
+func TestSetKeepsDirectivesWithTheirDocument(t *testing.T) {
+	assert.Equal(t, "name: a\n...\n%YAML 1.1\n---\nid: X\nname: b\n", setIn(t, "name: a\n...\n%YAML 1.1\n---\nname: b\n", 1, "id", "X"))
 }

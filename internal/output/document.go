@@ -55,19 +55,36 @@ func ParseValue(content []byte) (any, error) {
 	if json.Valid(content) {
 		return decodeJSON(json.NewDecoder(bytes.NewReader(content)))
 	}
-	var node yaml.Node
-	if err := yaml.Unmarshal(content, &node); err != nil {
+	nodes, err := yamlDocuments(content)
+	if err != nil {
 		return nil, err
 	}
-	if node.Kind != yaml.DocumentNode || len(node.Content) != 1 {
+	switch len(nodes) {
+	case 0:
 		return nil, nil
+	case 1:
+		return toValue(nodes[0].Content[0])
 	}
-	return toValue(node.Content[0])
+	return nil, errMoreThanOne(len(nodes))
 }
 
-// ParseDocument reads JSON or YAML; JSON is valid YAML, so one parser handles both.
-// Anchors, aliases and merge keys (`<<:`) are resolved, as js-yaml's load did.
+// ParseDocument reads one object as JSON or YAML; JSON is valid YAML, so one parser handles
+// both. Anchors, aliases and merge keys (`<<:`) are resolved, as js-yaml's load did.
 func ParseDocument(content []byte) (*Document, error) {
+	docs, err := ParseDocuments(content)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) > 1 {
+		return nil, errMoreThanOne(len(docs))
+	}
+	return docs[0], nil
+}
+
+// ParseDocuments reads the objects of a file: JSON holds one, YAML one per document, so a
+// file can keep several objects of a kind apart with `---`. Empty documents, as a trailing
+// `---` leaves, hold none.
+func ParseDocuments(content []byte) ([]*Document, error) {
 	// JSON is read with a JSON decoder: a YAML parser rejects characters JSON allows
 	// unescaped, such as DEL, and would fail on a platform response containing one.
 	content = bytes.TrimPrefix(content, bom)
@@ -80,24 +97,75 @@ func ParseDocument(content []byte) (*Document, error) {
 		if !ok {
 			return nil, fmt.Errorf("expected an object")
 		}
-		return &Document{value: m}, nil
+		return []*Document{{value: m}}, nil
 	}
-	var node yaml.Node
-	if err := yaml.Unmarshal(content, &node); err != nil {
-		return nil, err
-	}
-	if node.Kind != yaml.DocumentNode || len(node.Content) != 1 {
-		return nil, fmt.Errorf("expected an object")
-	}
-	value, err := toValue(node.Content[0])
+	_, docs, err := yamlObjects(content)
+	return docs, err
+}
+
+// yamlObjects decodes the documents of a YAML file into objects, keeping the nodes they
+// came from for the positions of their keys.
+func yamlObjects(content []byte) ([]*yaml.Node, []*Document, error) {
+	nodes, err := yamlDocuments(content)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	m, ok := value.(*jsyaml.Map)
-	if !ok {
-		return nil, fmt.Errorf("expected an object")
+	if len(nodes) == 0 {
+		return nil, nil, fmt.Errorf("expected an object")
 	}
-	return &Document{value: m}, nil
+	docs := make([]*Document, 0, len(nodes))
+	for i, node := range nodes {
+		value, err := toValue(node.Content[0])
+		if err != nil {
+			return nil, nil, inDocument(err, i, len(nodes))
+		}
+		m, ok := value.(*jsyaml.Map)
+		if !ok {
+			return nil, nil, inDocument(fmt.Errorf("expected an object"), i, len(nodes))
+		}
+		docs = append(docs, &Document{value: m})
+	}
+	return nodes, docs, nil
+}
+
+// yamlDocuments decodes every document of a YAML file, leaving out empty ones.
+// yaml.Unmarshal would read only the first and drop the rest without a word.
+func yamlDocuments(content []byte) ([]*yaml.Node, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader(content))
+	var nodes []*yaml.Node
+	for {
+		var node yaml.Node
+		err := decoder.Decode(&node)
+		if errors.Is(err, io.EOF) {
+			return nodes, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(node.Content) != 1 || (node.Content[0].Kind == yaml.ScalarNode && node.Content[0].Tag == "!!null") {
+			continue
+		}
+		nodes = append(nodes, &node)
+	}
+}
+
+func errMoreThanOne(n int) error {
+	return fmt.Errorf("found %d documents where one object is expected", n)
+}
+
+func inDocument(err error, index, count int) error {
+	if count == 1 {
+		return err
+	}
+	return fmt.Errorf("document %d: %w", index+1, err)
+}
+
+// Label names one object of a file in messages: the file alone when it holds one.
+func Label(file string, index, count int) string {
+	if count == 1 {
+		return file
+	}
+	return fmt.Sprintf("%s (document %d)", file, index+1)
 }
 
 func NewDocument(m *jsyaml.Map) *Document { return &Document{value: m} }

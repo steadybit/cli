@@ -1296,3 +1296,35 @@ func TestExpectationsNeedWaitingAndARealState(t *testing.T) {
 	err = experiment.Run(ctx, nil, experiment.RunOptions{Key: "TST-1", Yes: true, WaitOptions: experiment.WaitOptions{ExpectState: "FAILED"}})
 	assert.EqualError(t, err, "--expect-state, --expect-reason and --expectation-retries need to wait for the run; remove --no-wait.")
 }
+
+func TestApplyWritesEachNewKeyIntoItsDocument(t *testing.T) {
+	p := platformtest.New(t)
+	created := 0
+	p.Handle("POST /api/experiments", func(platformtest.Request) platformtest.Reply {
+		created++
+		return platformtest.Reply{Status: http.StatusCreated, Headers: map[string]string{"Location": fmt.Sprintf("%s/api/experiments/NEW-%d", p.URL, created)}}
+	})
+	file := filepath.Join(t.TempDir(), "experiments.yml")
+	require.NoError(t, os.WriteFile(file, []byte("# first\nname: a\nlanes: []\n---\n# second\nname: b\nlanes: []\n"), 0o644))
+
+	out, err := platformtest.Stdout(t, func() error { return experiment.Apply(ctx, p.Client, experiment.ApplyOptions{Files: []string{file}}) })
+
+	require.NoError(t, err)
+	assert.Equal(t, "Experiment NEW-1 created.\nExperiment NEW-2 created.\n", out)
+	content, _ := os.ReadFile(file)
+	assert.Equal(t, "key: NEW-1\n# first\nname: a\nlanes: []\n---\nkey: NEW-2\n# second\nname: b\nlanes: []\n", string(content))
+}
+
+// A run writes the key of a new experiment back while other runs may be going, so its
+// file holds one experiment.
+func TestRunTakesOneExperimentPerFile(t *testing.T) {
+	p := platformtest.New(t)
+	file := filepath.Join(t.TempDir(), "experiments.yml")
+	require.NoError(t, os.WriteFile(file, []byte("name: a\n---\nname: b\n"), 0o644))
+
+	_, err := platformtest.Stdout(t, func() error {
+		return experiment.Run(ctx, p.Client, experiment.RunOptions{Files: []string{file}, Yes: true})
+	})
+
+	assert.EqualError(t, err, "Experiment file '"+file+"' holds 2 experiments; running takes one experiment per file.")
+}
