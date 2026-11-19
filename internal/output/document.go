@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/steadybit/cli/v6/internal/jsyaml"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Document is a JSON or YAML object as the TypeScript CLI held it: a JavaScript value
