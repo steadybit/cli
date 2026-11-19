@@ -159,36 +159,25 @@ func ResolveFiles(paths []string, recursive bool) ([]string, error) {
 	return files, nil
 }
 
-func load(file string) (Document, output.Datatype, error) {
+func load(file string) (*output.File, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to read experiment file at path '%s': %w", file, err)
+		return nil, fmt.Errorf("Failed to read experiment file at path '%s': %w", file, err)
 	}
-	document, err := output.ParseDocument(content)
+	f, err := output.ParseFile(content)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to parse experiment file at path '%s' as YAML/JSON: %w", file, err)
+		return nil, fmt.Errorf("Failed to parse experiment file at path '%s' as YAML/JSON: %w", file, err)
 	}
-	datatype := output.YAML
-	if output.IsJSON(content) {
-		datatype = output.JSON
-	}
-	return document, datatype, nil
+	return f, nil
 }
 
-// writeBack puts the key the platform assigned at the top of the file, so that the next
-// apply updates this experiment instead of creating another one.
-func writeBack(file string, document Document, datatype output.Datatype, key string) error {
-	content, err := os.ReadFile(file)
-	if err != nil {
+// writeKey puts the key the platform assigned into the file, so that the next apply
+// updates this experiment instead of creating another one.
+func writeKey(file string, f *output.File, key string) error {
+	if err := f.Set("key", key); err != nil {
 		return err
 	}
-	if datatype == output.YAML {
-		if rendered, ok := output.WithFieldFirst(content, document, "key", key); ok {
-			return os.WriteFile(file, rendered, 0o644)
-		}
-	}
-	document.SetFirst("key", key)
-	return os.WriteFile(file, document.RenderFile(datatype), 0o644)
+	return os.WriteFile(file, f.Bytes(), 0o644)
 }
 
 func keyOf(document Document) string {
@@ -231,10 +220,11 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		return errors.New("If --key is specified, at most one --file can be specified.")
 	}
 	for _, file := range files {
-		document, datatype, err := load(file)
+		f, err := load(file)
 		if err != nil {
 			return err
 		}
+		document := f.Document()
 		key := o.Key
 		if key == "" {
 			key = keyOf(document)
@@ -256,7 +246,7 @@ func Apply(ctx context.Context, c *platform.Client, o ApplyOptions) error {
 		}
 		key = keyFromLocation(resp)
 		if resp.StatusCode == http.StatusCreated {
-			if err := writeBack(file, document, datatype, key); err != nil {
+			if err := writeKey(file, f, key); err != nil {
 				return err
 			}
 			fmt.Printf("Experiment %s created.\n", key)
@@ -643,10 +633,11 @@ func runKey(ctx context.Context, c *platform.Client, key string, a attempt) (sta
 }
 
 func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string, a attempt) (started, error) {
-	document, datatype, err := load(file)
+	f, err := load(file)
 	if err != nil {
 		return started{}, err
 	}
+	document := f.Document()
 	key := o.Key
 	if key == "" {
 		key = keyOf(document)
@@ -671,7 +662,7 @@ func runFile(ctx context.Context, c *platform.Client, o RunOptions, file string,
 	if err != nil {
 		return started{}, err
 	}
-	return result, writeBack(file, document, datatype, result.Key)
+	return result, writeKey(file, f, result.Key)
 }
 
 func runTemplate(ctx context.Context, c *platform.Client, o RunOptions, a attempt) (started, error) {
@@ -802,10 +793,11 @@ func runIDFromLocation(location string) int64 {
 // fileExperimentName is how the question about running in parallel names the experiment
 // of a file: its key, or its name.
 func fileExperimentName(file string) string {
-	document, _, err := load(file)
+	f, err := load(file)
 	if err != nil {
 		return "the experiment"
 	}
+	document := f.Document()
 	for _, field := range []string{"key", "name"} {
 		if v, ok := document.Get(field); ok && v != "" {
 			return v

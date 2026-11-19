@@ -65,8 +65,9 @@ func TestGetAndApplyRoundTrip(t *testing.T) {
 func TestApplyCreatesAndWritesTheIdBack(t *testing.T) {
 	p := platformtest.New(t)
 	p.Reply("POST /api/environments", platformtest.Reply{Status: http.StatusCreated, JSON: map[string]any{"id": id, "name": "New"}})
+	// Indented, as `get` writes it; the id goes in in the same style.
 	file := filepath.Join(t.TempDir(), "new.json")
-	require.NoError(t, os.WriteFile(file, []byte(`{"name":"New","query":"x"}`), 0o644))
+	require.NoError(t, os.WriteFile(file, []byte("{\n  \"name\": \"New\",\n  \"query\": \"x\"\n}"), 0o644))
 
 	out, err := platformtest.Stdout(t, func() error { return environment.Apply(ctx, p.Client, environment.ApplyOptions{Files: []string{file}}) })
 

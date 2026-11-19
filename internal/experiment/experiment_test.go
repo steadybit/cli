@@ -100,8 +100,8 @@ func TestApplyWritesTheKeyIntoFilesALineInFrontWouldBreak(t *testing.T) {
 	for name, tc := range map[string]struct{ file, original, written string }{
 		"document marker": {"e.yml", "---\nname: new\n", "---\nkey: NEW-1\nname: new\n"},
 		"empty key":       {"e.yml", "key: ''\nname: new\n", "key: NEW-1\nname: new\n"},
-		"flow mapping":    {"e.yml", "{name: new}\n", "key: NEW-1\nname: new\n"},
-		"json with a bom": {"e.json", "\ufeff{\"name\":\"new\"}", `{"key":"NEW-1","name":"new"}`},
+		"flow mapping":    {"e.yml", "{name: new}  # kept\n", "{key: NEW-1, name: new} # kept\n"},
+		"json with a bom": {"e.json", "\ufeff{\"name\":\"new\"}", "\ufeff{\"key\":\"NEW-1\",\"name\":\"new\"}"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := platformtest.New(t)

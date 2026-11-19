@@ -1,5 +1,14 @@
 # Changelog
 
+- An id or key that `apply` writes back into a YAML file where no line could go in front,
+  as in a flow mapping `{...}` or a file holding the field empty, keeps the file's
+  comments, anchors and quoting; a flow mapping stays one, and a field held empty keeps
+  its place. Before, the file was written out again from its values, without any of
+  them, and the field moved to the top. Blank lines are still lost in that case, and
+  indentation becomes two spaces.
+- An id or key that `apply` writes back into a JSON file keeps the file's style: compact
+  or indented, with or without a final newline, and a byte order mark. Before, an
+  experiment file always came out compact and other files indented, without the mark.
 - `team apply` and `apply` warn about each team member the platform left out because its
   username or email is no user of the tenant; before, the team was reported as saved
   without a word. `--validate-members` makes the platform refuse such a team instead.

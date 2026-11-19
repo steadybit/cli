@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -111,8 +110,7 @@ func (d *Document) Get(key string) (string, bool) {
 	return s, ok && isString
 }
 
-func (d *Document) Delete(key string)          { d.value.Delete(key) }
-func (d *Document) SetFirst(key, value string) { d.value.SetFirst(key, value) }
+func (d *Document) Delete(key string) { d.value.Delete(key) }
 
 // Render as `get` printed it: JSON.stringify(value, undefined, 2), or js-yaml's dump.
 func (d *Document) Render(datatype Datatype) ([]byte, error) {
@@ -321,32 +319,3 @@ func resolve(node *yaml.Node) *yaml.Node {
 func IsJSON(content []byte) bool { return json.Valid(bytes.TrimPrefix(content, bom)) }
 
 var bom = []byte("\ufeff")
-
-// A file may open with comments and a `---` document marker; a new first key goes after them.
-var documentStart = regexp.MustCompile(`\A(?:[ \t]*(?:#[^\n]*)?\r?\n)*---[ \t]*\r?\n`)
-
-// WithFieldFirst returns YAML content with `field: value` added as its first key, and the
-// rest of the file, comments and anchors included, kept byte for byte. It reports false
-// when a line in front would not do that, as for a flow mapping `{...}` or a file that
-// already holds the field, empty; the caller then renders the document instead.
-func WithFieldFirst(content []byte, doc *Document, field, value string) ([]byte, bool) {
-	var head []byte
-	rest := content
-	if bytes.HasPrefix(rest, bom) {
-		head, rest = bom, rest[len(bom):]
-	}
-	if loc := documentStart.FindIndex(rest); loc != nil {
-		head, rest = append(head, rest[:loc[1]]...), rest[loc[1]:]
-	}
-	line := jsyaml.NewMap()
-	line.Set(field, value)
-	updated := append(append(append([]byte{}, head...), jsyaml.Dump(line)...), rest...)
-
-	expected := jsyaml.Clone(doc.value).(*jsyaml.Map)
-	expected.SetFirst(field, value)
-	parsed, err := ParseDocument(updated)
-	if err != nil || jsyaml.CompactJSON(parsed.value) != jsyaml.CompactJSON(expected) {
-		return nil, false
-	}
-	return updated, true
-}

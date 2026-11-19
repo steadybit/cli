@@ -25,11 +25,11 @@ func compareAll(ctx context.Context, c *platform.Client, k Kind, paths []string,
 	}
 	results := make([]Result, 0, len(files))
 	for _, file := range files {
-		doc, _, err := resource.Read(file, k.Name)
+		f, err := resource.Read(file, k.Name)
 		if err != nil {
 			return nil, err
 		}
-		r, err := Compare(ctx, c, k, file, doc)
+		r, err := Compare(ctx, c, k, file, f.Document())
 		if err != nil {
 			return nil, err
 		}

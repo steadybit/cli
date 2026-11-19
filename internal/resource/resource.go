@@ -53,26 +53,17 @@ func format(doc *output.Document, datatype output.Datatype) string {
 	return jsyaml.Dump(doc.Value())
 }
 
-// Read loads a JSON or YAML file; JSON is tried first, as it was.
-func Read(file, what string) (*output.Document, output.Datatype, error) {
+// Read loads a JSON or YAML file.
+func Read(file, what string) (*output.File, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to read %s file at path '%s': %s", what, file, cause(err))
+		return nil, fmt.Errorf("Failed to read %s file at path '%s': %s", what, file, cause(err))
 	}
-	doc, err := output.ParseDocument(content)
+	f, err := output.ParseFile(content)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to parse %s file at path '%s' as YAML/JSON: %s", what, file, err)
+		return nil, fmt.Errorf("Failed to parse %s file at path '%s' as YAML/JSON: %s", what, file, err)
 	}
-	datatype := output.YAML
-	if isJSON(content) {
-		datatype = output.JSON
-	}
-	return doc, datatype, nil
-}
-
-func isJSON(content []byte) bool {
-	trimmed := strings.TrimSpace(strings.TrimPrefix(string(content), "\ufeff"))
-	return strings.HasPrefix(trimmed, "{") && output.IsJSON(content)
+	return f, nil
 }
 
 func cause(err error) string {
@@ -104,39 +95,27 @@ func ApplyFiles(paths []string, recursive bool, what string, upsert func(file st
 		return err
 	}
 	for _, file := range files {
-		doc, datatype, err := Read(file, what)
+		f, err := Read(file, what)
 		if err != nil {
 			return err
 		}
+		doc := f.Document()
 		existingID, _ := doc.Value().Get("id")
-		result, err := upsert(file, output.NewDocument(jsyaml.Clone(doc.Value()).(*jsyaml.Map)))
+		result, err := upsert(file, doc)
 		if err != nil {
 			return err
 		}
 		// Resources named by a key, like teams, have no id to write back.
 		if (existingID == nil || existingID == "") && result.ID != "" {
-			if err := writeID(file, doc, datatype, result.ID); err != nil {
+			if err := f.Set("id", result.ID); err != nil {
+				return err
+			}
+			if err := os.WriteFile(file, f.Bytes(), 0o644); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-// writeID puts the new id at the top of the file. YAML keeps its comments and anchors
-// when a line in front can hold it; otherwise the document is written out again.
-func writeID(file string, doc *output.Document, datatype output.Datatype, id string) error {
-	if datatype == output.YAML {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			return err
-		}
-		if rendered, ok := output.WithFieldFirst(content, doc, "id", id); ok {
-			return os.WriteFile(file, rendered, 0o644)
-		}
-	}
-	doc.Value().SetFirst("id", id)
-	return os.WriteFile(file, []byte(format(doc, datatype)), 0o644)
 }
 
 func CreatedOrUpdated(created bool) string {
@@ -190,11 +169,11 @@ func Variables(pairs []string, file string, replace bool) (*jsyaml.Map, error) {
 	}
 	variables := jsyaml.NewMap()
 	if file != "" {
-		doc, _, err := Read(file, "variables")
+		f, err := Read(file, "variables")
 		if err != nil {
 			return nil, fmt.Errorf("Variables file '%s' must be a map of variable names to values.", file)
 		}
-		variables = doc.Value()
+		variables = f.Document().Value()
 	}
 	for _, k := range given.Keys() {
 		v, _ := given.Get(k)
