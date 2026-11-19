@@ -171,6 +171,27 @@ sed -i.bak 's/duration: 8s/duration: 9s/' experiments/b.yml && rm -f experiments
 check "diff exits with 2 once a file changed" exits_with 2 steadybit experiment diff -f experiments
 check "apply updates the experiment" exits_with 0 steadybit experiment apply -f experiments
 
+# A file may hold several experiments, one per YAML document; each gets its own key.
+experiment c.yml c 3s
+experiment d.yml d 4s
+{ cat c.yml; echo ---; cat d.yml; } >multi.yml && rm -f c.yml d.yml
+check "apply creates every experiment of a multi-document file and writes each key into its document" sh -c '
+  steadybit experiment apply -f multi.yml >out.log 2>&1 || { tail -n 20 out.log; exit 1; }
+  [ "$(grep -c "^key: " multi.yml)" -eq 2 ] && [ "$(grep -c "^# Written by" multi.yml)" -eq 2 ] || { cat multi.yml; exit 1; }
+'
+check "the second key names the second experiment" prints "$MARK-$RUN-d" \
+  steadybit experiment get -k "$(key_of multi.yml | sed -n 2p)" --jq .name
+check "diff finds no drift in a multi-document file" exits_with 0 steadybit experiment diff -f multi.yml
+sed -i.bak 's/duration: 4s/duration: 5s/' multi.yml && rm -f multi.yml.bak
+check "diff exits with 2 and names the document that changed" sh -c '
+  steadybit experiment diff -f multi.yml >out.log 2>&1
+  [ $? -eq 2 ] && grep -qF "multi.yml (document 2)" out.log && ! grep -qF "multi.yml (document 1)" out.log || { tail -n 20 out.log; exit 1; }
+'
+check "run refuses a file of several experiments" sh -c '
+  steadybit experiment run -f multi.yml --yes --allowParallel >out.log 2>&1
+  [ $? -eq 1 ] && grep -qF "running takes one experiment per file" out.log || { tail -n 5 out.log; exit 1; }
+'
+
 check "a parallel run completes both experiments and reports them" sh -c '
   steadybit experiment run -f experiments --yes --parallel 2 --allowParallel --report report.xml >run.log 2>&1 || { tail -n 20 run.log; exit 1; }
   [ "$(grep -c "<testsuite " report.xml)" -eq 2 ] && grep -q "\[" run.log
@@ -390,6 +411,30 @@ EOF
   check "environment get and diff find no drift" round_trips admin environment get -i "$ENV_ID" -f environment.yml -- admin environment diff -f environment.yml
   admin environment variable set -i "$ENV_ID" cliE2e=one >/dev/null 2>&1
   check "environment variable set and get" prints "cliE2e: one" admin environment variable get -i "$ENV_ID"
+
+  # Several environments in one file of a project directory, as a repository may keep them.
+  mkdir -p tenant/environments
+  cat >tenant/environments/all.yml <<EOF
+# Written by e2e/platform.sh; holds no targets.
+name: $MARK-$RUN-environment-x
+query: target.type="cli-e2e.nothing"
+---
+# Written by e2e/platform.sh; holds no targets.
+name: $MARK-$RUN-environment-y
+query: target.type="cli-e2e.nothing-either"
+EOF
+  check "apply -d creates every environment of a multi-document file" exits_with 0 admin apply -d tenant
+  check "apply -d writes each id into its document" sh -c '
+    [ "$(grep -c "^id: " tenant/environments/all.yml)" -eq 2 ] && [ "$(grep -c "^# Written by" tenant/environments/all.yml)" -eq 2 ] || { cat tenant/environments/all.yml; exit 1; }
+  '
+  check "the second id names the second environment" prints "$MARK-$RUN-environment-y" \
+    admin environment get -i "$(id_of tenant/environments/all.yml | sed -n 2p)" --jq .name
+  check "diff -d finds no drift in a multi-document file" exits_with 0 admin diff -d tenant
+  check "apply -d applies the file again" exits_with 0 admin apply -d tenant
+  check "and updates both environments instead of creating new ones" test "$(grep -c ' updated\.$' out.log)" -eq 2
+  for id in $(id_of tenant/environments/all.yml); do
+    check "environment delete deletes $id" exits_with 0 admin environment delete -i "$id" --yes
+  done
 
   cat >team.yml <<EOF
 # Written by e2e/platform.sh.
