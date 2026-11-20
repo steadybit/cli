@@ -14,6 +14,7 @@
   platform allows them for every team. `diff` and `apply --dry-run` no longer report them
   as removed, which applying could never do, and `team apply`, `diff` and dry runs note
   that the team has them anyway.
+- Built with Go 1.27.4, which fixes CVE-2026-97054 in the Go standard library.
 
 ## v6.4.1
 
