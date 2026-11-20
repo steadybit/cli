@@ -1,5 +1,7 @@
 # Changelog
 
+## v6.5.0
+
 - `team apply` and `apply` warn about each team member the platform left out because its
   username or email is no user of the tenant; before, the team was reported as saved
   without a word. `--validate-members` makes the platform refuse such a team instead.
