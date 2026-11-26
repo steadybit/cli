@@ -1,0 +1,10 @@
+# Since oapi-codegen v2.9.0 nullable fields are always written, as null when unset. The CLI leaves out
+# what the user didn't give, so it keeps omitting unset nullable fields as it did before.
+overlay: 1.0.0
+info:
+  title: Keep omitting unset nullable fields
+  version: 1.0.0
+actions:
+  - target: $..properties[?(@.nullable == true)]
+    update:
+      x-omitempty: true

@@ -7,3 +7,5 @@ compatibility:
   circular-reference-limit: 11
 output-options:
   skip-prune: false
+  overlay:
+    path: omitempty-overlay.yaml

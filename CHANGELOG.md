@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updated dependencies, among them the generator of the API client (oapi-codegen v2.9.0)
+  and its runtime, which include their latest security fixes.
+
 ## v6.5.0
 
 - `team apply` and `apply` warn about each team member the platform left out because its
