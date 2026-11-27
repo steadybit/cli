@@ -128,6 +128,7 @@ func TestRotate(t *testing.T) {
 		return platformtest.Reply{JSON: map[string]any{"id": id, "token": "new-secret", "previousSecretExpiresAt": "2026-11-28T10:00:00Z"}}
 	})
 	p.Reply("POST /api/access-tokens/v2/nope/rotate", platformtest.Reply{Status: http.StatusNotFound})
+	p.Reply("GET /api/access-tokens/v2", platformtest.Reply{JSON: map[string]any{"items": []any{}}})
 	rotate := func(o accesstoken.RotateOptions) (string, error) {
 		o.Yes = true
 		return platformtest.Stdout(t, func() error { return accesstoken.Rotate(ctx, p.Client, o) })
@@ -158,4 +159,17 @@ func TestRotate(t *testing.T) {
 	_, err = rotate(accesstoken.RotateOptions{ID: id, ExpiresAt: "tomorrow"})
 	assert.EqualError(t, err, "--expires-at 'tomorrow' is neither a date like 2026-09-01 nor a time like 2026-09-01T12:00:00Z.")
 	assert.Len(t, p.Requests(path), 4)
+}
+
+// An older platform has no rotate endpoint and answers 404 for it, which must not read as
+// a missing token.
+func TestRotateOnAPlatformWithoutRotate(t *testing.T) {
+	p := platformtest.New(t)
+	p.Reply("GET /api/access-tokens/v2", platformtest.Reply{JSON: map[string]any{"items": []any{map[string]any{"id": id}}}})
+	p.Reply("POST /api/access-tokens/v2/"+id+"/rotate", platformtest.Reply{Status: http.StatusNotFound})
+	p.Reply("POST /api/access-tokens/v2/gone/rotate", platformtest.Reply{Status: http.StatusNotFound})
+
+	assert.EqualError(t, accesstoken.Rotate(ctx, p.Client, accesstoken.RotateOptions{ID: id, Yes: true}),
+		"The platform can't rotate access tokens yet. Update it, or use access-token recreate until then.")
+	assert.EqualError(t, accesstoken.Rotate(ctx, p.Client, accesstoken.RotateOptions{ID: "gone", Yes: true}), "Access token gone not found.")
 }
