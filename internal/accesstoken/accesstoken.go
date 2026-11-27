@@ -166,7 +166,7 @@ func Rotate(ctx context.Context, c *platform.Client, o RotateOptions) error {
 		params.ExpiresAt = &expiresAt
 	}
 	question := fmt.Sprintf("Rotate access token %s? Its current secret stops working.", o.ID)
-	if o.GracePeriod != "" {
+	if d, err := time.ParseDuration(o.GracePeriod); o.GracePeriod != "" && (err != nil || d > 0) {
 		question = fmt.Sprintf("Rotate access token %s? Its current secret keeps working for %s.", o.ID, o.GracePeriod)
 	}
 	if ok, err := resource.Confirmed(o.Yes, question); !ok || err != nil {
