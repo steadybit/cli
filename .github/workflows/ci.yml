@@ -45,7 +45,7 @@ jobs:
   api-compatibility:
     uses: ./.github/workflows/api-compatibility.yml
     with:
-      platform: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'dev' }}
+      platform: ${{ startsWith(github.ref, 'refs/tags/v') && 'https://platform.steadybit.com' || 'https://platform.dev.steadybit.com' }}
 
   # Nightly, a quick look that the CLI still talks to the real platform: the test team's
   # token works and the answers still decode. The whole flow runs weekly, in

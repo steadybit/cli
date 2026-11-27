@@ -7,7 +7,7 @@ on:
   workflow_call:
     inputs:
       platform:
-        description: '"dev" or "prod"'
+        description: The base URL of the platform whose API the CLI is built against
         type: string
         required: true
       build:
@@ -19,8 +19,10 @@ on:
       platform:
         description: The platform whose API the CLI is built against
         type: choice
-        options: [dev, prod]
-        default: dev
+        options:
+          - https://platform.dev.steadybit.com
+          - https://platform.steadybit.com
+        default: https://platform.dev.steadybit.com
       build:
         description: The CLI to build
         type: choice
@@ -35,9 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # A scheduled run has no inputs: the latest release against production.
-      PLATFORM: ${{ inputs.platform || 'prod' }}
+      PLATFORM: ${{ inputs.platform || 'https://platform.steadybit.com' }}
       BUILD: ${{ inputs.build || 'latest release' }}
-      STEADYBIT_SPEC_URL: ${{ (inputs.platform || 'prod') == 'prod' && 'https://platform.steadybit.com/api/spec' || 'https://platform.dev.steadybit.com/api/spec' }}
+      STEADYBIT_SPEC_URL: ${{ inputs.platform || 'https://platform.steadybit.com' }}/api/spec
     steps:
       - uses: actions/checkout@v7
         with:
@@ -64,11 +66,11 @@ jobs:
           # The raw spec is not compared: the platform orders some of its maps differently
           # from one response to the next. The generated client is deterministic.
           if git diff --quiet -- api/platform.gen.go; then
-            echo "The $PLATFORM platform API matches the committed client." >> "$GITHUB_STEP_SUMMARY"
+            echo "The API of $PLATFORM matches the committed client." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::warning::The $PLATFORM platform API changed. Run \`STEADYBIT_SPEC_URL=$STEADYBIT_SPEC_URL go run ./internal/tools/spec fetch && go generate ./api\` and commit the result."
+            echo "::warning::The API of $PLATFORM changed. Run \`STEADYBIT_SPEC_URL=$STEADYBIT_SPEC_URL go run ./internal/tools/spec fetch && go generate ./api\` and commit the result."
             {
-              echo "### The $PLATFORM platform API changed"
+              echo "### The API of $PLATFORM changed"
               echo
               echo '```'
               git diff --stat -- api/platform.gen.go
