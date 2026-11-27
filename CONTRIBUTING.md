@@ -117,8 +117,9 @@ against production, so a CLI that calls what production lacks is not released. E
 weekday the latest release is built against production too, and a manual run picks the
 platform and whether to build main or the latest release. So a command for a new endpoint
 can be merged once the endpoint is on dev, but is released only after the platform release
-that ships it. If `e2e/platform.sh` uses the new command, merge it together with that CLI
-release: the weekly platform-e2e runs main's script with the latest release. Fetch the spec from dev for such a change:
+that ships it. The weekly platform-e2e runs main's script with the latest release, so if `e2e/platform.sh`
+uses the new command, check that the CLI has it first (see `access-token rotate` there), or
+merge it together with that CLI release. Fetch the spec from dev for such a change:
 `STEADYBIT_SPEC_URL=https://platform.dev.steadybit.com/api/spec go run ./internal/tools/spec fetch`.
 
 Every operation of the spec is called by a command, deprecated, or listed with a reason in
