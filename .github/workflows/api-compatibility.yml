@@ -28,18 +28,13 @@ on:
         type: choice
         options: [main, latest release]
         default: main
-  # Weekdays, the CLI users have against the platform they use, so a breaking change reaching
-  # production shows within a day.
-  schedule:
-    - cron: '30 5 * * 1-5'
 jobs:
   api-compatibility:
     runs-on: ubuntu-latest
     env:
-      # A scheduled run has no inputs: the latest release against production.
-      PLATFORM: ${{ inputs.platform || 'https://platform.steadybit.com' }}
-      BUILD: ${{ inputs.build || 'latest release' }}
-      STEADYBIT_SPEC_URL: ${{ inputs.platform || 'https://platform.steadybit.com' }}/api/spec
+      PLATFORM: ${{ inputs.platform }}
+      BUILD: ${{ inputs.build }}
+      STEADYBIT_SPEC_URL: ${{ inputs.platform }}/api/spec
     steps:
       - uses: actions/checkout@v7
         with:

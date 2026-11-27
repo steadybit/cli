@@ -15,6 +15,10 @@ on:
       issue:
         type: boolean
         default: false
+      # Builds the latest release instead of the commit the caller runs for.
+      latest-release:
+        type: boolean
+        default: false
 
 jobs:
   check:
@@ -25,6 +29,16 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: ${{ !inputs.latest-release && 1 || 0 }}
+      - name: Check out the latest release
+        if: inputs.latest-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          git checkout --quiet "$tag"
+          echo "Checking $tag" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod

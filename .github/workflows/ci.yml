@@ -9,7 +9,7 @@ on:
   pull_request:
     branches: [main]
   # Daily, so a breaking change in the dev platform's API is noticed within a day, before it
-  # reaches production. api-compatibility.yml checks the latest release against production.
+  # reaches production. spec-diff-platform-prod.yml checks the latest release against production.
   schedule:
     - cron: '0 5 * * 1-5'
 

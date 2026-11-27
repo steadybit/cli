@@ -1,7 +1,8 @@
 name: Check Open API Spec (platform vs cli / PROD)
 
-# The CLI against the API of https://platform.steadybit.com/api/spec,
-# what customers run. Shown on the development dashboard; see spec-check.yml.
+# The latest CLI release against the API of https://platform.steadybit.com/api/spec: what
+# customers run against what they use. Main may already call what only dev has; ci.yml and
+# spec-diff-platform-dev.yml check it. Shown on the development dashboard; see spec-check.yml.
 on:
   push:
     branches:
@@ -24,3 +25,4 @@ jobs:
     with:
       spec-url: https://platform.steadybit.com/api/spec
       issue: true
+      latest-release: true
