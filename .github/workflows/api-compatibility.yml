@@ -1,9 +1,12 @@
 name: API compatibility
 # The committed spec is what the CLI was built against; this builds the CLI against the spec a
 # platform serves now. A breaking change to an endpoint the CLI uses fails to compile and fails
-# the job. Changes the CLI does not depend on only warn.
+# the job. Changes the CLI does not depend on only warn. With coverage, it also fails when the
+# platform has an operation no command calls and internal/tools/spec/coverage.go does not list
+# with a reason.
 on:
-  # From ci.yml, on the code it builds.
+  # From ci.yml, on the code it builds, and from spec-diff-platform-*.yml, which the development
+  # dashboard shows.
   workflow_call:
     inputs:
       platform:
@@ -11,9 +14,17 @@ on:
         type: string
         required: true
       build:
-        description: '"caller" builds the commit ci.yml runs for'
+        description: '"caller" builds the commit the caller runs for, "latest release" the latest release'
         type: string
         default: caller
+      coverage:
+        type: boolean
+        default: false
+      # Keeps one issue open while operations are uncovered, and closes it after. Only one caller
+      # does, so two do not overwrite each other's issue. Needs issues: write from the caller.
+      issue:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       platform:
@@ -28,18 +39,14 @@ on:
         type: choice
         options: [main, latest release]
         default: main
-  # Weekdays, the CLI users have against the platform they use, so a breaking change reaching
-  # production shows within a day.
-  schedule:
-    - cron: '30 5 * * 1-5'
 jobs:
   api-compatibility:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     env:
-      # A scheduled run has no inputs: the latest release against production.
-      PLATFORM: ${{ inputs.platform || 'https://platform.steadybit.com' }}
-      BUILD: ${{ inputs.build || 'latest release' }}
-      STEADYBIT_SPEC_URL: ${{ inputs.platform || 'https://platform.steadybit.com' }}/api/spec
+      PLATFORM: ${{ inputs.platform }}
+      BUILD: ${{ inputs.build }}
+      STEADYBIT_SPEC_URL: ${{ inputs.platform }}/api/spec
     steps:
       - uses: actions/checkout@v7
         with:
@@ -77,3 +84,35 @@ jobs:
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Every operation is called by a command or listed
+        if: always() && inputs.coverage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPEN_ISSUE: ${{ inputs.issue && github.event_name == 'schedule' }}
+        run: |
+          go build -o "$RUNNER_TEMP/spec" ./internal/tools/spec
+          status=0
+          "$RUNNER_TEMP/spec" coverage openapi/platform-api.json >result.md 2>&1 || status=1
+          {
+            echo "Every operation of $STEADYBIT_SPEC_URL is called by a command, deprecated, or listed with a reason in"
+            echo "[\`internal/tools/spec/coverage.go\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/main/internal/tools/spec/coverage.go)."
+            echo "Those that are not need a command, or a line there saying why not."
+            echo
+            cat result.md
+          } >coverage.md
+          cat coverage.md >>"$GITHUB_STEP_SUMMARY"
+          if [ "$OPEN_ISSUE" = true ]; then
+            title="Platform API operations no CLI command covers"
+            issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+            if [ "$status" -ne 0 ]; then
+              printf '\nUpdated by %s/%s/actions/runs/%s.\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >>coverage.md
+              if [ -n "$issue" ]; then
+                gh issue edit "$issue" --body-file coverage.md
+              else
+                gh issue create --title "$title" --body-file coverage.md
+              fi
+            elif [ -n "$issue" ]; then
+              gh issue close "$issue" --comment "Every platform operation is covered or listed again, as of $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            fi
+          fi
+          exit "$status"
