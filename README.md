@@ -316,6 +316,17 @@ steadybit apply -d ./chaos --dry-run      # what an apply would create or update
 steadybit apply -d ./chaos                # profiles, services, experiments, then schedules
 ```
 
+`diff` starts from the files: it reports what changed on the platform, and something deleted
+there as something an apply would create. It does not see what exists only on the platform:
+an experiment created in the UI, or one whose file was removed from the directory, as `apply`
+creates and updates but does not delete. To catch both in CI, export into the repository and
+fail the job when Git sees new files:
+
+```bash
+steadybit export --team ADM -d ./chaos
+test -z "$(git status --porcelain ./chaos)"
+```
+
 Keep the tenant's configuration in Git the same way: experiment templates, environments,
 teams, property definitions, hubs, integrations and custom service profiles, one directory
 each (`templates/`, `environments/`, `teams/`, `property-definitions/`, `hubs/`,
