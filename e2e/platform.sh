@@ -422,13 +422,22 @@ EOF
   mask "$(token_of token.json)"
   check "access-token create makes a team token" test -n "$(token_of token.json)"
   check "the new token works" prints "$SCOPE_TEAM" with_token token.json steadybit team get -k "$SCOPE_TEAM" --jq .key
-  admin access-token recreate -i "$(json_id token.json)" --yes -t json >recreated.json 2>out.log
-  mask "$(token_of recreated.json)"
-  check "access-token recreate makes a new token" test -n "$(token_of recreated.json)"
-  check "the replaced token stops working" exits_with 1 with_token token.json steadybit team get -k "$SCOPE_TEAM"
-  check "the recreated token works" prints "$SCOPE_TEAM" with_token recreated.json steadybit team get -k "$SCOPE_TEAM" --jq .key
-  check "access-token delete deletes it" exits_with 0 admin access-token delete -i "$(json_id recreated.json)" --yes
-  rm -f token.json recreated.json
+  admin access-token rotate -i "$(json_id token.json)" --grace-period 1h --yes -t json >rotated.json 2>out.log
+  mask "$(token_of rotated.json)"
+  check "access-token rotate gives it a new secret" test -n "$(token_of rotated.json)" -a "$(token_of rotated.json)" != "$(token_of token.json)"
+  check "access-token rotate keeps its id" test "$(json_id rotated.json)" = "$(json_id token.json)"
+  check "the rotated token works" prints "$SCOPE_TEAM" with_token rotated.json steadybit team get -k "$SCOPE_TEAM" --jq .key
+  check "the previous secret works for the grace period" prints "$SCOPE_TEAM" with_token token.json steadybit team get -k "$SCOPE_TEAM" --jq .key
+  check "access-token rotate keeps the expiry" prints "$tomorrow" admin access-token list --name "$MARK-$RUN-token" --jq '.[0].expiresAt'
+  # Without a grace period the previous secret ends at once, and the one before it with it.
+  admin access-token rotate -i "$(json_id token.json)" --expires-at never --yes -t json >never.json 2>out.log
+  mask "$(token_of never.json)"
+  check "access-token rotate --expires-at never works" prints "$SCOPE_TEAM" with_token never.json steadybit team get -k "$SCOPE_TEAM" --jq .key
+  check "the previous secret stops working without a grace period" exits_with 1 with_token rotated.json steadybit team get -k "$SCOPE_TEAM"
+  check "the secret before it stops working too" exits_with 1 with_token token.json steadybit team get -k "$SCOPE_TEAM"
+  check "access-token rotate --expires-at never removes the expiry" prints "null" admin access-token list --name "$MARK-$RUN-token" --jq '.[0].expiresAt'
+  check "access-token delete deletes it" exits_with 0 admin access-token delete -i "$(json_id never.json)" --yes
+  rm -f token.json rotated.json never.json
 
   # A second entry for the public hub; nothing is imported from it.
   cat >hub.yml <<EOF

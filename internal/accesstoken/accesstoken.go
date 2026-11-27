@@ -135,6 +135,68 @@ func Create(ctx context.Context, c *platform.Client, o CreateOptions) error {
 	return printToken(token, o.Output, fmt.Sprintf("Access token %s (%s) created.", o.Name, token.ID))
 }
 
+type RotateOptions struct {
+	ID, ExpiresAt, GracePeriod string
+	Output                     string
+	Yes                        bool
+}
+
+// Rotate gives a token a new secret in place: its id, name, type, teams and expiry stay
+// unless --expires-at says otherwise.
+func Rotate(ctx context.Context, c *platform.Client, o RotateOptions) error {
+	params := api.RotateAccessTokenParams{}
+	if o.GracePeriod != "" {
+		params.GracePeriod = &o.GracePeriod
+	}
+	if o.ExpiresAt != "" {
+		var expiresAt api.RotateAccessTokenParamsExpiresAt
+		if o.ExpiresAt == "never" {
+			if err := expiresAt.FromRotateAccessTokenParamsExpiresAt1(api.Never); err != nil {
+				return err
+			}
+		} else {
+			at, err := resource.Time("expires-at", o.ExpiresAt)
+			if err != nil {
+				return err
+			}
+			if err := expiresAt.FromRotateAccessTokenParamsExpiresAt0(*at); err != nil {
+				return err
+			}
+		}
+		params.ExpiresAt = &expiresAt
+	}
+	question := fmt.Sprintf("Rotate access token %s? Its current secret stops working.", o.ID)
+	if o.GracePeriod != "" {
+		question = fmt.Sprintf("Rotate access token %s? Its current secret keeps working for %s.", o.ID, o.GracePeriod)
+	}
+	if ok, err := resource.Confirmed(o.Yes, question); !ok || err != nil {
+		return err
+	}
+	var rotated struct {
+		created
+		PreviousSecretExpiresAt *string `json:"previousSecretExpiresAt"`
+	}
+	resp, err := c.RotateAccessToken(ctx, o.ID, &params)
+	if _, err := platform.Decode(resp, err, &rotated); err != nil {
+		return notFoundOr(err, o.ID, "Failed to rotate access token %s")
+	}
+	var until any
+	previous := "The previous secret stopped working."
+	if rotated.PreviousSecretExpiresAt != nil {
+		until = *rotated.PreviousSecretExpiresAt
+		previous = fmt.Sprintf("The previous secret works until %s.", until)
+	}
+	if o.Output != "" {
+		m := jsyaml.NewMap()
+		m.Set("id", rotated.ID)
+		m.Set("token", rotated.Token)
+		m.Set("previousSecretExpiresAt", until)
+		return resource.OutputValue(m, "", o.Output)
+	}
+	fmt.Printf("Access token %s rotated. %s Store the new one now, it cannot be shown again:\n%s\n", o.ID, previous, rotated.Token)
+	return nil
+}
+
 type RecreateOptions struct {
 	ID, ExpiresAt string
 	Output        string

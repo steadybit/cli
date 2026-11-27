@@ -117,3 +117,45 @@ func TestRecreateKeepsTheExpiry(t *testing.T) {
 	assert.Equal(t, map[string]any{}, p.Requests("POST /api/access-tokens/v2/forever/recreate")[0].JSON(t))
 	assert.Equal(t, map[string]any{}, p.Requests("POST /api/access-tokens/v2/gone/recreate")[0].JSON(t))
 }
+
+func TestRotate(t *testing.T) {
+	p := platformtest.New(t)
+	path := "POST /api/access-tokens/v2/" + id + "/rotate"
+	p.Handle(path, func(r platformtest.Request) platformtest.Reply {
+		if len(r.Query["gracePeriod"]) == 0 {
+			return platformtest.Reply{JSON: map[string]any{"id": id, "token": "new-secret"}}
+		}
+		return platformtest.Reply{JSON: map[string]any{"id": id, "token": "new-secret", "previousSecretExpiresAt": "2026-11-28T10:00:00Z"}}
+	})
+	p.Reply("POST /api/access-tokens/v2/nope/rotate", platformtest.Reply{Status: http.StatusNotFound})
+	rotate := func(o accesstoken.RotateOptions) (string, error) {
+		o.Yes = true
+		return platformtest.Stdout(t, func() error { return accesstoken.Rotate(ctx, p.Client, o) })
+	}
+
+	out, err := rotate(accesstoken.RotateOptions{ID: id})
+	require.NoError(t, err)
+	assert.Equal(t, "Access token "+id+" rotated. The previous secret stopped working. Store the new one now, it cannot be shown again:\nnew-secret\n", out)
+	assert.Empty(t, p.Requests(path)[0].Query, "without flags the token keeps its expiry and the previous secret ends at once")
+
+	out, err = rotate(accesstoken.RotateOptions{ID: id, GracePeriod: "24h", ExpiresAt: "never"})
+	require.NoError(t, err)
+	assert.Equal(t, "Access token "+id+" rotated. The previous secret works until 2026-11-28T10:00:00Z. Store the new one now, it cannot be shown again:\nnew-secret\n", out)
+	assert.Equal(t, []string{"24h"}, p.Requests(path)[1].Query["gracePeriod"])
+	assert.Equal(t, []string{"never"}, p.Requests(path)[1].Query["expiresAt"])
+
+	out, err = rotate(accesstoken.RotateOptions{ID: id, GracePeriod: "1h", ExpiresAt: "2027-06-30T12:00:00+02:00", Output: "json"})
+	require.NoError(t, err)
+	assert.Equal(t, "{\n  \"id\": \""+id+"\",\n  \"token\": \"new-secret\",\n  \"previousSecretExpiresAt\": \"2026-11-28T10:00:00Z\"\n}\n", out)
+	assert.Equal(t, []string{"2027-06-30T12:00:00+02:00"}, p.Requests(path)[2].Query["expiresAt"])
+
+	out, err = rotate(accesstoken.RotateOptions{ID: id, Output: "json"})
+	require.NoError(t, err)
+	assert.Equal(t, "{\n  \"id\": \""+id+"\",\n  \"token\": \"new-secret\",\n  \"previousSecretExpiresAt\": null\n}\n", out)
+
+	_, err = rotate(accesstoken.RotateOptions{ID: "nope"})
+	assert.EqualError(t, err, "Access token nope not found.")
+	_, err = rotate(accesstoken.RotateOptions{ID: id, ExpiresAt: "tomorrow"})
+	assert.EqualError(t, err, "--expires-at 'tomorrow' is neither a date like 2026-09-01 nor a time like 2026-09-01T12:00:00Z.")
+	assert.Len(t, p.Requests(path), 4)
+}
