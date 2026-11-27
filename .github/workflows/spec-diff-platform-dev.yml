@@ -1,7 +1,7 @@
 name: Check Open API Spec (platform vs cli / DEV)
 
 # The CLI against the API of https://platform.dev.steadybit.com/api/spec,
-# what is coming, before it reaches customers. Shown on the development dashboard; see spec-check.yml.
+# what is coming, before it reaches customers. Shown on the development dashboard; see api-compatibility.yml.
 on:
   push:
     branches:
@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/spec-*.yml
+      - .github/workflows/api-compatibility.yml
       - internal/tools/spec/**
   schedule:
     - cron: '0 7 * * 1-5'
@@ -20,7 +21,9 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: ./.github/workflows/spec-check.yml
+    uses: ./.github/workflows/api-compatibility.yml
     with:
-      spec-url: https://platform.dev.steadybit.com/api/spec
+      platform: https://platform.dev.steadybit.com
+      build: caller
+      coverage: true
       issue: false
