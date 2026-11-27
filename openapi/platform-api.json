@@ -1119,6 +1119,7 @@
           "Target Statistics"
         ],
         "summary": "Gather target statistics for a given predicate or query",
+        "description": "Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {\"usage\": \"ENRICHMENT_DATA\"}.",
         "operationId": "getTargetsStats_1",
         "requestBody": {
           "content": {
@@ -1304,6 +1305,7 @@
           "Services"
         ],
         "summary": "Create or update a provided experiment.",
+        "description": "Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.",
         "operationId": "upsertProvidedExperiment",
         "parameters": [
           {
@@ -1345,10 +1347,10 @@
             "description": "Experiment created."
           },
           "404": {
-            "description": "Service or Template not found."
+            "description": "Service or template not found, or `experimentKey` is not a provided experiment of the service."
           },
           "422": {
-            "description": "Validation error."
+            "description": "Validation error, e.g. `templateId` is not the template the experiment was provided from."
           }
         }
       }
@@ -2092,7 +2094,7 @@
           "Properties"
         ],
         "summary": "Create or update a property association",
-        "description": "   Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.\n\n   Examples:\n   - Assign the property `RESULT_COLOR` to all experiment designs:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": false,\n       \"required\": true\n   }\n   ```\n   - Assign the property `RESULT_COLOR` to the design ADM-15:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": false,\n       \"experimentKey\": \"ADM-15\",\n       \"required\": true\n   }\n   ```\n   - Assign the property `RESULT_COLOR` that can be edited in each experiment execution of the experiment with key `ADM-15`:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": true,\n       \"experimentKey\": \"ADM-15\",\n       \"required\": false\n   }\n   ```\n   - Assign the property `RESULT_COLOR` to a service `0a2d67b9-1d5a-4179-8c32-e5296be1f56f`:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"associationType\": \"SERVICE\",\n       \"serviceId\": \"0a2d67b9-1d5a-4179-8c32-e5296be1f56f\",\n       \"required\": false\n   }\n   ```\n",
+        "description": "   Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.\n\n   Examples:\n   - Assign the property `RESULT_COLOR` to all experiment designs:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": false,\n       \"required\": true\n   }\n   ```\n   - Assign the property `RESULT_COLOR` to the design ADM-15:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": false,\n       \"experimentKey\": \"ADM-15\",\n       \"required\": true\n   }\n   ```\n   - Assign the property `RESULT_COLOR` that can be edited in each experiment execution of the experiment with key `ADM-15`:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"editableInExecution\": true,\n       \"experimentKey\": \"ADM-15\",\n       \"required\": false\n   }\n   ```\n   - Assign the property `RESULT_COLOR` to a service `0a2d67b9-1d5a-4179-8c32-e5296be1f56f`:\n   ```\n   {\n       \"key\": \"RESULT_COLOR\",\n       \"associationType\": \"SERVICE\",\n       \"serviceId\": \"0a2d67b9-1d5a-4179-8c32-e5296be1f56f\",\n       \"required\": false\n   }\n   ```\n",
         "operationId": "upsertPropertyAssociation",
         "requestBody": {
           "content": {
@@ -2228,7 +2230,7 @@
           "Integrations"
         ],
         "summary": "Create or update a custom webhook",
-        "description": "Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.",
+        "description": "Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.",
         "operationId": "upsertCustomWebhook",
         "requestBody": {
           "content": {
@@ -2271,6 +2273,9 @@
               }
             }
           },
+          "404": {
+            "description": "Custom webhook with given `id` was not found"
+          },
           "422": {
             "description": "Validation error, custom webhook was not created / updated"
           }
@@ -2308,7 +2313,7 @@
           "Integrations"
         ],
         "summary": "Create or update a slack integration",
-        "description": "Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.",
+        "description": "Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.",
         "operationId": "upsertSlackIntegration",
         "requestBody": {
           "content": {
@@ -2351,6 +2356,9 @@
               }
             }
           },
+          "404": {
+            "description": "Slack integration with given `id` was not found"
+          },
           "422": {
             "description": "Validation error, slack integration was not created / updated"
           }
@@ -2388,7 +2396,7 @@
           "Integrations"
         ],
         "summary": "Create or update a preflight webhook",
-        "description": "Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.",
+        "description": "Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.",
         "operationId": "upsertPreflightWebhook",
         "requestBody": {
           "content": {
@@ -2431,6 +2439,9 @@
               }
             }
           },
+          "404": {
+            "description": "Preflight webhook with given `id` was not found"
+          },
           "422": {
             "description": "Validation error, preflight webhook was not created / updated"
           }
@@ -2468,7 +2479,7 @@
           "Integrations"
         ],
         "summary": "Create or update a preflight action integration",
-        "description": "Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.",
+        "description": "Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.",
         "operationId": "upsertPreflightActionIntegration",
         "requestBody": {
           "content": {
@@ -2511,6 +2522,9 @@
               }
             }
           },
+          "404": {
+            "description": "Preflight action integration with given `id` was not found"
+          },
           "422": {
             "description": "Validation error, preflight action integration was not created / updated"
           }
@@ -2548,7 +2562,7 @@
           "Hubs"
         ],
         "summary": "Create or update a hub",
-        "description": "Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.",
+        "description": "Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.",
         "operationId": "upsertHub",
         "parameters": [
           {
@@ -2602,6 +2616,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Hub with given `id` was not found."
           },
           "422": {
             "description": "Validation error, hub was not created / updated."
@@ -4200,7 +4217,7 @@
           "Environments"
         ],
         "summary": "Create or update an environment",
-        "description": "Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.",
+        "description": "Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.",
         "operationId": "upsertEnvironment",
         "requestBody": {
           "content": {
@@ -4242,6 +4259,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Another environment already has this name"
           },
           "422": {
             "description": "Validation error, environment was not created / updated"
@@ -4506,13 +4526,94 @@
         }
       }
     },
+    "/api/access-tokens/v2/{id}/rotate": {
+      "post": {
+        "tags": [
+          "Access Tokens"
+        ],
+        "summary": "Rotate an access token",
+        "description": "Give an access token a new secret. Id, name, type, teams and owner stay the same. The previous secret keeps working for the grace period, so you can switch your systems over without downtime; a secret replaced by an earlier rotation stops working right away, and the previous secret never outlives the old or the new expiration date. Expired tokens can be rotated as well; pass a new expiration date for them. An admin token can rotate any token, any other token only itself. A request authenticated with a previous secret can't rotate.",
+        "operationId": "rotateAccessToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id of the token to rotate, the part of the token before the dot.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "expiresAt",
+            "in": "query",
+            "description": "New expiration date of the token, or \"never\" for a token that doesn't expire. If not set, the token keeps its expiration date.",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string",
+                  "description": "The token never expires.",
+                  "enum": [
+                    "never"
+                  ]
+                }
+              ]
+            },
+            "example": "2027-01-01T00:00:00Z"
+          },
+          {
+            "name": "gracePeriod",
+            "in": "query",
+            "description": "How long the previous secret keeps working, from 0s (stops working immediately) to 168h (7 days).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "24h",
+              "default": "0s"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token rotated. Make sure to save the generated token as you can't read it again afterwards for security-reasons.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateAccessTokenResponseV2AO"
+                }
+              },
+              "application/yaml": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateAccessTokenResponseV2AO"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not permitted to rotate this token: it is another token and the caller is no admin token, or the caller used a previous secret"
+          },
+          "404": {
+            "description": "Token not found"
+          },
+          "422": {
+            "description": "Validation error, the token was not rotated"
+          }
+        }
+      }
+    },
     "/api/access-tokens/v2/{id}/recreate": {
       "post": {
         "tags": [
           "Access Tokens"
         ],
         "summary": "Recreate an access token",
-        "description": "Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.",
+        "description": "Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.",
         "operationId": "recreateAccessToken",
         "parameters": [
           {
@@ -4554,7 +4655,9 @@
           "404": {
             "description": "Token not found"
           }
-        }
+        },
+        "deprecated": true,
+        "x-sunset": "2027-08-31"
       }
     },
     "/api/experiments/schedules/{id}": {
@@ -7509,6 +7612,15 @@
             "description": "Whether reliability advice is shown on the landscape.",
             "example": false
           },
+          "openOnTab": {
+            "type": "string",
+            "description": "The Explorer tab this view opens on. Omit it for the landscape, which is the default.",
+            "enum": [
+              "LANDSCAPE",
+              "TARGETS",
+              "ADVICE"
+            ]
+          },
           "filterQuery": {
             "maxLength": 20000,
             "minLength": 0,
@@ -7571,6 +7683,15 @@
             "type": "boolean",
             "description": "Whether reliability advice is shown on the landscape.",
             "example": false
+          },
+          "openOnTab": {
+            "type": "string",
+            "description": "The Explorer tab this view opens on. Omit it for the landscape, which is the default.",
+            "enum": [
+              "LANDSCAPE",
+              "TARGETS",
+              "ADVICE"
+            ]
           },
           "filterQuery": {
             "maxLength": 20000,
@@ -10379,7 +10500,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id of the webhook or null if a new webhook should be created.",
+            "description": "The id of the preflight action integration or null if a new preflight action integration should be created.",
             "format": "uuid",
             "nullable": true,
             "example": "ac456d58-8fb2-4df4-86d8-ca81d7562739"
@@ -10450,7 +10571,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The id of the webhook",
+            "description": "The id of the preflight action integration",
             "format": "uuid",
             "example": "ac456d58-8fb2-4df4-86d8-ca81d7562739"
           },
@@ -13006,6 +13127,21 @@
             "description": "Alternative to `predicate`. If both `query` and `predicate` will be provided, `query` will override the `predicate`.",
             "nullable": true,
             "example": "aws.account=\"123\" OR aws.account=\"456\""
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/VariableExpressionAO"
+            },
+            "description": "Variables owned by the environment. Each value is either a constant string, an array of constant strings, or a select expression object. A select-expression value **must not** set `scope` — the environment tier always samples from the environment itself. Omitting this field leaves existing variables untouched, an empty object removes all of them.",
+            "example": {
+              "endpoint": "http://prod.example.com",
+              "targetServices": [
+                "gateway",
+                "hot-deals",
+                "fashion-bestseller"
+              ]
+            }
           }
         },
         "description": "Update or insert environment.",
@@ -13013,7 +13149,10 @@
           "id": "2v1av42-e525-4c00-a13a-1ac32d170724",
           "name": "Global",
           "version": 0,
-          "query": "aws.account=\"123\" OR aws.account=\"456\""
+          "query": "aws.account=\"123\" OR aws.account=\"456\"",
+          "variables": {
+            "endpoint": "http://prod.example.com"
+          }
         }
       },
       "EnvironmentAO": {
@@ -13066,6 +13205,22 @@
               "ERROR",
               "UNKNOWN"
             ]
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/VariableExpressionAO"
+            },
+            "description": "Variables owned by the environment. Each value is either a constant string, an array of constant strings, or a select expression object. Only returned when fetching a single environment — the list endpoint omits it.",
+            "nullable": true,
+            "example": {
+              "endpoint": "http://prod.example.com",
+              "targetServices": [
+                "gateway",
+                "hot-deals",
+                "fashion-bestseller"
+              ]
+            }
           }
         },
         "description": "An environment for limiting the access to discovered systems for a team.",
@@ -13074,7 +13229,10 @@
           "name": "Global",
           "version": 0,
           "query": "aws.account=\"123\" OR aws.account=\"456\"",
-          "state": "READY"
+          "state": "READY",
+          "variables": {
+            "endpoint": "http://prod.example.com"
+          }
         }
       },
       "GetAdviceApiRequestAO": {
@@ -13409,11 +13567,30 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique identifier of this access token"
+            "description": "Unique identifier of this access token, the part of the token before the dot"
           },
           "token": {
             "type": "string",
             "description": "The access token. Make sure to save it as you can't read it again afterwards for security-reasons."
+          }
+        }
+      },
+      "RotateAccessTokenResponseV2AO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the access token, the part of the token before the dot; unchanged by the rotation"
+          },
+          "token": {
+            "type": "string",
+            "description": "The access token with its new secret. Make sure to save it as you can't read it again afterwards for security-reasons."
+          },
+          "previousSecretExpiresAt": {
+            "type": "string",
+            "description": "Until when the previous secret still works. Null means it stopped working right away.",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -16518,7 +16695,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique identifier of this access token"
+            "description": "Unique identifier of this access token, the part of the token before the dot"
           },
           "name": {
             "type": "string",
@@ -16552,6 +16729,18 @@
           "lastUsed": {
             "type": "string",
             "description": "Date of the last token usage. Null means the token was never used.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "previousSecretExpiresAt": {
+            "type": "string",
+            "description": "Until when the secret replaced by the last rotation still works. Null means it no longer does.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rotated": {
+            "type": "string",
+            "description": "When the secret was last rotated. Null means it never was.",
             "format": "date-time",
             "nullable": true
           }
