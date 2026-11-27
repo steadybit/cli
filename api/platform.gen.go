@@ -433,6 +433,27 @@ func (e InvitationAORole) Valid() bool {
 	}
 }
 
+// Defines values for LandscapeViewAOOpenOnTab.
+const (
+	LandscapeViewAOOpenOnTabADVICE    LandscapeViewAOOpenOnTab = "ADVICE"
+	LandscapeViewAOOpenOnTabLANDSCAPE LandscapeViewAOOpenOnTab = "LANDSCAPE"
+	LandscapeViewAOOpenOnTabTARGETS   LandscapeViewAOOpenOnTab = "TARGETS"
+)
+
+// Valid indicates whether the value is a known member of the LandscapeViewAOOpenOnTab enum.
+func (e LandscapeViewAOOpenOnTab) Valid() bool {
+	switch e {
+	case LandscapeViewAOOpenOnTabADVICE:
+		return true
+	case LandscapeViewAOOpenOnTabLANDSCAPE:
+		return true
+	case LandscapeViewAOOpenOnTabTARGETS:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LandscapeViewColorByAOOverrides.
 const (
 	BERRIES     LandscapeViewColorByAOOverrides = "BERRIES"
@@ -1063,6 +1084,27 @@ func (e TimeSeriesReportAORollup) Valid() bool {
 	}
 }
 
+// Defines values for UpsertLandscapeViewAOOpenOnTab.
+const (
+	UpsertLandscapeViewAOOpenOnTabADVICE    UpsertLandscapeViewAOOpenOnTab = "ADVICE"
+	UpsertLandscapeViewAOOpenOnTabLANDSCAPE UpsertLandscapeViewAOOpenOnTab = "LANDSCAPE"
+	UpsertLandscapeViewAOOpenOnTabTARGETS   UpsertLandscapeViewAOOpenOnTab = "TARGETS"
+)
+
+// Valid indicates whether the value is a known member of the UpsertLandscapeViewAOOpenOnTab enum.
+func (e UpsertLandscapeViewAOOpenOnTab) Valid() bool {
+	switch e {
+	case UpsertLandscapeViewAOOpenOnTabADVICE:
+		return true
+	case UpsertLandscapeViewAOOpenOnTabLANDSCAPE:
+		return true
+	case UpsertLandscapeViewAOOpenOnTabTARGETS:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpsertPropertyAssociationAOAssociationType.
 const (
 	UpsertPropertyAssociationAOAssociationTypeEXPERIMENT UpsertPropertyAssociationAOAssociationType = "EXPERIMENT"
@@ -1276,6 +1318,21 @@ func (e GetAccessTokens1ParamsType) Valid() bool {
 	case GetAccessTokens1ParamsTypeTEAM:
 		return true
 	case GetAccessTokens1ParamsTypeWILDCARD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RotateAccessTokenParamsExpiresAt1.
+const (
+	Never RotateAccessTokenParamsExpiresAt1 = "never"
+)
+
+// Valid indicates whether the value is a known member of the RotateAccessTokenParamsExpiresAt1 enum.
+func (e RotateAccessTokenParamsExpiresAt1) Valid() bool {
+	switch e {
+	case Never:
 		return true
 	default:
 		return false
@@ -1594,7 +1651,7 @@ type AccessTokensPageItemV2AO struct {
 	// ExpiresAt Expiration date of the token. Null means the token never expires.
 	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 
-	// Id Unique identifier of this access token
+	// Id Unique identifier of this access token, the part of the token before the dot
 	Id *string `json:"id,omitempty"`
 
 	// LastUsed Date of the last token usage. Null means the token was never used.
@@ -1602,6 +1659,12 @@ type AccessTokensPageItemV2AO struct {
 
 	// Name Name of this access token
 	Name *string `json:"name,omitempty"`
+
+	// PreviousSecretExpiresAt Until when the secret replaced by the last rotation still works. Null means it no longer does.
+	PreviousSecretExpiresAt *time.Time `json:"previousSecretExpiresAt,omitempty"`
+
+	// Rotated When the secret was last rotated. Null means it never was.
+	Rotated *time.Time `json:"rotated,omitempty"`
 
 	// Teams Teams associated with this token.
 	Teams *[]string `json:"teams,omitempty"`
@@ -1949,7 +2012,7 @@ type CreateAccessTokenResponseAO struct {
 
 // CreateAccessTokenResponseV2AO defines model for CreateAccessTokenResponseV2AO.
 type CreateAccessTokenResponseV2AO struct {
-	// Id Unique identifier of this access token
+	// Id Unique identifier of this access token, the part of the token before the dot
 	Id *string `json:"id,omitempty"`
 
 	// Token The access token. Make sure to save it as you can't read it again afterwards for security-reasons.
@@ -2348,7 +2411,7 @@ type EnvironmentAL struct {
 
 // EnvironmentAO An environment for limiting the access to discovered systems for a team.
 //
-// Example: {"id":"2v1av42-e525-4c00-a13a-1ac32d170724","name":"Global","query":"aws.account=\"123\" OR aws.account=\"456\"","state":"READY","version":0}
+// Example: {"id":"2v1av42-e525-4c00-a13a-1ac32d170724","name":"Global","query":"aws.account=\"123\" OR aws.account=\"456\"","state":"READY","variables":{"endpoint":"http://prod.example.com"},"version":0}
 type EnvironmentAO struct {
 	// Id Unique identifier of a environment
 	Id *openapi_types.UUID `json:"id,omitempty"`
@@ -2372,6 +2435,11 @@ type EnvironmentAO struct {
 	//
 	// Example: "READY"
 	State EnvironmentAOState `json:"state"`
+
+	// Variables Variables owned by the environment. Each value is either a constant string, an array of constant strings, or a select expression object. Only returned when fetching a single environment — the list endpoint omits it.
+	//
+	// Example: {"endpoint":"http://prod.example.com","targetServices":["gateway","hot-deals","fashion-bestseller"]}
+	Variables *map[string]VariableExpressionAO `json:"variables,omitempty"`
 
 	// Version Version for optimistic locking (optional in the API)
 	//
@@ -3658,6 +3726,9 @@ type LandscapeViewAO struct {
 	// Example: Kubernetes by namespace
 	Name *string `json:"name,omitempty"`
 
+	// OpenOnTab The Explorer tab this view opens on. Omit it for the landscape, which is the default.
+	OpenOnTab *LandscapeViewAOOpenOnTab `json:"openOnTab,omitempty"`
+
 	// ShowAdvice Whether reliability advice is shown on the landscape.
 	//
 	// Example: false
@@ -3673,6 +3744,9 @@ type LandscapeViewAO struct {
 	// Example: ADM
 	Team string `json:"team"`
 }
+
+// LandscapeViewAOOpenOnTab The Explorer tab this view opens on. Omit it for the landscape, which is the default.
+type LandscapeViewAOOpenOnTab string
 
 // LandscapeViewColorByAO The color-by dimension: the attribute the targets are colored by, together with its advanced configuration.
 type LandscapeViewColorByAO struct {
@@ -4160,7 +4234,7 @@ type PreflightActionAO struct {
 
 // PreflightActionIntegrationAO Example: {"id":"ac456d58-8fb2-4df4-86d8-ca81d7562739","inflightInterval":"10s","inflightTimeout":"5s","name":"Example Preflight Action Integration","preflightActionId":"com.example.preflightaction.MyPreflightAction","scope":"TEAM","team":"ADM","version":1}
 type PreflightActionIntegrationAO struct {
-	// Id The id of the webhook
+	// Id The id of the preflight action integration
 	//
 	// Example: ac456d58-8fb2-4df4-86d8-ca81d7562739
 	Id               openapi_types.UUID `json:"id"`
@@ -4200,7 +4274,7 @@ type PreflightActionIntegrationAOScope string
 
 // PreflightActionIntegrationUpsertAO Example: {"id":"ac456d58-8fb2-4df4-86d8-ca81d7562739","inflightInterval":"10s","inflightTimeout":"5s","name":"Example Preflight Action Integration","preflightActionId":"com.example.preflightaction.MyPreflightAction","scope":"TEAM","team":"ADM","version":1}
 type PreflightActionIntegrationUpsertAO struct {
-	// Id The id of the webhook or null if a new webhook should be created.
+	// Id The id of the preflight action integration or null if a new preflight action integration should be created.
 	//
 	// Example: ac456d58-8fb2-4df4-86d8-ca81d7562739
 	Id               *openapi_types.UUID `json:"id,omitempty"`
@@ -4522,6 +4596,18 @@ type ReportFilterAO struct {
 //
 // Example: MONTHLY
 type ReportFilterAORollup string
+
+// RotateAccessTokenResponseV2AO defines model for RotateAccessTokenResponseV2AO.
+type RotateAccessTokenResponseV2AO struct {
+	// Id Unique identifier of the access token, the part of the token before the dot; unchanged by the rotation
+	Id *string `json:"id,omitempty"`
+
+	// PreviousSecretExpiresAt Until when the previous secret still works. Null means it stopped working right away.
+	PreviousSecretExpiresAt *time.Time `json:"previousSecretExpiresAt,omitempty"`
+
+	// Token The access token with its new secret. Make sure to save it as you can't read it again afterwards for security-reasons.
+	Token *string `json:"token,omitempty"`
+}
 
 // ScalarValueAO defines model for ScalarValueAO.
 type ScalarValueAO struct {
@@ -5545,7 +5631,7 @@ type UpdateExperimentFromTemplateAO struct {
 
 // UpsertEnvironmentAO Update or insert environment.
 //
-// Example: {"id":"2v1av42-e525-4c00-a13a-1ac32d170724","name":"Global","query":"aws.account=\"123\" OR aws.account=\"456\"","version":0}
+// Example: {"id":"2v1av42-e525-4c00-a13a-1ac32d170724","name":"Global","query":"aws.account=\"123\" OR aws.account=\"456\"","variables":{"endpoint":"http://prod.example.com"},"version":0}
 type UpsertEnvironmentAO struct {
 	// Id Unique identifier of a environment
 	Id *openapi_types.UUID `json:"id,omitempty"`
@@ -5560,6 +5646,11 @@ type UpsertEnvironmentAO struct {
 	//
 	// Example: aws.account="123" OR aws.account="456"
 	Query *string `json:"query,omitempty"`
+
+	// Variables Variables owned by the environment. Each value is either a constant string, an array of constant strings, or a select expression object. A select-expression value **must not** set `scope` — the environment tier always samples from the environment itself. Omitting this field leaves existing variables untouched, an empty object removes all of them.
+	//
+	// Example: {"endpoint":"http://prod.example.com","targetServices":["gateway","hot-deals","fashion-bestseller"]}
+	Variables *map[string]VariableExpressionAO `json:"variables,omitempty"`
 
 	// Version Version for optimistic locking (optional in the API)
 	//
@@ -5720,6 +5811,9 @@ type UpsertLandscapeViewAO struct {
 	// Example: Kubernetes by namespace
 	Name *string `json:"name,omitempty"`
 
+	// OpenOnTab The Explorer tab this view opens on. Omit it for the landscape, which is the default.
+	OpenOnTab *UpsertLandscapeViewAOOpenOnTab `json:"openOnTab,omitempty"`
+
 	// ShowAdvice Whether reliability advice is shown on the landscape.
 	//
 	// Example: false
@@ -5735,6 +5829,9 @@ type UpsertLandscapeViewAO struct {
 	// Example: ADM
 	Team string `json:"team"`
 }
+
+// UpsertLandscapeViewAOOpenOnTab The Explorer tab this view opens on. Omit it for the landscape, which is the default.
+type UpsertLandscapeViewAOOpenOnTab string
 
 // UpsertPropertyAssociationAO A property association upsert.
 //
@@ -6131,6 +6228,26 @@ type GetAccessTokens1Params struct {
 
 // GetAccessTokens1ParamsType defines parameters for GetAccessTokens1.
 type GetAccessTokens1ParamsType string
+
+// RotateAccessTokenParams defines parameters for RotateAccessToken.
+type RotateAccessTokenParams struct {
+	// ExpiresAt New expiration date of the token, or "never" for a token that doesn't expire. If not set, the token keeps its expiration date.
+	ExpiresAt *RotateAccessTokenParamsExpiresAt `form:"expiresAt,omitempty" json:"expiresAt,omitempty"`
+
+	// GracePeriod How long the previous secret keeps working, from 0s (stops working immediately) to 168h (7 days).
+	GracePeriod *string `form:"gracePeriod,omitempty" json:"gracePeriod,omitempty"`
+}
+
+// RotateAccessTokenParamsExpiresAt0 defines parameters for RotateAccessToken.
+type RotateAccessTokenParamsExpiresAt0 = time.Time
+
+// RotateAccessTokenParamsExpiresAt1 defines parameters for RotateAccessToken.
+type RotateAccessTokenParamsExpiresAt1 string
+
+// RotateAccessTokenParamsExpiresAt defines parameters for RotateAccessToken.
+type RotateAccessTokenParamsExpiresAt struct {
+	union json.RawMessage
+}
 
 // FindAllActionsParams defines parameters for FindAllActions.
 type FindAllActionsParams struct {
@@ -6693,6 +6810,8 @@ type CreateAccessTokenJSONRequestBody = CreateAccessTokenRequestAO
 type CreateAccessToken1JSONRequestBody = CreateAccessTokenRequestV2AO
 
 // RecreateAccessTokenJSONRequestBody defines body for RecreateAccessToken for application/json ContentType.
+//
+// Deprecated: this type has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 type RecreateAccessTokenJSONRequestBody = RecreateAccessTokenRequestV2AO
 
 // GetTargetAdviceSummaryJSONRequestBody defines body for GetTargetAdviceSummary for application/json ContentType.
@@ -12432,6 +12551,85 @@ func (t *VariableExpressionAO) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsRotateAccessTokenParamsExpiresAt0 returns the union data inside the RotateAccessTokenParamsExpiresAt as a RotateAccessTokenParamsExpiresAt0
+func (t RotateAccessTokenParamsExpiresAt) AsRotateAccessTokenParamsExpiresAt0() (RotateAccessTokenParamsExpiresAt0, error) {
+	var body RotateAccessTokenParamsExpiresAt0
+	err := runtime.JSONUnmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRotateAccessTokenParamsExpiresAt0 overwrites any union data inside the RotateAccessTokenParamsExpiresAt as the provided RotateAccessTokenParamsExpiresAt0
+func (t *RotateAccessTokenParamsExpiresAt) FromRotateAccessTokenParamsExpiresAt0(v RotateAccessTokenParamsExpiresAt0) error {
+	b, err := runtime.JSONMarshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRotateAccessTokenParamsExpiresAt0 performs a merge with any union data inside the RotateAccessTokenParamsExpiresAt, using the provided RotateAccessTokenParamsExpiresAt0
+func (t *RotateAccessTokenParamsExpiresAt) MergeRotateAccessTokenParamsExpiresAt0(v RotateAccessTokenParamsExpiresAt0) error {
+	b, err := runtime.JSONMarshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRotateAccessTokenParamsExpiresAt1 returns the union data inside the RotateAccessTokenParamsExpiresAt as a RotateAccessTokenParamsExpiresAt1
+func (t RotateAccessTokenParamsExpiresAt) AsRotateAccessTokenParamsExpiresAt1() (RotateAccessTokenParamsExpiresAt1, error) {
+	var body RotateAccessTokenParamsExpiresAt1
+	err := runtime.JSONUnmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRotateAccessTokenParamsExpiresAt1 overwrites any union data inside the RotateAccessTokenParamsExpiresAt as the provided RotateAccessTokenParamsExpiresAt1
+func (t *RotateAccessTokenParamsExpiresAt) FromRotateAccessTokenParamsExpiresAt1(v RotateAccessTokenParamsExpiresAt1) error {
+	b, err := runtime.JSONMarshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRotateAccessTokenParamsExpiresAt1 performs a merge with any union data inside the RotateAccessTokenParamsExpiresAt, using the provided RotateAccessTokenParamsExpiresAt1
+func (t *RotateAccessTokenParamsExpiresAt) MergeRotateAccessTokenParamsExpiresAt1(v RotateAccessTokenParamsExpiresAt1) error {
+	b, err := runtime.JSONMarshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// UnmarshalText sets the union from the text of a path, query, header or cookie
+// parameter, which carries no JSON type.
+// The text is taken as a string.
+func (t *RotateAccessTokenParamsExpiresAt) UnmarshalText(text []byte) error {
+	b, err := runtime.JSONMarshal(string(text))
+	if err != nil {
+		return err
+	}
+	t.union = b
+	return nil
+}
+
+// Bind implements runtime.Binder, which binds exploded query parameters; see UnmarshalText.
+func (t *RotateAccessTokenParamsExpiresAt) Bind(src string) error {
+	return t.UnmarshalText([]byte(src))
+}
+
+func (t RotateAccessTokenParamsExpiresAt) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RotateAccessTokenParamsExpiresAt) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
 
@@ -12571,21 +12769,32 @@ type ClientInterface interface {
 
 	// RecreateAccessTokenWithBody Recreate an access token
 	//
-	// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+	// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RecreateAccessTokenWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RecreateAccessToken Recreate an access token
 	//
-	// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+	// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RecreateAccessToken(ctx context.Context, id string, body RecreateAccessTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RotateAccessToken Rotate an access token
+	//
+	// Give an access token a new secret. Id, name, type, teams and owner stay the same. The previous secret keeps working for the grace period, so you can switch your systems over without downtime; a secret replaced by an earlier rotation stops working right away, and the previous secret never outlives the old or the new expiration date. Expired tokens can be rotated as well; pass a new expiration date for them. An admin token can rotate any token, any other token only itself. A request authenticated with a previous secret can't rotate.
+	//
+	// Corresponds with POST /api/access-tokens/v2/{id}/rotate (the `RotateAccessToken` operationId).
+	RotateAccessToken(ctx context.Context, id string, params *RotateAccessTokenParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAccessToken Delete access token
 	//
@@ -12652,7 +12861,7 @@ type ClientInterface interface {
 
 	// UpsertEnvironmentWithBody Create or update an environment
 	//
-	// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+	// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -12661,7 +12870,7 @@ type ClientInterface interface {
 
 	// UpsertEnvironment Create or update an environment
 	//
-	// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+	// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13227,7 +13436,7 @@ type ClientInterface interface {
 
 	// UpsertHubWithBody Create or update a hub
 	//
-	// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+	// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13236,7 +13445,7 @@ type ClientInterface interface {
 
 	// UpsertHub Create or update a hub
 	//
-	// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+	// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13291,7 +13500,7 @@ type ClientInterface interface {
 
 	// UpsertPreflightWebhookWithBody Create or update a preflight webhook
 	//
-	// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13300,7 +13509,7 @@ type ClientInterface interface {
 
 	// UpsertPreflightWebhook Create or update a preflight webhook
 	//
-	// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13316,7 +13525,7 @@ type ClientInterface interface {
 
 	// UpsertPreflightActionIntegrationWithBody Create or update a preflight action integration
 	//
-	// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13325,7 +13534,7 @@ type ClientInterface interface {
 
 	// UpsertPreflightActionIntegration Create or update a preflight action integration
 	//
-	// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13369,7 +13578,7 @@ type ClientInterface interface {
 
 	// UpsertSlackIntegrationWithBody Create or update a slack integration
 	//
-	// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13378,7 +13587,7 @@ type ClientInterface interface {
 
 	// UpsertSlackIntegration Create or update a slack integration
 	//
-	// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13408,7 +13617,7 @@ type ClientInterface interface {
 
 	// UpsertCustomWebhookWithBody Create or update a custom webhook
 	//
-	// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -13417,7 +13626,7 @@ type ClientInterface interface {
 
 	// UpsertCustomWebhook Create or update a custom webhook
 	//
-	// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13481,7 +13690,7 @@ type ClientInterface interface {
 
 	// UpsertPropertyAssociationWithBody Create or update a property association
 	//
-	//    Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+	//    Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 	//
 	//    Examples:
 	//    - Assign the property `RESULT_COLOR` to all experiment designs:
@@ -13527,7 +13736,7 @@ type ClientInterface interface {
 
 	// UpsertPropertyAssociation Create or update a property association
 	//
-	//    Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+	//    Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 	//
 	//    Examples:
 	//    - Assign the property `RESULT_COLOR` to all experiment designs:
@@ -13848,12 +14057,16 @@ type ClientInterface interface {
 
 	// UpsertProvidedExperimentWithBody Create or update a provided experiment.
 	//
+	// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/services/{id}/experiments/provided (the `UpsertProvidedExperiment` operationId).
 	UpsertProvidedExperimentWithBody(ctx context.Context, id openapi_types.UUID, params *UpsertProvidedExperimentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpsertProvidedExperiment Create or update a provided experiment.
+	//
+	// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -13915,12 +14128,16 @@ type ClientInterface interface {
 
 	// GetTargetsStats1WithBody Gather target statistics for a given predicate or query
 	//
+	// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/target-stats (the `GetTargetsStats1` operationId).
 	GetTargetsStats1WithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetTargetsStats1 Gather target statistics for a given predicate or query
+	//
+	// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -14283,11 +14500,12 @@ func (c *Client) DeleteAccessToken1(ctx context.Context, id string, reqEditors .
 
 // RecreateAccessTokenWithBody Recreate an access token
 //
-// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 //
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) RecreateAccessTokenWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRecreateAccessTokenRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
@@ -14302,13 +14520,31 @@ func (c *Client) RecreateAccessTokenWithBody(ctx context.Context, id string, con
 
 // RecreateAccessToken Recreate an access token
 //
-// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *Client) RecreateAccessToken(ctx context.Context, id string, body RecreateAccessTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRecreateAccessTokenRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RotateAccessToken Rotate an access token
+//
+// Give an access token a new secret. Id, name, type, teams and owner stay the same. The previous secret keeps working for the grace period, so you can switch your systems over without downtime; a secret replaced by an earlier rotation stops working right away, and the previous secret never outlives the old or the new expiration date. Expired tokens can be rotated as well; pass a new expiration date for them. An admin token can rotate any token, any other token only itself. A request authenticated with a previous secret can't rotate.
+//
+// Corresponds with POST /api/access-tokens/v2/{id}/rotate (the `RotateAccessToken` operationId).
+func (c *Client) RotateAccessToken(ctx context.Context, id string, params *RotateAccessTokenParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRotateAccessTokenRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -14473,7 +14709,7 @@ func (c *Client) GetEnvironments(ctx context.Context, params *GetEnvironmentsPar
 
 // UpsertEnvironmentWithBody Create or update an environment
 //
-// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 //
 // Takes any type of body and a specified content type.
 //
@@ -14492,7 +14728,7 @@ func (c *Client) UpsertEnvironmentWithBody(ctx context.Context, contentType stri
 
 // UpsertEnvironment Create or update an environment
 //
-// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15697,7 +15933,7 @@ func (c *Client) GetHubs(ctx context.Context, reqEditors ...RequestEditorFn) (*h
 
 // UpsertHubWithBody Create or update a hub
 //
-// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15716,7 +15952,7 @@ func (c *Client) UpsertHubWithBody(ctx context.Context, params *UpsertHubParams,
 
 // UpsertHub Create or update a hub
 //
-// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15841,7 +16077,7 @@ func (c *Client) GetPreflightWebhooks(ctx context.Context, reqEditors ...Request
 
 // UpsertPreflightWebhookWithBody Create or update a preflight webhook
 //
-// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15860,7 +16096,7 @@ func (c *Client) UpsertPreflightWebhookWithBody(ctx context.Context, contentType
 
 // UpsertPreflightWebhook Create or update a preflight webhook
 //
-// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -15896,7 +16132,7 @@ func (c *Client) GetPreflightActionIntegrations(ctx context.Context, reqEditors 
 
 // UpsertPreflightActionIntegrationWithBody Create or update a preflight action integration
 //
-// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type.
 //
@@ -15915,7 +16151,7 @@ func (c *Client) UpsertPreflightActionIntegrationWithBody(ctx context.Context, c
 
 // UpsertPreflightActionIntegration Create or update a preflight action integration
 //
-// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16019,7 +16255,7 @@ func (c *Client) GetSlackIntegrations(ctx context.Context, reqEditors ...Request
 
 // UpsertSlackIntegrationWithBody Create or update a slack integration
 //
-// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type.
 //
@@ -16038,7 +16274,7 @@ func (c *Client) UpsertSlackIntegrationWithBody(ctx context.Context, contentType
 
 // UpsertSlackIntegration Create or update a slack integration
 //
-// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16108,7 +16344,7 @@ func (c *Client) GetCustomWebhooks(ctx context.Context, reqEditors ...RequestEdi
 
 // UpsertCustomWebhookWithBody Create or update a custom webhook
 //
-// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type.
 //
@@ -16127,7 +16363,7 @@ func (c *Client) UpsertCustomWebhookWithBody(ctx context.Context, contentType st
 
 // UpsertCustomWebhook Create or update a custom webhook
 //
-// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -16291,7 +16527,7 @@ func (c *Client) GetAssociations(ctx context.Context, params *GetAssociationsPar
 
 // UpsertPropertyAssociationWithBody Create or update a property association
 //
-//	Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+//	Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 //
 //	Examples:
 //	- Assign the property `RESULT_COLOR` to all experiment designs:
@@ -16347,7 +16583,7 @@ func (c *Client) UpsertPropertyAssociationWithBody(ctx context.Context, contentT
 
 // UpsertPropertyAssociation Create or update a property association
 //
-//	Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+//	Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 //
 //	Examples:
 //	- Assign the property `RESULT_COLOR` to all experiment designs:
@@ -17048,6 +17284,8 @@ func (c *Client) LinkCustomExperiment(ctx context.Context, id openapi_types.UUID
 
 // UpsertProvidedExperimentWithBody Create or update a provided experiment.
 //
+// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/services/{id}/experiments/provided (the `UpsertProvidedExperiment` operationId).
@@ -17064,6 +17302,8 @@ func (c *Client) UpsertProvidedExperimentWithBody(ctx context.Context, id openap
 }
 
 // UpsertProvidedExperiment Create or update a provided experiment.
+//
+// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -17205,6 +17445,8 @@ func (c *Client) GetTargetsStats(ctx context.Context, reqEditors ...RequestEdito
 
 // GetTargetsStats1WithBody Gather target statistics for a given predicate or query
 //
+// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/target-stats (the `GetTargetsStats1` operationId).
@@ -17221,6 +17463,8 @@ func (c *Client) GetTargetsStats1WithBody(ctx context.Context, contentType strin
 }
 
 // GetTargetsStats1 Gather target statistics for a given predicate or query
+//
+// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -18070,6 +18314,79 @@ func NewRecreateAccessTokenRequestWithBody(server string, id string, contentType
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRotateAccessTokenRequest constructs an http.Request for the RotateAccessToken method
+func NewRotateAccessTokenRequest(server string, id string, params *RotateAccessTokenParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := "/api/access-tokens/v2/" + pathParam0 + "/rotate"
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.ExpiresAt != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "expiresAt", *params.ExpiresAt, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.GracePeriod != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "gracePeriod", *params.GracePeriod, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -25128,21 +25445,34 @@ type ClientWithResponsesInterface interface {
 
 	// RecreateAccessTokenWithBodyWithResponse Recreate an access token
 	//
-	// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+	// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RecreateAccessTokenWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecreateAccessTokenResponse, error)
 
 	// RecreateAccessTokenWithResponse Recreate an access token
 	//
-	// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+	// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+	//
+	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RecreateAccessTokenWithResponse(ctx context.Context, id string, body RecreateAccessTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*RecreateAccessTokenResponse, error)
+
+	// RotateAccessTokenWithResponse Rotate an access token
+	//
+	// Give an access token a new secret. Id, name, type, teams and owner stay the same. The previous secret keeps working for the grace period, so you can switch your systems over without downtime; a secret replaced by an earlier rotation stops working right away, and the previous secret never outlives the old or the new expiration date. Expired tokens can be rotated as well; pass a new expiration date for them. An admin token can rotate any token, any other token only itself. A request authenticated with a previous secret can't rotate.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/access-tokens/v2/{id}/rotate (the `RotateAccessToken` operationId).
+	RotateAccessTokenWithResponse(ctx context.Context, id string, params *RotateAccessTokenParams, reqEditors ...RequestEditorFn) (*RotateAccessTokenResponse, error)
 
 	// DeleteAccessTokenWithResponse Delete access token
 	//
@@ -25223,7 +25553,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertEnvironmentWithBodyWithResponse Create or update an environment
 	//
-	// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+	// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25232,7 +25562,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertEnvironmentWithResponse Create or update an environment
 	//
-	// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+	// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25848,7 +26178,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertHubWithBodyWithResponse Create or update a hub
 	//
-	// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+	// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25857,7 +26187,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertHubWithResponse Create or update a hub
 	//
-	// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+	// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25920,7 +26250,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPreflightWebhookWithBodyWithResponse Create or update a preflight webhook
 	//
-	// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25929,7 +26259,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPreflightWebhookWithResponse Create or update a preflight webhook
 	//
-	// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25947,7 +26277,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPreflightActionIntegrationWithBodyWithResponse Create or update a preflight action integration
 	//
-	// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -25956,7 +26286,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPreflightActionIntegrationWithResponse Create or update a preflight action integration
 	//
-	// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26010,7 +26340,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertSlackIntegrationWithBodyWithResponse Create or update a slack integration
 	//
-	// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26019,7 +26349,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertSlackIntegrationWithResponse Create or update a slack integration
 	//
-	// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26055,7 +26385,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertCustomWebhookWithBodyWithResponse Create or update a custom webhook
 	//
-	// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26064,7 +26394,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertCustomWebhookWithResponse Create or update a custom webhook
 	//
-	// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+	// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26146,7 +26476,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPropertyAssociationWithBodyWithResponse Create or update a property association
 	//
-	//    Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+	//    Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 	//
 	//    Examples:
 	//    - Assign the property `RESULT_COLOR` to all experiment designs:
@@ -26192,7 +26522,7 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertPropertyAssociationWithResponse Create or update a property association
 	//
-	//    Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+	//    Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 	//
 	//    Examples:
 	//    - Assign the property `RESULT_COLOR` to all experiment designs:
@@ -26539,12 +26869,16 @@ type ClientWithResponsesInterface interface {
 
 	// UpsertProvidedExperimentWithBodyWithResponse Create or update a provided experiment.
 	//
+	// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/services/{id}/experiments/provided (the `UpsertProvidedExperiment` operationId).
 	UpsertProvidedExperimentWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *UpsertProvidedExperimentParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpsertProvidedExperimentResponse, error)
 
 	// UpsertProvidedExperimentWithResponse Create or update a provided experiment.
+	//
+	// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -26612,12 +26946,16 @@ type ClientWithResponsesInterface interface {
 
 	// GetTargetsStats1WithBodyWithResponse Gather target statistics for a given predicate or query
 	//
+	// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/target-stats (the `GetTargetsStats1` operationId).
 	GetTargetsStats1WithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetTargetsStats1Response, error)
 
 	// GetTargetsStats1WithResponse Gather target statistics for a given predicate or query
+	//
+	// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -27138,6 +27476,54 @@ func (r RecreateAccessTokenResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RecreateAccessTokenResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RotateAccessTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RotateAccessTokenResponseV2AO
+	// YAML200 the response for an HTTP 200 `application/yaml` response
+	YAML200 *RotateAccessTokenResponseV2AO
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RotateAccessTokenResponse) GetJSON200() *RotateAccessTokenResponseV2AO {
+	return r.JSON200
+}
+
+// GetYAML200 returns the response for an HTTP 200 `application/yaml` response
+func (r RotateAccessTokenResponse) GetYAML200() *RotateAccessTokenResponseV2AO {
+	return r.YAML200
+}
+
+// GetBody returns the raw response body bytes
+func (r RotateAccessTokenResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RotateAccessTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RotateAccessTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RotateAccessTokenResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -33423,11 +33809,13 @@ func (c *ClientWithResponses) DeleteAccessToken1WithResponse(ctx context.Context
 
 // RecreateAccessTokenWithBodyWithResponse Recreate an access token
 //
-// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+//
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) RecreateAccessTokenWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RecreateAccessTokenResponse, error) {
 	rsp, err := c.RecreateAccessTokenWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
@@ -33438,17 +33826,33 @@ func (c *ClientWithResponses) RecreateAccessTokenWithBodyWithResponse(ctx contex
 
 // RecreateAccessTokenWithResponse Recreate an access token
 //
-// Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
+// Deprecated, use rotate instead. Recreate an existing access token with a new expiration date. The old token is deleted and a new one is generated with the same name, type, and team associations.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/access-tokens/v2/{id}/recreate (the `RecreateAccessToken` operationId).
+// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 func (c *ClientWithResponses) RecreateAccessTokenWithResponse(ctx context.Context, id string, body RecreateAccessTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*RecreateAccessTokenResponse, error) {
 	rsp, err := c.RecreateAccessToken(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseRecreateAccessTokenResponse(rsp)
+}
+
+// RotateAccessTokenWithResponse Rotate an access token
+//
+// Give an access token a new secret. Id, name, type, teams and owner stay the same. The previous secret keeps working for the grace period, so you can switch your systems over without downtime; a secret replaced by an earlier rotation stops working right away, and the previous secret never outlives the old or the new expiration date. Expired tokens can be rotated as well; pass a new expiration date for them. An admin token can rotate any token, any other token only itself. A request authenticated with a previous secret can't rotate.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/access-tokens/v2/{id}/rotate (the `RotateAccessToken` operationId).
+func (c *ClientWithResponses) RotateAccessTokenWithResponse(ctx context.Context, id string, params *RotateAccessTokenParams, reqEditors ...RequestEditorFn) (*RotateAccessTokenResponse, error) {
+	rsp, err := c.RotateAccessToken(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRotateAccessTokenResponse(rsp)
 }
 
 // DeleteAccessTokenWithResponse Delete access token
@@ -33584,7 +33988,7 @@ func (c *ClientWithResponses) GetEnvironmentsWithResponse(ctx context.Context, p
 
 // UpsertEnvironmentWithBodyWithResponse Create or update an environment
 //
-// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -33599,7 +34003,7 @@ func (c *ClientWithResponses) UpsertEnvironmentWithBodyWithResponse(ctx context.
 
 // UpsertEnvironmentWithResponse Create or update an environment
 //
-// Insert or update the environment in Steadybit. The `id` will be used to identify whether the environment exists already and should be updated or newly inserted.
+// Insert or update the environment in Steadybit. With an `id`, the environment with that id is updated, including its name; if there is none, the environment is created under that id. Without an `id`, the environment with the same name is updated, or a new one is created.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34599,7 +35003,7 @@ func (c *ClientWithResponses) GetHubsWithResponse(ctx context.Context, reqEditor
 
 // UpsertHubWithBodyWithResponse Create or update a hub
 //
-// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34614,7 +35018,7 @@ func (c *ClientWithResponses) UpsertHubWithBodyWithResponse(ctx context.Context,
 
 // UpsertHubWithResponse Create or update a hub
 //
-// Insert or update a hub. The `id` will be used to identify whether the hub exists already and should be updated or newly inserted. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
+// Insert or update a hub. With an `id`, that hub is updated; without one, a new hub is created. The hub content can be synchronized depending on the `resync` parameter. This operation is executed synchronously and may take some time to complete depending on the network connection to hub address.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34719,7 +35123,7 @@ func (c *ClientWithResponses) GetPreflightWebhooksWithResponse(ctx context.Conte
 
 // UpsertPreflightWebhookWithBodyWithResponse Create or update a preflight webhook
 //
-// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34734,7 +35138,7 @@ func (c *ClientWithResponses) UpsertPreflightWebhookWithBodyWithResponse(ctx con
 
 // UpsertPreflightWebhookWithResponse Create or update a preflight webhook
 //
-// Insert or update a preflight webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight webhook. With an `id`, that preflight webhook is updated; without one, a new preflight webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34764,7 +35168,7 @@ func (c *ClientWithResponses) GetPreflightActionIntegrationsWithResponse(ctx con
 
 // UpsertPreflightActionIntegrationWithBodyWithResponse Create or update a preflight action integration
 //
-// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34779,7 +35183,7 @@ func (c *ClientWithResponses) UpsertPreflightActionIntegrationWithBodyWithRespon
 
 // UpsertPreflightActionIntegrationWithResponse Create or update a preflight action integration
 //
-// Insert or update a preflight action integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a preflight action integration. With an `id`, that preflight action integration is updated; without one, a new preflight action integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34869,7 +35273,7 @@ func (c *ClientWithResponses) GetSlackIntegrationsWithResponse(ctx context.Conte
 
 // UpsertSlackIntegrationWithBodyWithResponse Create or update a slack integration
 //
-// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34884,7 +35288,7 @@ func (c *ClientWithResponses) UpsertSlackIntegrationWithBodyWithResponse(ctx con
 
 // UpsertSlackIntegrationWithResponse Create or update a slack integration
 //
-// Insert or update a slack integration.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a slack integration. With an `id`, that slack integration is updated; without one, a new slack integration is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34944,7 +35348,7 @@ func (c *ClientWithResponses) GetCustomWebhooksWithResponse(ctx context.Context,
 
 // UpsertCustomWebhookWithBodyWithResponse Create or update a custom webhook
 //
-// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -34959,7 +35363,7 @@ func (c *ClientWithResponses) UpsertCustomWebhookWithBodyWithResponse(ctx contex
 
 // UpsertCustomWebhookWithResponse Create or update a custom webhook
 //
-// Insert or update a custom webhook.<br/This endpoint requires an admin-token and can't be used with a team-based token.
+// Insert or update a custom webhook. With an `id`, that custom webhook is updated; without one, a new custom webhook is created.<br/>This endpoint requires an admin-token and can't be used with a team-based token.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35101,7 +35505,7 @@ func (c *ClientWithResponses) GetAssociationsWithResponse(ctx context.Context, p
 
 // UpsertPropertyAssociationWithBodyWithResponse Create or update a property association
 //
-//	Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+//	Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 //
 //	Examples:
 //	- Assign the property `RESULT_COLOR` to all experiment designs:
@@ -35153,7 +35557,7 @@ func (c *ClientWithResponses) UpsertPropertyAssociationWithBodyWithResponse(ctx 
 
 // UpsertPropertyAssociationWithResponse Create or update a property association
 //
-//	Insert or update the property association. The `id` will be used to identify whether the schedule exists already and should be updated or newly inserted.
+//	Insert or update the property association. The `id` will be used to identify whether the property association exists already and should be updated or newly inserted.
 //
 //	Examples:
 //	- Assign the property `RESULT_COLOR` to all experiment designs:
@@ -35728,6 +36132,8 @@ func (c *ClientWithResponses) LinkCustomExperimentWithResponse(ctx context.Conte
 
 // UpsertProvidedExperimentWithBodyWithResponse Create or update a provided experiment.
 //
+// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/services/{id}/experiments/provided (the `UpsertProvidedExperiment` operationId).
@@ -35740,6 +36146,8 @@ func (c *ClientWithResponses) UpsertProvidedExperimentWithBodyWithResponse(ctx c
 }
 
 // UpsertProvidedExperimentWithResponse Create or update a provided experiment.
+//
+// Without `experimentKey`, a new experiment is created from the template and linked to the service as a provided experiment. With `experimentKey`, that provided experiment of the service is updated from the template it was created from.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -35855,6 +36263,8 @@ func (c *ClientWithResponses) GetTargetsStatsWithResponse(ctx context.Context, r
 
 // GetTargetsStats1WithBodyWithResponse Gather target statistics for a given predicate or query
 //
+// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/target-stats (the `GetTargetsStats1` operationId).
@@ -35867,6 +36277,8 @@ func (c *ClientWithResponses) GetTargetsStats1WithBodyWithResponse(ctx context.C
 }
 
 // GetTargetsStats1WithResponse Gather target statistics for a given predicate or query
+//
+// Counts targets of usage TARGET, unless the predicate filters by usage itself, e.g. {"usage": "ENRICHMENT_DATA"}.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -36476,6 +36888,48 @@ func ParseRecreateAccessTokenResponse(rsp *http.Response) (*RecreateAccessTokenR
 	return response, nil
 }
 
+// ParseRotateAccessTokenResponse parses an HTTP response from a RotateAccessTokenWithResponse call
+func ParseRotateAccessTokenResponse(rsp *http.Response) (*RotateAccessTokenResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RotateAccessTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RotateAccessTokenResponseV2AO
+		if err := runtime.JSONUnmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "yaml") && rsp.StatusCode == 200:
+		var dest RotateAccessTokenResponseV2AO
+		if err := yaml.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.YAML200 = &dest
+
+	case rsp.StatusCode == 403:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	case rsp.StatusCode == 422:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteAccessTokenResponse parses an HTTP response from a DeleteAccessTokenWithResponse call
 func ParseDeleteAccessTokenResponse(rsp *http.Response) (*DeleteAccessTokenResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -36743,6 +37197,9 @@ func ParseUpsertEnvironmentResponse(rsp *http.Response) (*UpsertEnvironmentRespo
 			return nil, err
 		}
 		response.YAML201 = &dest
+
+	case rsp.StatusCode == 409:
+		break // No content-type
 
 	case rsp.StatusCode == 422:
 		break // No content-type
@@ -38114,6 +38571,9 @@ func ParseUpsertHubResponse(rsp *http.Response) (*UpsertHubResponse, error) {
 		}
 		response.YAML201 = &dest
 
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	case rsp.StatusCode == 422:
 		break // No content-type
 
@@ -38324,6 +38784,9 @@ func ParseUpsertPreflightWebhookResponse(rsp *http.Response) (*UpsertPreflightWe
 		}
 		response.YAML201 = &dest
 
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	case rsp.StatusCode == 422:
 		break // No content-type
 
@@ -38406,6 +38869,9 @@ func ParseUpsertPreflightActionIntegrationResponse(rsp *http.Response) (*UpsertP
 			return nil, err
 		}
 		response.YAML201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	case rsp.StatusCode == 422:
 		break // No content-type
@@ -38634,6 +39100,9 @@ func ParseUpsertSlackIntegrationResponse(rsp *http.Response) (*UpsertSlackIntegr
 		}
 		response.YAML201 = &dest
 
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	case rsp.StatusCode == 422:
 		break // No content-type
 
@@ -38788,6 +39257,9 @@ func ParseUpsertCustomWebhookResponse(rsp *http.Response) (*UpsertCustomWebhookR
 			return nil, err
 		}
 		response.YAML201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	case rsp.StatusCode == 422:
 		break // No content-type

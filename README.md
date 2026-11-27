@@ -271,6 +271,7 @@ steadybit team environment add -k ADM --environment Global
 
 ```bash
 steadybit access-token create --name ci --type TEAM --team ADM --expires-at 2026-12-31
+steadybit access-token rotate -i <token-id> --grace-period 24h
 steadybit user invite --email jane@example.com --team ADM
 steadybit user list --query jane
 steadybit user delete --username <username>

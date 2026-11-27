@@ -62,12 +62,31 @@ func newAccessToken() *cobra.Command {
 	_ = create.MarkFlagRequired("type")
 	variadic(create, "team")
 
+	var ro accesstoken.RotateOptions
+	rotate := &cobra.Command{
+		Use: "rotate",
+		Short: "Give an access token a new secret. Its id, name, type, teams and expiry stay; the new secret is printed once " +
+			"and cannot be shown again.",
+		Args: cobra.NoArgs,
+		Example: examples(
+			"steadybit access-token rotate -i "+accessTokenID+" --grace-period 24h",
+			"steadybit access-token rotate -i "+accessTokenID+" --expires-at never -t json",
+		),
+		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error { return accesstoken.Rotate(ctx, c, ro) }),
+	}
+	idFlag(rotate, &ro.ID, "The access token id, the part of the token before the dot.")
+	rotate.Flags().StringVar(&ro.ExpiresAt, "expires-at", "", `When the token expires from now on, a date, an RFC 3339 time, or "never". (default: when it expires now)`)
+	rotate.Flags().StringVar(&ro.GracePeriod, "grace-period", "", `How long the previous secret keeps working, from "0s" to "168h". (default: it stops working at once)`)
+	rotate.Flags().StringVarP(&ro.Output, "output", "t", "", `Print the id, the token and until when the previous secret works as "json" or "yaml", for a script to read.`)
+	rotate.Flags().BoolVar(&ro.Yes, "yes", false, yesHelp)
+
 	var r accesstoken.RecreateOptions
 	recreate := &cobra.Command{
-		Use:     "recreate",
-		Short:   "Replace an access token with a new one of the same name, type and teams. The old token stops working.",
-		Args:    cobra.NoArgs,
-		Example: examples("steadybit access-token recreate -i " + accessTokenID + " --expires-at 2027-06-30"),
+		Use:        "recreate",
+		Short:      "Replace an access token with a new one of the same name, type and teams. The old token stops working.",
+		Deprecated: "use rotate, which keeps the token's id and can let its previous secret work for a grace period.",
+		Args:       cobra.NoArgs,
+		Example:    examples("steadybit access-token recreate -i " + accessTokenID + " --expires-at 2027-06-30"),
 		RunE: withClient(func(ctx context.Context, c *platform.Client, _ []string) error {
 			return accesstoken.Recreate(ctx, c, r)
 		}),
@@ -88,6 +107,6 @@ func newAccessToken() *cobra.Command {
 	idFlag(del, &d.ID, "The access token id.")
 	del.Flags().BoolVar(&d.Yes, "yes", false, yesHelp)
 
-	cmd.AddCommand(list, create, recreate, del)
+	cmd.AddCommand(list, create, rotate, recreate, del)
 	return cmd
 }

@@ -135,6 +135,74 @@ func Create(ctx context.Context, c *platform.Client, o CreateOptions) error {
 	return printToken(token, o.Output, fmt.Sprintf("Access token %s (%s) created.", o.Name, token.ID))
 }
 
+type RotateOptions struct {
+	ID, ExpiresAt, GracePeriod string
+	Output                     string
+	Yes                        bool
+}
+
+// Rotate gives a token a new secret in place: its id, name, type, teams and expiry stay
+// unless --expires-at says otherwise.
+func Rotate(ctx context.Context, c *platform.Client, o RotateOptions) error {
+	params := api.RotateAccessTokenParams{}
+	if o.GracePeriod != "" {
+		params.GracePeriod = &o.GracePeriod
+	}
+	if o.ExpiresAt != "" {
+		var expiresAt api.RotateAccessTokenParamsExpiresAt
+		if o.ExpiresAt == "never" {
+			if err := expiresAt.FromRotateAccessTokenParamsExpiresAt1(api.Never); err != nil {
+				return err
+			}
+		} else {
+			at, err := resource.Time("expires-at", o.ExpiresAt)
+			if err != nil {
+				return err
+			}
+			if err := expiresAt.FromRotateAccessTokenParamsExpiresAt0(*at); err != nil {
+				return err
+			}
+		}
+		params.ExpiresAt = &expiresAt
+	}
+	question := fmt.Sprintf("Rotate access token %s? Its current secret stops working.", o.ID)
+	if d, err := time.ParseDuration(o.GracePeriod); o.GracePeriod != "" && (err != nil || d > 0) {
+		question = fmt.Sprintf("Rotate access token %s? Its current secret keeps working for %s.", o.ID, o.GracePeriod)
+	}
+	if ok, err := resource.Confirmed(o.Yes, question); !ok || err != nil {
+		return err
+	}
+	var rotated struct {
+		created
+		PreviousSecretExpiresAt *string `json:"previousSecretExpiresAt"`
+	}
+	resp, err := c.RotateAccessToken(ctx, o.ID, &params)
+	if _, err := platform.Decode(resp, err, &rotated); err != nil {
+		// A platform without the rotate endpoint answers 404 too; the token list tells the two apart.
+		if platform.IsStatus(err, http.StatusNotFound) {
+			if token, lookupErr := listedToken(ctx, c, o.ID); lookupErr == nil && token != nil {
+				return fmt.Errorf("The platform can't rotate access tokens yet. Update it, or use access-token recreate until then.")
+			}
+		}
+		return notFoundOr(err, o.ID, "Failed to rotate access token %s")
+	}
+	var until any
+	previous := "The previous secret stopped working."
+	if rotated.PreviousSecretExpiresAt != nil {
+		until = *rotated.PreviousSecretExpiresAt
+		previous = fmt.Sprintf("The previous secret works until %s.", until)
+	}
+	if o.Output != "" {
+		m := jsyaml.NewMap()
+		m.Set("id", rotated.ID)
+		m.Set("token", rotated.Token)
+		m.Set("previousSecretExpiresAt", until)
+		return resource.OutputValue(m, "", o.Output)
+	}
+	fmt.Printf("Access token %s rotated. %s Store the new one now, it cannot be shown again:\n%s\n", o.ID, previous, rotated.Token)
+	return nil
+}
+
 type RecreateOptions struct {
 	ID, ExpiresAt string
 	Output        string
@@ -170,39 +238,52 @@ func Recreate(ctx context.Context, c *platform.Client, o RecreateOptions) error 
 	return printToken(token, o.Output, fmt.Sprintf("Access token %s recreated as %s.", o.ID, token.ID))
 }
 
-// currentExpiry is when the token expires now, for the new one to expire then too, or
-// nil when it never does. One that has already expired needs an explicit new expiry.
-func currentExpiry(ctx context.Context, c *platform.Client, id string) (*time.Time, error) {
+type listed struct {
+	ID        string  `json:"id"`
+	ExpiresAt *string `json:"expiresAt"`
+}
+
+// listedToken is the token with the id as the token list shows it, or nil when there is none.
+func listedToken(ctx context.Context, c *platform.Client, id string) (*listed, error) {
 	raw, err := platform.AllPagesRaw(func(page, size int32) (*http.Response, error) {
 		return c.GetAccessTokens1(ctx, &api.GetAccessTokens1Params{PageRequest: api.PageRequestAO{Page: &page, Size: &size}})
 	})
 	if err != nil {
 		return nil, platform.Failed(err, "Failed to get access token %s", id)
 	}
-	var tokens []struct {
-		ID        string  `json:"id"`
-		ExpiresAt *string `json:"expiresAt"`
-	}
+	var tokens []listed
 	if err := resource.DecodeEach(raw, &tokens); err != nil {
 		return nil, err
 	}
 	for _, token := range tokens {
-		if token.ID != id {
-			continue
+		if token.ID == id {
+			return &token, nil
 		}
-		if token.ExpiresAt == nil || *token.ExpiresAt == "" {
-			return nil, nil
-		}
-		expiry, err := time.Parse(time.RFC3339Nano, *token.ExpiresAt)
-		if err != nil {
-			return nil, fmt.Errorf("Access token %s expires at '%s', which is not a time the CLI can read. Pass --expires-at.", id, *token.ExpiresAt)
-		}
-		if !expiry.After(time.Now()) {
-			return nil, fmt.Errorf("Access token %s expired at %s. Pass --expires-at for the new one, or --expires-at never.", id, *token.ExpiresAt)
-		}
-		return &expiry, nil
 	}
-	return nil, fmt.Errorf("Access token %s not found.", id)
+	return nil, nil
+}
+
+// currentExpiry is when the token expires now, for the new one to expire then too, or
+// nil when it never does. One that has already expired needs an explicit new expiry.
+func currentExpiry(ctx context.Context, c *platform.Client, id string) (*time.Time, error) {
+	token, err := listedToken(ctx, c, id)
+	if err != nil {
+		return nil, err
+	}
+	if token == nil {
+		return nil, fmt.Errorf("Access token %s not found.", id)
+	}
+	if token.ExpiresAt == nil || *token.ExpiresAt == "" {
+		return nil, nil
+	}
+	expiry, err := time.Parse(time.RFC3339Nano, *token.ExpiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("Access token %s expires at '%s', which is not a time the CLI can read. Pass --expires-at.", id, *token.ExpiresAt)
+	}
+	if !expiry.After(time.Now()) {
+		return nil, fmt.Errorf("Access token %s expired at %s. Pass --expires-at for the new one, or --expires-at never.", id, *token.ExpiresAt)
+	}
+	return &expiry, nil
 }
 
 type DeleteOptions struct {

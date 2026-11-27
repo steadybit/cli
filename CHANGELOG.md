@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `access-token rotate` gives an access token a new secret without downtime. The token keeps
+  its id, name, type, teams and expiry; `--grace-period` lets the previous secret keep working
+  for up to 7 days while whatever uses it switches over, and `--expires-at` sets a new expiry,
+  or `never`. Needs a platform that knows `POST /api/access-tokens/v2/{id}/rotate`.
+- `access-token recreate` is deprecated: it deletes the token and creates one with a new id,
+  and the old secret stops working at once. Use `access-token rotate`.
 - Updated dependencies, among them the generator of the API client (oapi-codegen v2.9.0)
   and its runtime, which include their latest security fixes.
 
