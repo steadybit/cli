@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-  # Daily, so a breaking change in the platform API is noticed within a day of it
-  # reaching production rather than at the next release of the CLI.
+  # Daily, so a breaking change in the dev platform's API is noticed within a day, before it
+  # reaches production. api-compatibility.yml checks the latest release against production.
   schedule:
     - cron: '0 5 * * 1-5'
 
@@ -38,37 +38,14 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
-  # The committed spec is what the CLI was built against; this checks it against the live
-  # platform. A breaking change to an endpoint the CLI uses fails to compile and fails the
-  # job, which also blocks a release. Changes the CLI does not depend on only warn.
+  # Main and pull requests are built against the dev platform, which runs what the next
+  # platform release ships. A release tag is built against production, where its users are, so
+  # a CLI that calls what production lacks is not released. Failing blocks images, packages and
+  # releases.
   api-compatibility:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - run: go run ./internal/tools/spec fetch
-      - run: go generate ./api
-      - name: Build against the live platform API
-        run: go build ./... && go vet ./...
-      - name: Report API changes
-        if: always()
-        run: |
-          # The raw spec is not compared: the platform orders some of its maps differently
-          # from one response to the next. The generated client is deterministic.
-          if git diff --quiet -- api/platform.gen.go; then
-            echo "The live platform API matches the committed client." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::warning::The platform API changed. Run \`go run ./internal/tools/spec fetch && go generate ./api\` and commit the result."
-            {
-              echo "### The platform API changed"
-              echo
-              echo '```'
-              git diff --stat -- api/platform.gen.go
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+    uses: ./.github/workflows/api-compatibility.yml
+    with:
+      platform: ${{ startsWith(github.ref, 'refs/tags/v') && 'https://platform.steadybit.com' || 'https://platform.dev.steadybit.com' }}
 
   # Nightly, a quick look that the CLI still talks to the real platform: the test team's
   # token works and the answers still decode. The whole flow runs weekly, in

@@ -110,8 +110,16 @@ go build ./...                       # a breaking change fails here
 `diff` and `apply --dry-run` compare them without regard to order, for the kinds whose
 `Schema` names them in `internal/gitops/kinds.go`.
 
-CI fails when the generated client does not match the committed spec, and builds against
-the live spec daily and before each release.
+CI fails when the generated client does not match the committed spec. It also builds the
+CLI against a live spec (`api-compatibility.yml`): main and pull requests, and every weekday,
+against the dev platform, which runs what the next platform release ships; a release tag
+against production, so a CLI that calls what production lacks is not released. Every
+weekday the latest release is built against production too, and a manual run picks the
+platform and whether to build main or the latest release. So a command for a new endpoint
+can be merged once the endpoint is on dev, but is released only after the platform release
+that ships it. If `e2e/platform.sh` uses the new command, merge it together with that CLI
+release: the weekly platform-e2e runs main's script with the latest release. Fetch the spec from dev for such a change:
+`STEADYBIT_SPEC_URL=https://platform.dev.steadybit.com/api/spec go run ./internal/tools/spec fetch`.
 
 Every operation of the spec is called by a command, deprecated, or listed with a reason in
 `internal/tools/spec/coverage.go`; a test fails otherwise, so a spec refresh that brings a
