@@ -1,0 +1,77 @@
+name: API compatibility
+# The committed spec is what the CLI was built against; this builds the CLI against the spec a
+# platform serves now. A breaking change to an endpoint the CLI uses fails to compile and fails
+# the job. Changes the CLI does not depend on only warn.
+on:
+  # From ci.yml, on the code it builds.
+  workflow_call:
+    inputs:
+      platform:
+        description: '"dev" or "prod"'
+        type: string
+        required: true
+      build:
+        description: '"caller" builds the commit ci.yml runs for'
+        type: string
+        default: caller
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: The platform whose API the CLI is built against
+        type: choice
+        options: [dev, prod]
+        default: dev
+      build:
+        description: The CLI to build
+        type: choice
+        options: [main, latest release]
+        default: main
+  # Weekdays, the CLI users have against the platform they use, so a breaking change reaching
+  # production shows within a day.
+  schedule:
+    - cron: '30 5 * * 1-5'
+jobs:
+  api-compatibility:
+    runs-on: ubuntu-latest
+    env:
+      # A scheduled run has no inputs: the latest release against production.
+      PLATFORM: ${{ inputs.platform || 'prod' }}
+      BUILD: ${{ inputs.build || 'latest release' }}
+      STEADYBIT_SPEC_URL: ${{ (inputs.platform || 'prod') == 'prod' && 'https://platform.steadybit.com/api/spec' || 'https://platform.dev.steadybit.com/api/spec' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.build == 'main' && 'main' || '' }}
+          fetch-depth: 0
+      - name: Check out the latest release
+        if: env.BUILD == 'latest release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          git checkout --quiet "$tag"
+          echo "Building $tag" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go run ./internal/tools/spec fetch
+      - run: go generate ./api
+      - name: Build against the live platform API
+        run: go build ./... && go vet ./...
+      - name: Report API changes
+        if: always()
+        run: |
+          # The raw spec is not compared: the platform orders some of its maps differently
+          # from one response to the next. The generated client is deterministic.
+          if git diff --quiet -- api/platform.gen.go; then
+            echo "The $PLATFORM platform API matches the committed client." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The $PLATFORM platform API changed. Run \`STEADYBIT_SPEC_URL=$STEADYBIT_SPEC_URL go run ./internal/tools/spec fetch && go generate ./api\` and commit the result."
+            {
+              echo "### The $PLATFORM platform API changed"
+              echo
+              echo '```'
+              git diff --stat -- api/platform.gen.go
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
